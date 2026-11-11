@@ -12,7 +12,7 @@ from stay_safe.report import inspect, markdown
 from tests.see_every_connection_and_setting.test_config import FIXTURE
 from tests.support import CHATGPT_APPS, FIRST, SECOND, ConfigCase, ROOT, section
 
-# Under approval_policy = "never" Codex asks before no tool call, whatever the mode (as for `prompt`).
+# Conditional approval meanings: harnesses/codex.md#tool-approval-decisions.
 AUTO = "tool approval `auto` (approval depends on server hints, other exemptions and review)"
 DEFAULT_AUTO = ("tool approval left at the default, `auto` (approval depends on server hints, other exemptions and review)")
 # (entry id, kind, observations) -> expected line, covering every observation the readers can produce.

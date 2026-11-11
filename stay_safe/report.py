@@ -169,9 +169,7 @@ TOOL_PROMPT = {
     "what": "Set `approval_mode = \"prompt\"` for this tool to require approval unless another exemption applies. Review can still change the outcome.",
     "where": "under `[{table}]`",
     "ask": "Edit {file} to set `approval_mode = \"prompt\"` for the `{tool}` tool of my `{name}` {kind}"}
-# Rows: default_tools_approval_mode `writes` (asks unless the tool declares readOnlyHint=true, which the server sets
-# and Codex doesn't check: core/src/mcp_tool_call.rs L2621-L2623) and `prompt`; `enabled_tools`, an MCP server
-# setting only, leaves the listed tools on their mode.
+# Conditional approval meanings: harnesses/codex.md#tool-approval-decisions.
 AUTOMATIC_GROUP = {
     "what": "Set `default_tools_approval_mode = \"writes\"` (a read-only hint can exempt approval; "
             "other exemptions and review still apply){allowlist}. Stricter: `default_tools_approval_mode = \"prompt\"`, to require approval unless another exemption applies. Review can still change the outcome.",

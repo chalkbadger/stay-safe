@@ -95,9 +95,7 @@ def block(what, where, ask, check=None):
     return "\n\n".join(parts + ([f"*Check:* {check}"] if check else []))
 
 
-# Rows: server/app writes (asks unless the tool declares readOnlyHint=true, which the server sets and Codex doesn't
-# check: core/src/mcp_tool_call.rs L2621-L2623), server enabled_tools (MCP servers only; the listed tools keep their
-# mode, so they still run without asking), server/app prompt.
+# Conditional approval meanings: harnesses/codex.md#tool-approval-decisions.
 def automatic_group(kind, name, table, file=FILE):
     allowlist = (", or list only the tools you use in `enabled_tools` (their approval modes still apply)"
                  if kind == "MCP server" else "")

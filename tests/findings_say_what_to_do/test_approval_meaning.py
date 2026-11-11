@@ -39,6 +39,8 @@ class ApprovalMeaningTests(ConfigCase):
             self.assertIn('allowed without asking', risk['explanation'])
             self.assertIn('strict automatic review', risk['explanation'])
             self.assertIn('not successful execution', risk['explanation'])
+            self.assertIn('runtime state requiring automated review', risk['explanation'])
+            self.assertIn('reviewer state are not inspected', risk['explanation'])
         md = render(report, 'markdown')
         groups = section(md, 'Your setup').split('**Config file ')
         self.assertIn('human-review requests are denied', groups[1])
