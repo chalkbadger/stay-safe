@@ -169,7 +169,7 @@ class DefaultConfigTests(ConfigCase):
             with self.subTest(args=args):
                 status, report = self.report(args)
                 self.assertEqual((status, report['inspection_gaps'], report['risks']),
-                                 (2, [READ_GAP.replace('config-1', source)], []))
+                                 (2, [source + ': ' + 'Selected config file is missing. Check the path supplied to --config.'], []))
                 self.assertNotIn(NOTICE, json.dumps(report))
                 if len(args) > 2:
                     self.assertEqual({e['source'] for e in report['catalog']}, {'config-1' if source == 'config-2' else 'config-2'})

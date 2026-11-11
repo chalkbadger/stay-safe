@@ -117,7 +117,7 @@ class EnvironmentInheritanceTests(ConfigCase):
         with patch('stay_safe.codex.os.open', side_effect=PermissionError):
             report = inspect([unreadable])
         self.assertEqual((report['catalog'], report['risks'], report['inspection_gaps']), ([], [], [
-            'config-1: Input is missing, unreadable, a symlink, or invalid UTF-8 TOML; raw errors were withheld.']))
+            'config-1: Selected config file could not be read. Check its permissions and that it is a readable regular file.']))
 
     def test_cli_formats_keep_evidence_citations_and_honest_status(self):
         for config, status in [('model="example"', 2), (BASE, 0)]:
