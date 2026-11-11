@@ -63,4 +63,6 @@ class ApprovalMeaningTests(ConfigCase):
             self.assertEqual((run.returncode, run.stderr), (0, ''))
             self.assertIn('allowed without asking', run.stdout)
             self.assertIn('strict automatic review', run.stdout)
+            self.assertIn('runtime state', run.stdout)
+            self.assertIn('reviewer state are not inspected', run.stdout)
             self.assertNotIn('https://private.example', run.stdout)
