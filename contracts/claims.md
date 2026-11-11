@@ -63,7 +63,10 @@ Tests: [tests/see_every_connection_and_setting/](../tests/see_every_connection_a
 - I run with `--config` or `--rules` and see no system config folder gap. `test_system_folder.py::test_runs_with_file_arguments_give_no_system_folder_gap`
 - I run stay-safe with no file arguments, and a folder at `plugins/cache/<marketplace>/<plugin>/<version>` in my Codex home gives me one gap naming `plugins/cache`; the run exits `2`. `test_plugins_cache.py::test_version_folder_gives_the_gap_and_exits_2`
 - A Codex home of mine with no `plugins/cache`, an empty one, or one holding only marketplace or plugin folders with no version folder gives me no such gap. `test_plugins_cache.py::test_cache_without_a_version_folder_gives_no_gap`
-- A `plugins/cache` that can't be listed gives me the same gap, and the run exits `2`. `test_plugins_cache.py::test_unlistable_cache_gives_the_gap_and_exits_2`
+- A cache folder that cannot be listed gives me an inspection-failed gap and next step in both formats. `test_plugins_cache.py::test_unlistable_cache_reports_failure_without_private_details`
+- A failed cache inspection keeps unrelated findings. `test_plugins_cache.py::test_unlistable_cache_reports_failure_without_private_details`
+- A failed cache inspection exits `2`. `test_plugins_cache.py::test_unlistable_cache_reports_failure_without_private_details`
+- A failed cache inspection reveals no private path or raw error. `test_plugins_cache.py::test_unlistable_cache_reports_failure_without_private_details`
 - I run with `--config` or `--rules` and see no `plugins/cache` gap. `test_plugins_cache.py::test_runs_with_file_arguments_give_no_plugins_cache_gap`
 - I open the full scope section of `docs/report.md` and find every scope line of the JSON report, including that local modifications are not checked. `test_report_order.py::test_the_full_scope_holds_every_scope_line`
 
