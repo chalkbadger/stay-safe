@@ -78,7 +78,7 @@ ENTRIES = [
     ("config-2:shell_environment_policy", "permission", ["inherit: core (explicit)", "ignore_default_excludes: false (explicit)"],
      "Environment for commands: only core variables passed on (you set this), `ignore_default_excludes` false (you set this)"),
     ("config-3:config", "configuration file",
-     ["No default Codex configuration file was found; documented shell-environment defaults assessed."],
+     ["No default Codex configuration file was found. Assessed defaults: command environment and ChatGPT Apps."],
      "Config file: none found, so stay-safe assessed Codex's documented defaults (the environment of commands and "
      "the ChatGPT Apps connection)"),
     # Archived issue #121, harnesses/codex.md row `features.apps` `omitted`: Codex adds this MCP connection to ChatGPT when it

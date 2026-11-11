@@ -66,7 +66,10 @@ Tests: [tests/see_every_connection_and_setting/](../tests/see_every_connection_a
 - I run with `--config` or `--rules` and see no system config folder gap. `test_system_folder.py::test_runs_with_file_arguments_give_no_system_folder_gap`
 - I run stay-safe with no file arguments, and a folder at `plugins/cache/<marketplace>/<plugin>/<version>` in my Codex home gives me one gap naming `plugins/cache`; the run exits `2`. `test_plugins_cache.py::test_version_folder_gives_the_gap_and_exits_2`
 - A Codex home of mine with no `plugins/cache`, an empty one, or one holding only marketplace or plugin folders with no version folder gives me no such gap. `test_plugins_cache.py::test_cache_without_a_version_folder_gives_no_gap`
-- A `plugins/cache` that can't be listed gives me the same gap, and the run exits `2`. `test_plugins_cache.py::test_unlistable_cache_gives_the_gap_and_exits_2`
+- A cache folder that cannot be listed gives me an inspection-failed gap and next step in both formats. `test_plugins_cache.py::test_unlistable_cache_reports_failure_without_private_details`
+- A failed cache inspection keeps unrelated findings. `test_plugins_cache.py::test_unlistable_cache_reports_failure_without_private_details`
+- A failed cache inspection exits `2`. `test_plugins_cache.py::test_unlistable_cache_reports_failure_without_private_details`
+- A failed cache inspection reveals no private path or raw error. `test_plugins_cache.py::test_unlistable_cache_reports_failure_without_private_details`
 - I run with `--config` or `--rules` and see no `plugins/cache` gap. `test_plugins_cache.py::test_runs_with_file_arguments_give_no_plugins_cache_gap`
 - I open the full scope section of `docs/report.md` and find every scope line of the JSON report, including that local modifications are not checked. `test_report_order.py::test_the_full_scope_holds_every_scope_line`
 
@@ -142,6 +145,8 @@ Issue: https://github.com/chalkbadger/stay-safe/issues/7
 Tests: [tests/works_without_a_config_file/](../tests/works_without_a_config_file/)
 
 - I have no config file, and both formats tell me it is absent and show the cited default environment finding, with approval and sandbox gaps and exit status `2`. `test_report.py::test_both_formats_report_cited_defaults_and_retained_gaps`
+- I have no config file, and the notice in both formats names the command environment and ChatGPT Apps as assessed defaults. `test_report.py::test_both_formats_report_cited_defaults_and_retained_gaps`
+- I have no config file, and both formats say the ChatGPT Apps connection depends on sign-in, which was not checked. `test_report.py::test_both_formats_report_cited_defaults_and_retained_gaps`
 - With `~/.codex` missing and `CODEX_HOME` unset, I still get the default assessment. `test_report.py::test_missing_home_dot_codex_with_unset_codex_home_uses_defaults`
 - With `CODEX_HOME` empty or unset, stay-safe reads my `~/.codex`, not my working folder. `test_home.py::test_empty_or_unset_codex_home_reads_home_dot_codex_not_the_working_directory`
 - When I set `CODEX_HOME`, it is read even when the home folder lookup fails. `test_home.py::test_set_codex_home_is_read_when_the_home_lookup_fails`
@@ -213,3 +218,12 @@ Tests: [tests/explains_incomplete_inspection/](../tests/explains_incomplete_insp
 - Neither output stream reveals the private input name or value. `test_status.py::test_reports_with_gaps_explain_exit_two_on_stderr_only`
 - I get no incomplete-inspection explanation for a complete report or an invalid invocation that produces no report. `test_status.py::test_complete_reports_and_invalid_arguments_do_not_get_the_explanation`
 - The report is flushed to stdout before the explanation is written to stderr. `test_status.py::test_report_is_flushed_before_the_explanation_is_written`
+
+## [explains_save_path] I pass a path to `--save`, and the error tells me how to save the report.
+Issue: https://github.com/chalkbadger/stay-safe/issues/19
+Tests: [tests/explains_save_path/](../tests/explains_save_path/)
+
+- I supply a destination after `--save`, and the command exits 2 with the fixed explanation and no report. `test_arguments.py::test_save_path_explains_the_supported_form_without_echoing_the_path`
+- My supplied destination appears in neither output stream. `test_arguments.py::test_save_path_explains_the_supported_form_without_echoing_the_path`
+- The mistaken invocation stops before discovery, inspection or saving. `test_arguments.py::test_save_path_stops_before_discovery_inspection_or_save`
+- Other invalid invocations retain the generic error. `test_arguments.py::test_other_invalid_arguments_keep_the_generic_message`

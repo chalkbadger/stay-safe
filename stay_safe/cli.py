@@ -60,15 +60,18 @@ def hooks_json(home):
 
 
 def plugins_cache(home):
-    """Whether plugins/cache holds a <marketplace>/<plugin>/<version> folder, or cannot be listed."""
+    """Return the observed or unreadable cache gap, or no gap when no version folder is found."""
     def folders(path):
         return [path / name for name in os.listdir(path) if (path / name).is_dir()]
     try:
-        return any(folders(plugin) for market in folders(home / "plugins" / "cache") for plugin in folders(market))
+        if any(folders(plugin) for market in folders(home / "plugins" / "cache") for plugin in folders(market)):
+            return "Codex home: plugins/cache holds Codex plugins that were not inspected."
     except FileNotFoundError:
-        return False
+        pass
     except OSError:
-        return True
+        return ("Codex home: Could not check the plugin cache. "
+                "Check that you can open plugins/cache in your Codex folder.")
+    return None
 
 
 def system_config():
@@ -94,7 +97,11 @@ def main(argv=None):
     parser.add_argument("--save", action="store_true",
                         help=f"Also save the report as a formatted page, {NAME}, in this checkout, and end with a command "
                              "that opens it. Not with --format json.")
-    args = parser.parse_args(argv)
+    args, extra = parser.parse_known_args(argv)
+    if args.save and len(extra) == 1 and not extra[0].startswith("-"):
+        parser.exit(2, f"--save takes no path. It saves {NAME} in the stay-safe folder.\n")
+    if extra:
+        parser.error("Unexpected arguments.")
     if args.rules and len(args.rules) != 1:
         parser.error("Only one rules file may be selected.")
     if args.save and args.format == "json":
@@ -116,8 +123,9 @@ def main(argv=None):
             files = {"config-1": f"{base}/config.toml", "rules-1": f"{base}/rules/default.rules"}
             if hooks_json(home):
                 gaps.append("Codex home: hooks.json exists and was not inspected.")
-            if plugins_cache(home):
-                gaps.append("Codex home: plugins/cache holds Codex plugins that were not inspected.")
+            cache_gap = plugins_cache(home)
+            if cache_gap:
+                gaps.append(cache_gap)
             if system_config():
                 gaps.append("System config folder: /etc/codex holds Codex configuration that was not inspected.")
     result = inspect(paths, rules_path=rules, discovered=defaults, gaps=gaps)

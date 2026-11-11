@@ -360,7 +360,7 @@ def read_file(path: Path, source: str, *, discovered=False):
             if not discovered:
                 raise
             reader.add(["config"], "configuration file", [
-                "No default Codex configuration file was found; documented shell-environment defaults assessed.",
+                "No default Codex configuration file was found. Assessed defaults: command environment and ChatGPT Apps.",
             ])
             return reader.read({})
         with os.fdopen(fd, "rb") as stream:

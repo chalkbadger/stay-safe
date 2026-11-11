@@ -1,6 +1,6 @@
 """Default values are independently expected from the pinned Codex conversion:
 https://github.com/openai/codex/blob/086ccc833bc9cf01024ad2dd6af7dbd421b6bf9a/codex-rs/config/src/shell_environment_policy.rs#L133-L169
-Selection and absence behavior are specified in stay-safe issue #7.
+Selection and absence behavior are specified in stay-safe issue #7; notice wording in issue #42.
 """
 
 import io
@@ -18,7 +18,7 @@ from tests.support import CHATGPT_APPS, ConfigCase, ROOT, items, section, gap_it
 from tests.see_every_connection_and_setting.test_plain_gaps import gap_text
 
 
-NOTICE = 'No default Codex configuration file was found; documented shell-environment defaults assessed.'
+NOTICE = 'No default Codex configuration file was found. Assessed defaults: command environment and ChatGPT Apps.'
 DEFAULTS = ['inherit: all (default)', 'ignore_default_excludes: true (default)']
 GAPS = [
     'config-1: approval_policy is absent; the reader does not infer its effective value.',
@@ -87,6 +87,7 @@ class DefaultConfigTests(ConfigCase):
                     self.assertCountEqual(gap_items(run.stdout), [gap_text(gap, absent=True, file='$CODEX_HOME/config.toml') for gap in GAPS])
                     self.assertIn('\n- Config file: none found, so stay-safe assessed Codex\'s documented defaults (the '
                                   'environment of commands and the ChatGPT Apps connection)\n', section(run.stdout, 'Your setup') + '\n')
+                    self.assertIn("only when Codex is signed in with ChatGPT (stay-safe doesn't check sign-in)", run.stdout)
                     self.assertIn('\n- Whether connections work, or what Codex actually allows when it runs: ', run.stdout)
                     for path in ('harnesses/codex.md', 'stay_safe/rules.py', 'incidents.md#i23-'):
                         self.assertIn(prefix + path, run.stdout)
