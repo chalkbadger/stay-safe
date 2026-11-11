@@ -1,9 +1,11 @@
 # stay-safe
 
-stay-safe gives people a shareable diagnostic of supported Codex settings and saved
-approval records from inspected files, with documented defaults, related risks and
-detected inspection gaps. Findings cite reported incidents; the
-[full scope](report.md#full-scope) states the inspection boundary.
+stay-safe helps people check their Codex files for risky settings. Its report
+explains each warning and suggests what to do.
+
+It reads settings and saved approvals from files. Only some settings are covered.
+It does not test live connections or what Codex will actually allow. The
+[full scope](report.md#full-scope) explains the limits.
 
 ## How review works
 
@@ -31,10 +33,9 @@ and a challenge outlives the maintainer's verdict.
 
 ## What the report shows
 
-- **Configured observations.** Within the [full scope](report.md#full-scope), the
-  report names supported connections and permissions from inspected files, includes
-  documented defaults, and lists detected inspection gaps.
-- **How settings are interpreted.** The [meanings table](../harnesses/codex.md)
-  identifies supported settings and cites Codex's sources for their interpretation.
-- **No silent all-clear.** A report without a finding does not establish that the
-  setup is safe; the [full scope](report.md#full-scope) explains what remains uninspected.
+- **What it found.** The report shows what stay-safe found in the files it read.
+  It names the defaults it used.
+- **What the settings mean.** The [meanings table](../harnesses/codex.md) lists
+  the settings stay-safe checks and the Codex sources it uses.
+- **What remains unknown.** The report says when it could not complete a check.
+  A report with no warnings does not mean the setup is safe.

@@ -7,7 +7,7 @@ Tests: [tests/runs_without_a_coding_agent/](../tests/runs_without_a_coding_agent
 - I open the README and find its first three fenced commands are a clone of a `vX.Y.Z` tag, `cd stay-safe` and `python3 -m stay_safe`. `test_readme.py::test_first_commands_clone_a_release_tag_and_run_the_diagnostic_without_an_agent`
 - I run stay-safe on the test configuration the README's sample finding links, and it prints that finding as the README shows it, apart from the commit in its links. `test_readme.py::test_sample_finding_is_what_stay_safe_prints_for_its_test_configuration`
 
-## [see_every_connection_and_setting] I run stay-safe and see supported configured connections and settings from inspected files, documented defaults and detected inspection gaps.
+## [see_every_connection_and_setting] I can see what stay-safe found in my Codex files. The report tells me when it used a default or could not complete a check.
 Issue: https://github.com/chalkbadger/stay-safe/issues/13
 Tests: [tests/see_every_connection_and_setting/](../tests/see_every_connection_and_setting/)
 
@@ -55,7 +55,7 @@ Tests: [tests/see_every_connection_and_setting/](../tests/see_every_connection_a
 - I run with `--config` or `--rules` and see no `plugins/cache` gap. `test_plugins_cache.py::test_runs_with_file_arguments_give_no_plugins_cache_gap`
 - I open the full scope section of `docs/report.md` and find every scope line of the JSON report, including that local modifications are not checked. `test_report_order.py::test_the_full_scope_holds_every_scope_line`
 
-## [each_risk_shows_its_cause] For each risk, I see its supporting configuration observation and the incident reports cited by its rule.
+## [each_risk_shows_its_cause] Each warning shows me the setting behind it and links to incident reports.
 Issue: https://github.com/chalkbadger/stay-safe/issues/13
 Tests: [tests/each_risk_shows_its_cause/](../tests/each_risk_shows_its_cause/)
 

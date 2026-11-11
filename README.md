@@ -1,6 +1,10 @@
 # Stay safe
 
-Get a deterministic, shareable report of supported Codex settings and saved approval records from inspected files, with documented defaults, related risks and detected inspection gaps. See the [full inspection scope](docs/report.md#full-scope). Here is a finding from a run on a [test configuration](tests/runs_without_a_coding_agent/sample.toml):
+Check your Codex files for risky settings. See what each warning means and what you can do about it.
+
+stay-safe reads settings and saved approvals from files. Only some settings are covered. The report names the defaults it uses and the checks it could not complete. It does not test live connections or what Codex will actually allow. See the [full scope](docs/report.md#full-scope).
+
+Here is a finding from a run on a [test configuration](tests/runs_without_a_coding_agent/sample.toml):
 
 > **Your config turns off Codex's sandbox.** Commands Codex runs aren't limited to your project, so a mistaken command could damage files elsewhere on your computer.
 >
@@ -39,11 +43,11 @@ again". If Codex can't download, see [Usage](docs/usage.md#if-codex-cant-downloa
 
 ## What it checks and what it can't see
 
-- It inspects supported settings and saved approval records from the files described in [Usage](docs/usage.md), and changes nothing in your setup.
-- Each finding names its rule, your setting and the [reported incidents](incidents.md) behind it; [reading the report](docs/report.md) explains each part.
-- Supported settings are read as the [Codex meanings table](harnesses/codex.md) says, citing Codex's sources; detected inspection gaps are listed.
-- The report's [full scope](docs/report.md#full-scope) explains which configuration layers and runtime behavior it does not inspect.
-- Names such as server, app and tool names are shown as written, so check them before sharing.
+- It reads the files listed in [Usage](docs/usage.md) and changes nothing in your setup.
+- Each warning names its rule and the setting behind it, and links to [incident reports](incidents.md). [Reading the report](docs/report.md) explains each part.
+- The [Codex meanings table](harnesses/codex.md) lists the settings it checks and the sources it uses. The report says when it used a default or could not complete a check.
+- The [full scope](docs/report.md#full-scope) explains what it does not inspect.
+- It shows server, app and tool names as written. Check those names before sharing the report.
 
 ## Challenge a finding
 
