@@ -16,6 +16,16 @@ from tests.support import ConfigCase, ROOT, items, section, gap_items
 WITHHELD = "The value is left out of this report."
 # JSON gap text, without its source label -> expected Markdown lead.
 PLAIN = {
+    'Selected config file is missing. Check the path supplied to --config.':
+        '**Not checked: your config file.** The selected file is missing.',
+    'Selected config file is a symlink and was not followed. Select its target file explicitly with --config.':
+        "**Not checked: your config file.** The selected file is a symlink, so stay-safe didn't follow it.",
+    'Selected config file could not be read. Check its permissions and that it is a readable regular file.':
+        "**Not checked: your config file.** stay-safe couldn't read the selected file. Error details are left out of this report.",
+    'Selected config file is not valid UTF-8. Save a copy as UTF-8 and select it with --config.':
+        "**Not checked: your config file.** The selected file isn't valid UTF-8. Its contents are left out of this report.",
+    'Selected config file is not valid TOML. Fix the TOML syntax locally, then run stay-safe again.':
+        "**Not checked: your config file.** The selected file isn't valid TOML. Parser details are left out of this report.",
     # Reading a configuration file
     "Input is not a regular file.":
         "**Not checked: your config file.** It isn't a regular file, so stay-safe didn't read it.",
@@ -190,6 +200,16 @@ ABSENT = {
 }
 # JSON gap text -> the follow-up the reader can act on (reading check, 2026-11-09), from the meanings table and docs/usage.md.
 STEPS = {
+    'Selected config file is missing. Check the path supplied to --config.':
+        'Check the path supplied to --config.',
+    'Selected config file is a symlink and was not followed. Select its target file explicitly with --config.':
+        'Select its target file explicitly with --config.',
+    'Selected config file could not be read. Check its permissions and that it is a readable regular file.':
+        'Check its permissions and that it is a readable regular file.',
+    'Selected config file is not valid UTF-8. Save a copy as UTF-8 and select it with --config.':
+        'Save a copy as UTF-8 and select it with --config.',
+    'Selected config file is not valid TOML. Fix the TOML syntax locally, then run stay-safe again.':
+        'Fix the TOML syntax locally, then run stay-safe again.',
     "Input is not a regular file.": "Make sure the path is a regular file, then run stay-safe again.",
     "Input exceeds the 1 MiB size limit.": "Check that you selected the right file and that it's under 1 MiB.",
     "Input is missing, unreadable, a symlink, or invalid UTF-8 TOML; raw errors were withheld.":

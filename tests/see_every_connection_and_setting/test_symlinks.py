@@ -43,7 +43,7 @@ class SymlinkPolicyTests(ConfigCase):
         config.symlink_to(self.targets / 'config.toml')
         rules = self.root / 'link.rules'
         rules.symlink_to(self.targets / 'default.rules')
-        for option, path, gap in [('--config', config, CONFIG_GAP), ('--rules', rules, RULES_GAP)]:
+        for option, path, gap in [('--config', config, 'config-1: Selected config file is a symlink and was not followed. Select its target file explicitly with --config.'), ('--rules', rules, RULES_GAP)]:
             with self.subTest(option=option):
                 self.assertEqual(self.report(option, str(path)), (2, [gap], []))
 

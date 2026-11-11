@@ -1,5 +1,6 @@
 """Read selected Codex TOML files without executing their configuration."""
 
+import errno
 import json
 import os
 from pathlib import Path
@@ -372,7 +373,18 @@ def read_file(path: Path, source: str, *, discovered=False):
             reader.gap("Input exceeds the 1 MiB size limit.")
             return [], sorted(reader.gaps)
         data = tomllib.loads(content.decode("utf-8"))
-    except (OSError, RecursionError, ValueError):
-        reader.gap("Input is missing, unreadable, a symlink, or invalid UTF-8 TOML; raw errors were withheld.")
+    except (OSError, RecursionError, ValueError) as error:
+        if not discovered and isinstance(error, FileNotFoundError):
+            reader.gap('Selected config file is missing. Check the path supplied to --config.')
+        elif not discovered and isinstance(error, OSError) and error.errno == errno.ELOOP:
+            reader.gap('Selected config file is a symlink and was not followed. Select its target file explicitly with --config.')
+        elif not discovered and isinstance(error, OSError):
+            reader.gap('Selected config file could not be read. Check its permissions and that it is a readable regular file.')
+        elif not discovered and isinstance(error, UnicodeDecodeError):
+            reader.gap('Selected config file is not valid UTF-8. Save a copy as UTF-8 and select it with --config.')
+        elif not discovered and isinstance(error, tomllib.TOMLDecodeError):
+            reader.gap('Selected config file is not valid TOML. Fix the TOML syntax locally, then run stay-safe again.')
+        else:
+            reader.gap("Input is missing, unreadable, a symlink, or invalid UTF-8 TOML; raw errors were withheld.")
         return [], sorted(reader.gaps)
     return reader.read(data)

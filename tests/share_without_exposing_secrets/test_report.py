@@ -132,9 +132,8 @@ class ShareableTests(ReportRuns, ConfigCase):
         missing = self.root / "alice@example.com-secret.toml"
         run = self.run_cli("--config", str(FIXTURE), "--config", str(missing))
         self.assertEqual(run.returncode, 2)
-        self.assertEqual(run.stderr, INCOMPLETE if run.returncode == 2 else "")
-        self.assertIn(gap_text("config-2: Input is missing, unreadable, a symlink, or invalid UTF-8 TOML; "
-                               "raw errors were withheld."), gap_items(run.stdout))
+        self.assertEqual(run.stderr, INCOMPLETE)
+        self.assertIn(gap_text('config-2: Selected config file is missing. Check the path supplied to --config.'), gap_items(run.stdout))
         self.assertIn("config-1:mcp_servers.git", run.stdout)
         self.assertNotIn(str(missing), run.stdout)
 
