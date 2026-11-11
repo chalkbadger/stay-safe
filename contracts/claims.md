@@ -7,8 +7,8 @@ Tests: [tests/runs_without_a_coding_agent/](../tests/runs_without_a_coding_agent
 - I open the README and find its first three fenced commands are a clone of a `vX.Y.Z` tag, `cd stay-safe` and `python3 -m stay_safe`. `test_readme.py::test_first_commands_clone_a_release_tag_and_run_the_diagnostic_without_an_agent`
 - I run stay-safe on the test configuration the README's sample finding links, and it prints that finding as the README shows it, apart from the commit in its links. `test_readme.py::test_sample_finding_is_what_stay_safe_prints_for_its_test_configuration`
 
-## [see_every_connection_and_setting] I run stay-safe and see every connection Codex can use and every setting that changes a finding. Anything it couldn't check is listed, so I know what it didn't look at.
-Issue: https://github.com/chalkbadger/stay-safe/issues/1
+## [see_every_connection_and_setting] I run stay-safe and see supported configured connections and settings from inspected files, documented defaults and detected inspection gaps.
+Issue: https://github.com/chalkbadger/stay-safe/issues/13
 Tests: [tests/see_every_connection_and_setting/](../tests/see_every_connection_and_setting/)
 
 - I run stay-safe on a known config file and see exactly the expected named entries and risks; settings I turned off are not treated as on. `test_config.py::test_known_configuration_has_exact_named_catalog_and_risks`

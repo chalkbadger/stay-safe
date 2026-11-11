@@ -1,6 +1,6 @@
 # Stay safe
 
-Get a deterministic, shareable report that names every Codex connection, each permission that can change a finding, and the reported incidents behind matching risk rules. Here is a finding from a run on a [test configuration](tests/runs_without_a_coding_agent/sample.toml):
+Get a deterministic, shareable report of supported Codex settings and saved approval records from inspected files, with documented defaults, related risks and detected inspection gaps. See the [full inspection scope](docs/report.md#full-scope). Here is a finding from a run on a [test configuration](tests/runs_without_a_coding_agent/sample.toml):
 
 > **Your config turns off Codex's sandbox.** Commands Codex runs aren't limited to your project, so a mistaken command could damage files elsewhere on your computer.
 >
@@ -20,7 +20,7 @@ cd stay-safe
 python3 -m stay_safe
 ```
 
-By default it reads `~/.codex/config.toml` (`$CODEX_HOME/config.toml` when `CODEX_HOME` is set), the same configuration Codex uses in the ChatGPT app and the CLI. [Usage](docs/usage.md) covers the options, `--save` and exit status.
+By default it reads `~/.codex/config.toml` (`$CODEX_HOME/config.toml` when `CODEX_HOME` is set). [Usage](docs/usage.md) covers the inspected files, options, `--save` and exit status.
 
 ## Ask Codex
 
@@ -39,11 +39,11 @@ again". If Codex can't download, see [Usage](docs/usage.md#if-codex-cant-downloa
 
 ## What it checks and what it can't see
 
-- It reads your Codex configuration and saved approvals, and changes nothing in your setup.
+- It inspects supported settings and saved approval records from the files described in [Usage](docs/usage.md), and changes nothing in your setup.
 - Each finding names its rule, your setting and the [reported incidents](incidents.md) behind it; [reading the report](docs/report.md) explains each part.
-- Settings are read as the [Codex meanings table](harnesses/codex.md) says, citing Codex's sources; anything it can't read or check is listed.
-- It can't see settings chosen in the app or with command-line flags, or whether connections work.
-- Names such as server, app and tool names are shown as written, so check them before sharing. The [full scope](docs/report.md#full-scope) lists every limit.
+- Supported settings are read as the [Codex meanings table](harnesses/codex.md) says, citing Codex's sources; detected inspection gaps are listed.
+- The report's [full scope](docs/report.md#full-scope) explains which configuration layers and runtime behavior it does not inspect.
+- Names such as server, app and tool names are shown as written, so check them before sharing.
 
 ## Challenge a finding
 
