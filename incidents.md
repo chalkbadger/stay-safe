@@ -4,9 +4,9 @@ Real-world reports of coding agents doing destructive or risky things. Risk rule
 
 ## I1. Home directory deleted by `rm -rf`
 - Harness: Claude Code
-- What happened: asked to clean up packages, the agent ran `rm -rf tests/patches/plan/ ~/`. The trailing `~/` deleted the home directory, including the Keychain.
+- What happened: The user asked Claude Code to clean up packages. Their post quotes the agent's explanation: `rm -rf tests/ patches/ plan/ ~/` deleted the home directory, including the Keychain.
 - Enabling condition: shell commands ran without careful review, possibly with permissions skipped.
-- Source: [Gigazine](https://gigazine.net/gsc_news/en/20251216-claude-code-cli-mac-deleted)
+- Sources: [Original report](https://www.reddit.com/r/ClaudeAI/comments/1pgxckk/claude_cli_deleted_my_entire_home_directory_wiped/), [Gigazine](https://gigazine.net/gsc_news/en/20251216-claude-code-cli-mac-deleted)
 
 ## I2. Home directory added to a delete command
 - Harness: Cursor (Gemini 2.5 Pro)
@@ -135,10 +135,10 @@ Real-world reports of coding agents doing destructive or risky things. Risk rule
 - Source: [Cursor forum](https://forum.cursor.com/t/agent-decides-again-to-wipe-entire-db/123619)
 
 ## I23. Production tables dropped by a dev-only migration command
-- Harness: unspecified agent with Prisma
-- What happened: the agent ran `prisma migrate diff` with the production URL as the disposable shadow database; all 22 tables were dropped.
+- Harness: Claude Code (reported model: Opus 5)
+- What happened: The agent ran `prisma migrate diff`. It used the production Supabase URL for the shadow database, which Prisma treats as disposable. The report says all 22 tables were dropped.
 - Enabling condition: a production database URL the agent can read.
-- Sources: [AI Incident Database](https://incidentdatabase.ai/es/entities/prisma/), [Prisma](https://www.prisma.io/blog/stop-your-ai-agent-dropping-your-database)
+- Sources: [Original report](https://www.reddit.com/r/Anthropic/comments/1v9iurd/and_just_like_that_opus_5_ultracode_wipes_the/), [AI Incident Database record](https://incidentdatabase.ai/cite/1676/), [AI Incident Database index](https://incidentdatabase.ai/es/entities/prisma/), [Prisma guidance](https://www.prisma.io/blog/stop-your-ai-agent-dropping-your-database)
 
 ## I24. "Diagnose" became a driver update
 - Harness: Claude Code
