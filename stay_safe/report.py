@@ -511,6 +511,8 @@ GAPS = {
     "Codex home: CODEX_HOME is unset and the home directory cannot be determined; no default files were inspected.":
         "**Not checked: your Codex folder.** `CODEX_HOME` isn't set and stay-safe couldn't find your home "
         "folder, so it read no files.",
+    "Codex home: Could not check the plugin cache. Check that you can open plugins/cache in your Codex folder.":
+        "**Not checked: your Codex plugins.** Could not check the plugin cache.",
     "Codex home: plugins/cache holds Codex plugins that were not inspected.":
         "**Not checked: your Codex plugins.** Your Codex folder has plugins in `plugins/cache`, which stay-safe "
         "doesn't read.",
@@ -622,6 +624,8 @@ STEPS = {
     "Codex home: hooks.json exists and was not inspected.": "Review the hooks in `hooks.json` yourself.",
     "System config folder: /etc/codex holds Codex configuration that was not inspected.":
         "Review the files in `/etc/codex` yourself.",
+    "Codex home: Could not check the plugin cache. Check that you can open plugins/cache in your Codex folder.":
+        "Check that you can open `plugins/cache` in your Codex folder.",
     "Codex home: plugins/cache holds Codex plugins that were not inspected.":
         "Review the plugins in `plugins/cache` yourself.",
     "features.apps has an invalid boolean; its behavior is unknown.": "Set `features.apps` to `true` or `false`.",
