@@ -23,6 +23,11 @@ Tests: [tests/runs_without_a_coding_agent/](../tests/runs_without_a_coding_agent
 Issue: https://github.com/chalkbadger/stay-safe/issues/13
 Tests: [tests/see_every_connection_and_setting/](../tests/see_every_connection_and_setting/)
 
+- My `plugins`, `marketplaces` and `desktop` sections are named as unchecked; arbitrary top-level names stay withheld and ignored preferences stay ignored. `test_unchecked_sections.py::test_only_recognized_unchecked_sections_are_named_and_preferences_stay_ignored`
+- My `projects` declarations give a literal trusted count, including zero; malformed or unsupported data gives a separate incomplete-assessment gap and preserves recognized counts in mixed tables. `test_unchecked_sections.py::test_project_counts_distinguish_zero_invalid_and_partial_declarations`
+- In both report formats I see each selected file's named gaps and trusted count, with project settings unassessed; private paths, nested names and values stay withheld, existing findings remain and the command exits `2`. `test_unchecked_sections.py::test_both_formats_keep_file_counts_findings_and_private_identifiers_withheld`
+- A project path in my config is never accessed while its trusted declaration is counted; a monitored directory access proves the test's detector works. `test_unchecked_sections.py::test_referenced_project_directories_are_not_accessed`
+
 - I run stay-safe on a known config file and see exactly the expected named entries and risks; settings I turned off are not treated as on. `test_config.py::test_known_configuration_has_exact_named_catalog_and_risks`
 - I read the Markdown report: it starts with a line counting its findings and the things it didn't check, then lists the findings, those gaps, my setup, the sources, then what the report can't see, each limit with why and what to do, with a link to the full scope, and ends with a footer naming the commit and report format. `test_report_order.py::test_summary_then_findings_and_gaps_then_setup_sources_limits_and_a_footer_last`
 - I read Your setup in Markdown and see every entry once, under its file and a line on how Codex uses that file, each observation in plain words, with one note on why left-out values aren't shown and where to find them. `test_your_setup.py::test_a_real_run_lists_every_entry_once_under_its_file`
