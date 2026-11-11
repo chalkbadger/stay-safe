@@ -78,14 +78,15 @@ SHOW = "; show only what you change."
 TOP = "near the top of the file, before any `[section]`"
 # One shared note before the findings (re-review F15 step 1): placeholders, Codex reads the file, what overrides a
 # file (`codex --help` 0.167.0: `-a, --ask-for-approval`, `-s, --sandbox`, `-p, --profile`, `-c, --config`), and
-# no prompt can accompany either approval or denial (issue #30; openai/codex
+# Codex can allow or block a call without showing a prompt. (Issue #30; openai/codex
 # 086ccc833bc9cf01024ad2dd6af7dbd421b6bf9a, codex-rs/codex-mcp/src/mcp/mod.rs L91-L110
-# and codex-rs/core/src/mcp_tool_call.rs L1691-L1698); this file inspection observes neither live outcome.
+# and codex-rs/core/src/mcp_tool_call.rs L1691-L1698.)
+# stay-safe does not run Codex to test these decisions.
 PLACEHOLDERS = ("`<config-1>` and similar labels stand for a file you passed with `--config` or `--rules`; put its "
                 "path in before you paste. ")
 NOTE = ("*Before you change anything:* {placeholders}Codex reads the whole file to edit it. The app, profiles and flags "
-        "such as `--ask-for-approval`, `--sandbox`, `--profile` and `-c` can override any file. A tool call can be "
-        "allowed or denied without an approval prompt. This report does not verify runtime approval behavior.")
+        "such as `--ask-for-approval`, `--sandbox`, `--profile` and `-c` can override any file. Codex can allow or "
+        "block a tool call without asking you. This report does not test which calls Codex allows.")
 
 
 def block(what, where, ask, check=None):
