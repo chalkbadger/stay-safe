@@ -93,8 +93,12 @@ trust_level = "untrusted"
         self.assertEqual([r['rule'] for r in parsed['risks']], ['environment_inheritance', 'environment_inheritance'])
         for s in ('plugins', 'marketplaces', 'desktop'):
             self.assertIn(f'**Not checked: `{s}`.** Its settings were not evaluated.', reports['markdown'])
-        self.assertIn('Projects marked as trusted in your file: 1.', reports['markdown'])
-        self.assertIn('Projects marked as trusted in your file: 0.', reports['markdown'])
+        for count, source in ((1, 'config-1'), (0, 'config-2')):
+            paragraph = (f'**Not checked: project settings.** Projects marked as trusted in your file: {count}. '
+                         'Their settings were not inspected.\n\n'
+                         '*What to do:* Review the `projects` section in your selected file and the settings for projects you trust.\n\n'
+                         f'*File `{source}`*')
+            self.assertIn(paragraph, reports['markdown'])
         self.assertIn('The project declarations could not be fully assessed.', reports['markdown'])
         self.assertIn('*File `config-1`*', reports['markdown'])
         self.assertIn('*File `config-2`*', reports['markdown'])
