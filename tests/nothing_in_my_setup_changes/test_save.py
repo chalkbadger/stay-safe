@@ -15,7 +15,7 @@ import subprocess
 import sys
 from unittest.mock import patch
 
-from stay_safe.__main__ import main
+from stay_safe.cli import main
 from tests.see_every_connection_and_setting.test_report_order import AFTER
 from tests.support import ConfigCase, REPORT, copy_checkout, run_checkout, tree_state
 
@@ -116,7 +116,7 @@ class SaveTests(ConfigCase):
         for platform, opener in (("darwin", "open"), ("linux", "xdg-open"), ("freebsd14", "xdg-open")):
             with self.subTest(platform=platform):
                 output = io.StringIO()
-                with patch("stay_safe.__main__.save", return_value=page), patch.object(sys, "platform", platform), \
+                with patch("stay_safe.cli.save", return_value=page), patch.object(sys, "platform", platform), \
                         redirect_stdout(output):
                     status = main(["--config", config, "--save"])
                 self.assertEqual(status, 0)

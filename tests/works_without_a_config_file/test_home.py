@@ -16,7 +16,7 @@ import sys
 from contextlib import redirect_stdout
 from unittest.mock import patch
 
-from stay_safe.__main__ import main
+from stay_safe.cli import main
 from tests.support import ConfigCase, ROOT
 
 POLICY = 'approval_policy="on-request"\nsandbox_mode="read-only"\n[shell_environment_policy]\ninherit="{}"\n'

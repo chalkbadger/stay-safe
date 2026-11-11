@@ -18,7 +18,7 @@ import json
 import os
 from unittest.mock import patch
 
-from stay_safe.__main__ import main
+from stay_safe.cli import main
 from tests.support import ConfigCase
 
 CONFIG = 'approval_policy="on-request"\nsandbox_mode="read-only"\n'
@@ -45,7 +45,7 @@ class SystemFolderTests(ConfigCase):
     def run_report(self, folder, args=(), env=None):
         out, err = io.StringIO(), io.StringIO()
         env = {'CODEX_HOME': str(self.codex_home)} if env is None else env
-        with patch('stay_safe.__main__.SYSTEM', folder), patch.dict(os.environ, env, clear=True), \
+        with patch('stay_safe.cli.SYSTEM', folder), patch.dict(os.environ, env, clear=True), \
                 redirect_stdout(out), redirect_stderr(err):
             code = main(['--format', 'json', *args])
         self.assertEqual(err.getvalue(), '')
@@ -87,7 +87,7 @@ class SystemFolderTests(ConfigCase):
             if path == folder / 'rules':
                 raise PermissionError(13, 'Permission denied')
             return listdir(path)
-        with patch('stay_safe.__main__.os.listdir', side_effect=denied):
+        with patch('stay_safe.cli.os.listdir', side_effect=denied):
             self.assertEqual(self.run_report(folder), (2, [GAP]))
 
     def test_runs_with_file_arguments_give_no_system_folder_gap(self):

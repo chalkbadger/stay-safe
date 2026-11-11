@@ -3,14 +3,25 @@
 The version check below runs before any module that needs Python 3.11 is imported (issue #48), so this file must
 stay parseable by older Pythons, such as macOS's own Python 3.9.
 """
+import os
+from pathlib import Path
+import stat
 import sys
 
-if sys.version_info < (3, 11):
-    import shutil
 
+def command(path):
+    """Whether `path` is a file anyone may execute, read from its metadata only; stay-safe never starts it."""
+    try:
+        return path.is_file() and bool(path.stat().st_mode & (stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH))
+    except OSError:
+        return False
+
+
+if sys.version_info < (3, 11):
     THIS = "%d.%d.%d" % (sys.version_info[0], sys.version_info[1], sys.version_info[2])
-    # Only checks that the command exists on the PATH; stay-safe doesn't start it.
-    NEWER = [name for name in ("python3.13", "python3.12", "python3.11") if shutil.which(name)]
+    FOLDERS = [folder for folder in os.environ.get("PATH", "").split(os.pathsep) if folder]
+    NEWER = [name for name in ("python3.13", "python3.12", "python3.11")
+             if any(command(Path(folder, name)) for folder in FOLDERS)]
     if NEWER:
         NEXT = "Run: %s -m stay_safe" % NEWER[0]
     else:

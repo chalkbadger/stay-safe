@@ -143,7 +143,7 @@ class ConfigCase(unittest.TestCase):
         self.directory = tempfile.TemporaryDirectory()
         self.addCleanup(self.directory.cleanup)
         self.root = Path(self.directory.name)
-        system = patch('stay_safe.__main__.SYSTEM', self.root / 'no-system-folder')
+        system = patch('stay_safe.cli.SYSTEM', self.root / 'no-system-folder')
         system.start()
         self.addCleanup(system.stop)
 
