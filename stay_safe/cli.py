@@ -94,7 +94,11 @@ def main(argv=None):
     parser.add_argument("--save", action="store_true",
                         help=f"Also save the report as a formatted page, {NAME}, in this checkout, and end with a command "
                              "that opens it. Not with --format json.")
-    args = parser.parse_args(argv)
+    args, extra = parser.parse_known_args(argv)
+    if args.save and len(extra) == 1 and not extra[0].startswith("-"):
+        parser.exit(2, f"--save takes no path. It saves {NAME} in the stay-safe folder.\n")
+    if extra:
+        parser.error("Unexpected arguments.")
     if args.rules and len(args.rules) != 1:
         parser.error("Only one rules file may be selected.")
     if args.save and args.format == "json":
