@@ -21,7 +21,7 @@ import json
 import os
 from unittest.mock import patch
 
-from stay_safe.__main__ import main
+from stay_safe.cli import main
 from tests.support import ConfigCase
 
 CONFIG = 'approval_policy="on-request"\nsandbox_mode="read-only"\n'

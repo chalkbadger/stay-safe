@@ -15,7 +15,7 @@ import subprocess
 import sys
 from unittest.mock import patch
 
-from stay_safe.__main__ import main
+from stay_safe.cli import main
 from stay_safe.codex_rules import PROGRAMS as CODE_PROGRAMS
 from tests.support import ConfigCase, HARD_WORDS, NEAR_PROGRAMS, PROGRAMS, ROOT, full_scope
 

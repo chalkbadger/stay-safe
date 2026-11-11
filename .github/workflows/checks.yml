@@ -21,3 +21,24 @@ jobs:
       - run: python -m unittest discover -s tests -v
       - run: python -m pip install git+https://github.com/chalkbadger/wirth@df613c93fdff0f51c1e36a9549cbc607965fe7f1
       - run: wirth validate
+  old-python:
+    # A Python older than 3.11 prints one line naming the command to run and exits 2 (issue #48).
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.9'
+      - run: python tests/runs_without_a_coding_agent/old_python_check.py
+      # Apple's own python3, 3.9 on current macOS. If Apple ships 3.11 or newer, this step says so and checks nothing.
+      - if: runner.os == 'macOS'
+        run: |
+          if /usr/bin/python3 -c 'import sys; sys.exit(sys.version_info >= (3, 11))'; then
+            /usr/bin/python3 tests/runs_without_a_coding_agent/old_python_check.py
+          else
+            echo "Skipped: /usr/bin/python3 is $(/usr/bin/python3 -V 2>&1), 3.11 or newer, so it can't show the old-Python message."
+          fi

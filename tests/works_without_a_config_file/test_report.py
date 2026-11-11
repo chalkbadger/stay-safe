@@ -12,7 +12,7 @@ import sys
 from contextlib import redirect_stdout
 from unittest.mock import patch
 
-from stay_safe.__main__ import main
+from stay_safe.cli import main
 from tests.support import CHATGPT_APPS, ConfigCase, ROOT, items, section, gap_items
 from tests.see_every_connection_and_setting.test_plain_gaps import gap_text
 

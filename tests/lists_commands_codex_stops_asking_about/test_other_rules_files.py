@@ -16,7 +16,7 @@ import json
 import os
 from unittest.mock import patch
 
-from stay_safe.__main__ import main
+from stay_safe.cli import main
 from tests.support import ConfigCase, section, gap_items
 from tests.see_every_connection_and_setting.test_plain_gaps import gap_text
 

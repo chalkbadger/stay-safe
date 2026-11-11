@@ -9,8 +9,9 @@ import re
 ROOT = Path(__file__).resolve().parents[1]
 REPOSITORY = "https://github.com/chalkbadger/stay-safe"
 SOURCE_FILES = (
-    "stay_safe/__init__.py", "stay_safe/__main__.py", "stay_safe/codex.py", "stay_safe/codex_rules.py",
-    "stay_safe/provenance.py", "stay_safe/report.py", "stay_safe/rules.py", "stay_safe/save.py",
+    "stay_safe/__init__.py", "stay_safe/__main__.py", "stay_safe/cli.py", "stay_safe/codex.py",
+    "stay_safe/codex_rules.py", "stay_safe/provenance.py", "stay_safe/report.py", "stay_safe/rules.py",
+    "stay_safe/save.py",
     "harnesses/codex.md", "incidents.md",
 )
 # Holds the commit in release archives (.gitattributes export-subst). It names the commit rather than running code,

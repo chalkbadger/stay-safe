@@ -207,7 +207,7 @@ class ShareableTests(ReportRuns, ConfigCase):
 import os, sys
 from pathlib import Path
 from unittest.mock import patch
-from stay_safe.__main__ import main
+from stay_safe.cli import main
 path = Path(os.environ['CODEX_HOME']) / 'config.toml'
 original_open = os.open
 def denied(file, *args, **kwargs):

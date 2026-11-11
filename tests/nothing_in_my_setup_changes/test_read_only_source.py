@@ -14,18 +14,26 @@ from tests.support import ROOT
 
 MODULES = {"argparse", "dataclasses", "hashlib", "html", "ipaddress", "json", "os", "pathlib", "re",
            "stat", "sys", "tomllib", "urllib.parse"}
-OS_NAMES = {"open", "fdopen", "fstat", "environ", "listdir", "O_RDONLY", "O_NONBLOCK", "O_NOFOLLOW"}
+OS_NAMES = {"open", "fdopen", "fstat", "environ", "listdir", "pathsep", "O_RDONLY", "O_NONBLOCK", "O_NOFOLLOW"}
 OS_READ_FLAGS = {"O_RDONLY", "O_NONBLOCK", "O_NOFOLLOW"}
 BANNED_NAMES = {"exec", "eval", "compile", "__import__", "open", "getattr", "importlib",
                 "__builtins__", "globals", "vars"}
 PATHLIB_ARGPARSE = set(dir(pathlib.Path)) | set(dir(argparse)) | set(dir(argparse.ArgumentParser))
 # The pathlib and argparse names the package uses; any other name of theirs is reported.
-USED_NAMES = {"Path", "home", "resolve", "parents", "is_dir", "is_file", "read_text", "read_bytes", "as_uri",
+USED_NAMES = {"Path", "home", "resolve", "parents", "is_dir", "is_file", "stat", "read_text", "read_bytes", "as_uri",
               "ArgumentParser", "add_argument", "parse_args", "error", "exit"}
 # The save step may also create a temporary file beside the report, write it, move it into place or remove it.
 WRITER = "stay_safe/save.py"
 WRITER_MODULES = {"tempfile"}
 WRITER_OS_NAMES = {"replace", "unlink"}
+# `python3 stay_safe` runs __main__.py outside its package, so it imports the package's own modules by name (issue #48).
+PACKAGE = "stay_safe"
+
+
+def own_module(name):
+    """The package itself or one of its modules, such as stay_safe.cli."""
+    parts = name.split(".")
+    return parts[0] == PACKAGE and len(parts) <= 2
 
 
 def is_os(node):
@@ -62,7 +70,7 @@ def violations(source, filename):
         if isinstance(node, ast.Import):
             for alias in node.names:
                 exempt.add(id(alias))  # a module name, checked against MODULES
-                if alias.name not in modules:
+                if alias.name not in modules and not own_module(alias.name):
                     report(node, f"import {alias.name} is outside the allowed modules")
                 elif alias.name == "os" and alias.asname not in (None, "os"):
                     report(node, "os may not be renamed")
@@ -139,6 +147,23 @@ class ReadOnlySourceTests(unittest.TestCase):
             with self.subTest(source=source):
                 self.assertEqual(violations("\n" + source + "\n", "stay_safe/planted.py"),
                                  [f"stay_safe/planted.py:2: {m}" for m in messages])
+
+    def test_the_entry_files_may_import_their_own_package_and_nothing_else_new(self):
+        for filename in ("stay_safe/__init__.py", "stay_safe/__main__.py"):
+            for source in ("import stay_safe", "import stay_safe.cli", "import stay_safe.cli as cli",
+                           "from . import cli", "os.environ.get('PATH', '').split(os.pathsep)"):
+                with self.subTest(filename=filename, source=source):
+                    self.assertEqual(violations("\n" + source + "\n", filename), [])
+            cases = {
+                "import shutil": ["import shutil is outside the allowed modules"],
+                "import runpy": ["import runpy is outside the allowed modules"],
+                "import stay_safe_tools": ["import stay_safe_tools is outside the allowed modules"],
+                "import subprocess": ["import subprocess is outside the allowed modules"],
+            }
+            for source, messages in cases.items():
+                with self.subTest(filename=filename, source=source):
+                    self.assertEqual(violations("\n" + source + "\n", filename),
+                                     [f"{filename}:2: {m}" for m in messages])
 
     def test_the_save_step_may_write_but_still_cannot_run_programs_connect_or_evaluate_input(self):
         allowed = ["import tempfile", "tempfile.mkstemp(dir=d)", "os.fdopen(fd, 'w', encoding='utf-8')",
