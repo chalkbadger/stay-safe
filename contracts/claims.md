@@ -90,10 +90,10 @@ Tests: [tests/each_risk_shows_its_cause/](../tests/each_risk_shows_its_cause/)
 - I see no `destructive_tools` for a disabled app, whatever its tools set, or, when none of its tools sets `enabled = true`, for an app whose `default_tools_enabled` is `false` or whose `destructive_enabled` is `false` with `default_tools_enabled` unset. `test_destructive_tools.py::test_no_risk_when_no_setting_lets_destructive_tools_run`
 
 ## [findings_say_what_to_do] Each finding tells me in plain words what is wrong and what to do, with a stricter option if I want one.
-Issue: https://github.com/chalkbadger/stay-safe/issues/30
+Issue: https://github.com/chalkbadger/stay-safe/issues/12
 Tests: [tests/findings_say_what_to_do/](../tests/findings_say_what_to_do/)
 
-- I read a finding in Markdown: it starts with a bold headline and plain sentences written for its rule and entry, including any source status, then how it has gone wrong, with its incident labels marked reported, not verified, then what to do, and ends with one line giving its rule ID, entry ID and configured evidence; the rule and meanings source links appear once, in the Sources section. `test_plain_findings.py::test_each_finding_leads_with_its_meaning_then_incidents_next_step_and_trace_and_sources_close_the_report`
+- I read a finding in Markdown: it starts with a bold headline and plain sentences written for its rule and entry, including any source status; tool-approval findings describe the setting without predicting a live decision, and the JSON preapproval explanation names its mode. Then it says how it has gone wrong, with its incident labels marked reported, not verified, then what to do, and ends with one line giving its rule ID, entry ID and configured evidence; the rule and meanings source links appear once, in the Sources section. `test_plain_findings.py::test_each_finding_leads_with_its_meaning_then_incidents_next_step_and_trace_and_sources_close_the_report`
 - I see one note before the findings. It explains that Codex reads the whole file when editing it. App settings, profiles and command-line options can override the file's settings. Codex can allow or block calls without asking me. The report does not test those decisions. The note explains file labels only when a finding uses one. `test_what_to_do.py::test_findings_open_with_one_shared_note`
 - I see the same note when my files set an approval policy, leave it out, or use different policies. `test_what_to_do.py::test_shared_note_keeps_approval_outcomes_unassessed_for_each_policy`
 - In Markdown, each finding's What to do is one line naming its lower-friction option, with its trade-off, where the Codex meanings table backs one, then its stricter option; Change it is one line telling me where the setting goes and giving a sentence that asks Codex to make the edit and show only what it changes. `test_what_to_do.py::test_each_finding_gives_lower_friction_then_stricter_option_then_how_to_change_it`
@@ -102,6 +102,7 @@ Tests: [tests/findings_say_what_to_do/](../tests/findings_say_what_to_do/)
 - The advice I get never suggests a sandbox looser than one a file I inspect sets: for `approval_policy = "never"` it keeps a `read-only` or `workspace-write` sandbox set in the same file, and it suggests `workspace-write` only when no file I inspect sets `read-only`. `test_what_to_do.py::test_advice_never_loosens_a_sandbox_another_inspected_file_sets`
 - When my file selects a permission profile with `default_permissions`, its approval advice gives no `sandbox_mode` advice and tells me the profile decides what commands can write. `test_what_to_do.py::test_a_selected_permission_profile_gets_no_sandbox_mode_advice`
 - Every setting the report's options tell me to change rests on a Codex meanings row whose status is documented or documented in source. `test_what_to_do.py::test_every_setting_an_option_names_rests_on_a_confirmed_meanings_row`
+
 
 ## [warns_when_codex_shares_my_environment] If Codex hands my whole shell environment to the commands it runs, the report tells me, whether I set that or it is Codex's default.
 Issue: https://github.com/chalkbadger/stay-safe/issues/2

@@ -119,7 +119,7 @@ class RiskOutputTests(ConfigCase):
                     explanation = next(r["explanation"] for r in report["risks"] if r["rule"] == "self_described_tools")
                     self.assertIn("Documented in source, not yet observed", explanation)
                     self.assertIn("server-declared hints", explanation)
-                    self.assertIn("labeled read-only can run without asking", explanation)
+                    self.assertIn("auto and writes use server-declared hints for tool approval", explanation)
                     for identifier, url in report["incident_links"].items():
                         self.assertTrue(url.startswith("https://github.com/chalkbadger/stay-safe/blob/" + identify()["source_revision"] + "/incidents.md#" + identifier.lower() + "-"))
                 else:
