@@ -26,6 +26,9 @@ USED_NAMES = {"Path", "home", "resolve", "parents", "is_dir", "is_file", "read_t
 WRITER = "stay_safe/save.py"
 WRITER_MODULES = {"tempfile"}
 WRITER_OS_NAMES = {"replace", "unlink"}
+# The version check may look a command up on the PATH without starting it, and running the folder without -m may run
+# the stay_safe package itself, as `python3 -m stay_safe` does (issue #48). Each may use only the name listed.
+ENTRY_NAMES = {"stay_safe/__init__.py": {"shutil": "which"}, "stay_safe/__main__.py": {"runpy": "run_module"}}
 
 
 def is_os(node):
@@ -48,6 +51,8 @@ def violations(source, filename):
     """Return 'file:line: problem' for each construct outside the allow-lists."""
     writer = filename == WRITER
     modules = MODULES | WRITER_MODULES if writer else MODULES
+    entry = ENTRY_NAMES.get(filename, {})
+    modules = modules | set(entry)
     os_names = OS_NAMES | WRITER_OS_NAMES if writer else OS_NAMES
     tree = ast.parse(source, filename)
     found = []
@@ -64,20 +69,23 @@ def violations(source, filename):
                 exempt.add(id(alias))  # a module name, checked against MODULES
                 if alias.name not in modules:
                     report(node, f"import {alias.name} is outside the allowed modules")
-                elif alias.name == "os" and alias.asname not in (None, "os"):
-                    report(node, "os may not be renamed")
+                elif alias.name in {"os", *entry} and alias.asname not in (None, alias.name):
+                    report(node, f"{alias.name} may not be renamed")
         elif isinstance(node, ast.ImportFrom):
             if node.level == 0 and node.module not in modules:
                 report(node, f"import from {node.module} is outside the allowed modules")
             elif node.level > 1:
                 report(node, "import from outside the package")
-            elif node.module == "os":
-                report(node, "from os import is not allowed; use os.<name>")
+            elif node.module in {"os", *entry}:
+                report(node, f"from {node.module} import is not allowed; use {node.module}.<name>")
         elif isinstance(node, ast.Name) and node.id in BANNED_NAMES:
             report(node, f"{node.id} is not allowed")
         elif isinstance(node, ast.Attribute) and is_os(node.value):
             if node.attr not in os_names:
                 report(node, f"os.{node.attr} is outside the allowed os names")
+        elif (isinstance(node, ast.Attribute) and isinstance(node.value, ast.Name) and node.value.id in entry
+              and node.attr != entry[node.value.id]):
+            report(node, f"{node.value.id}.{node.attr} is outside the allowed {node.value.id} names")
         elif isinstance(node, ast.Attribute) and node.attr in {"__builtins__", "importlib"}:
             report(node, f"{node.attr} is not allowed")
         elif isinstance(node, (ast.Attribute, ast.alias)) and id(node) not in exempt:
@@ -91,6 +99,11 @@ def violations(source, filename):
                 mode = argument(node, 1, "mode")
                 if mode is not None and not (isinstance(mode, ast.Constant) and mode.value in {"r", "rb"}):
                     report(node, "os.fdopen mode must be read-only")
+        if (isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)
+                and isinstance(node.func.value, ast.Name) and node.func.value.id == "runpy" and node.func.attr == "run_module" and "runpy" in entry):
+            name = argument(node, 0, "mod_name")
+            if not (isinstance(name, ast.Constant) and name.value == "stay_safe"):
+                report(node, "runpy.run_module may only run stay_safe")
     return sorted(found, key=lambda line: (int(line.split(":")[1]), line))
 
 
@@ -139,6 +152,29 @@ class ReadOnlySourceTests(unittest.TestCase):
             with self.subTest(source=source):
                 self.assertEqual(violations("\n" + source + "\n", "stay_safe/planted.py"),
                                  [f"stay_safe/planted.py:2: {m}" for m in messages])
+
+    def test_the_entry_files_may_only_look_up_a_command_or_run_their_own_package(self):
+        allowed = {"stay_safe/__init__.py": ["import shutil", "shutil.which('python3.13')"],
+                   "stay_safe/__main__.py": ["import runpy", "runpy.run_module('stay_safe', run_name='__main__')"]}
+        for filename, sources in allowed.items():
+            for source in sources:
+                with self.subTest(filename=filename, source=source):
+                    self.assertEqual(violations("\n" + source + "\n", filename), [])
+        cases = {
+            ("stay_safe/__init__.py", "shutil.rmtree(p)"): ["shutil.rmtree is outside the allowed shutil names"],
+            ("stay_safe/__init__.py", "from shutil import which"):
+                ["from shutil import is not allowed; use shutil.<name>"],
+            ("stay_safe/__init__.py", "import shutil as s"): ["shutil may not be renamed"],
+            ("stay_safe/__init__.py", "import runpy"): ["import runpy is outside the allowed modules"],
+            ("stay_safe/__main__.py", "runpy.run_path(p)"): ["runpy.run_path is outside the allowed runpy names"],
+            ("stay_safe/__main__.py", "runpy.run_module(name)"): ["runpy.run_module may only run stay_safe"],
+            ("stay_safe/__main__.py", "import shutil"): ["import shutil is outside the allowed modules"],
+            ("stay_safe/report.py", "import shutil"): ["import shutil is outside the allowed modules"],
+            ("stay_safe/report.py", "import runpy"): ["import runpy is outside the allowed modules"],
+        }
+        for (filename, source), messages in cases.items():
+            with self.subTest(filename=filename, source=source):
+                self.assertEqual(violations("\n" + source + "\n", filename), [f"{filename}:2: {m}" for m in messages])
 
     def test_the_save_step_may_write_but_still_cannot_run_programs_connect_or_evaluate_input(self):
         allowed = ["import tempfile", "tempfile.mkstemp(dir=d)", "os.fdopen(fd, 'w', encoding='utf-8')",
