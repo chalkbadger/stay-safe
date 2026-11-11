@@ -13,6 +13,7 @@ import subprocess
 import sys
 
 from stay_safe.report import inspect, render
+from tests.support import INCOMPLETE
 from tests.support import FIRST, NOTE_LABEL, SECOND, ConfigCase, ROOT, finding_items, section
 
 # Meanings rows (setting, value) an option rests on. Mode meanings are defined once, on the MCP server rows; the app
@@ -331,7 +332,7 @@ class WhatToDoTests(ConfigCase):
     def run_cli(self, *args, env=None):
         run = subprocess.run([sys.executable, "-B", "-m", "stay_safe", *args], cwd=ROOT, env=env or {},
                              text=True, capture_output=True, timeout=10)
-        self.assertEqual(run.stderr, "")
+        self.assertEqual(run.stderr, INCOMPLETE if run.returncode == 2 else "")
         return run
 
     def findings(self, *args, env=None):

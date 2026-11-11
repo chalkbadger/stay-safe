@@ -259,3 +259,6 @@ class ReportRuns:
             heading, *lines = group.splitlines()
             groups[heading.split("`")[1]] = [line.removeprefix("- ") for line in lines]
         return cant_see, groups
+
+# Issue #18 specifies this stderr text independently of the implementation.
+INCOMPLETE = "Inspection incomplete (exit 2). See the report for what wasn't checked.\n"

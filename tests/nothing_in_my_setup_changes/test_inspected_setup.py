@@ -1,6 +1,7 @@
 import os
 
 from tests.see_every_connection_and_setting.test_config import FIXTURE
+from tests.support import INCOMPLETE
 from tests.support import ConfigCase, copy_checkout, run_checkout
 
 
@@ -39,7 +40,7 @@ class InspectedSetupTests(ConfigCase):
             with self.subTest(input=name):
                 tree, files = self.snapshot(home, work), [self.state(p) for p in inspected]
                 run = run_checkout(checkout, *args, cwd=work, env=env)
-                self.assertEqual((run.returncode, run.stderr), (status, ""))
+                self.assertEqual((run.returncode, run.stderr), (status, INCOMPLETE if status == 2 else ""))
                 self.assertIn(expected, run.stdout)
                 self.assertEqual([self.state(p) for p in inspected], files)
                 self.assertEqual(self.snapshot(home, work), tree)

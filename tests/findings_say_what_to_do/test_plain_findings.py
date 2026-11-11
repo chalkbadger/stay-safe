@@ -10,6 +10,7 @@ import json
 import subprocess
 import sys
 
+from tests.support import INCOMPLETE
 from tests.support import finding_items, FIRST, SECOND, ConfigCase, ROOT, items, section
 
 PROGRAM = "If that program or your config file were tampered with, it could run code you didn't intend."
@@ -106,7 +107,7 @@ class PlainFindingTests(ConfigCase):
     def run_cli(self, *args):
         run = subprocess.run([sys.executable, "-B", "-m", "stay_safe", *args], cwd=ROOT, env={},
                              text=True, capture_output=True, timeout=10)
-        self.assertEqual(run.stderr, "")
+        self.assertEqual(run.stderr, INCOMPLETE if run.returncode == 2 else "")
         return run
 
     def test_each_finding_leads_with_its_meaning_then_incidents_next_step_and_trace_and_sources_close_the_report(self):

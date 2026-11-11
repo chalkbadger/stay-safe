@@ -7,6 +7,7 @@ import sys
 from stay_safe.report import inspect
 from tests.see_every_connection_and_setting.test_config import FIXTURE
 from tests.nothing_in_my_setup_changes.test_page import Page
+from tests.support import INCOMPLETE
 from tests.support import REPORT, SEEDED, SEEDS, ConfigCase, ReportRuns, ROOT, copy_checkout, gap_items, run_checkout, section
 from tests.see_every_connection_and_setting.test_plain_gaps import gap_text
 
@@ -90,7 +91,7 @@ class ShareableTests(ReportRuns, ConfigCase):
                                              if file == "config.toml" else 'prefix_rule(pattern=["git", "status"], decision="allow")\n')
                 run = subprocess.run([sys.executable, "-B", "-m", "stay_safe"], cwd=ROOT, env={"CODEX_HOME": str(home)},
                                      text=True, capture_output=True, timeout=10)
-                self.assertEqual(run.stderr, "")
+                self.assertEqual(run.stderr, INCOMPLETE if run.returncode == 2 else "")
                 self.assertEqual(note in section(run.stdout, "What this report can't see").splitlines(), expected)
 
     def test_found_files_are_named_by_where_codex_keeps_them_without_the_users_folder(self):
@@ -120,7 +121,7 @@ class ShareableTests(ReportRuns, ConfigCase):
                     (folder / "rules" / "default.rules").write_text('prefix_rule(pattern=["git", "status"], decision="allow")\n')
                 run = subprocess.run([sys.executable, "-B", "-m", "stay_safe"], cwd=ROOT, env=env,
                                      text=True, capture_output=True, timeout=10)
-                self.assertEqual((run.returncode, run.stderr), (2, ""))
+                self.assertEqual((run.returncode, run.stderr), (2, INCOMPLETE))
                 setup = section(run.stdout, "Your setup")
                 self.assertIn(f"\n**Config file `{shown}/config.toml`** (`config-1`): {config_use[files]}\n", "\n" + setup + "\n")
                 self.assertIn(f"\n**Rules file `{shown}/rules/default.rules`** (`rules-1`): {rules_use}\n", "\n" + setup + "\n")
@@ -132,7 +133,7 @@ class ShareableTests(ReportRuns, ConfigCase):
         missing = self.root / "alice@example.com-secret.toml"
         run = self.run_cli("--config", str(FIXTURE), "--config", str(missing))
         self.assertEqual(run.returncode, 2)
-        self.assertEqual(run.stderr, "")
+        self.assertEqual(run.stderr, INCOMPLETE if run.returncode == 2 else "")
         self.assertIn(gap_text("config-2: Input is missing, unreadable, a symlink, or invalid UTF-8 TOML; "
                                "raw errors were withheld."), gap_items(run.stdout))
         self.assertIn("config-1:mcp_servers.git", run.stdout)
@@ -189,8 +190,8 @@ class ShareableTests(ReportRuns, ConfigCase):
                 args = ('--format', format_name)
                 one = self.run_cli(*args, env={'HOME': str(home)})
                 two = self.run_cli(*args, env={'HOME': str(home)})
-                self.assertEqual((one.returncode, one.stderr), (2, ''))
-                self.assertEqual((two.returncode, two.stderr, two.stdout), (2, '', one.stdout))
+                self.assertEqual((one.returncode, one.stderr), (2, INCOMPLETE))
+                self.assertEqual((two.returncode, two.stderr, two.stdout), (2, INCOMPLETE, one.stdout))
                 self.assertIn('environment_inheritance', one.stdout)
                 self.assertNotIn(str(self.root), one.stdout)
                 self.assertNotIn('alice@example.com', one.stdout)
@@ -231,7 +232,7 @@ with patch('stay_safe.codex.os.open', side_effect=denied):
                     run = subprocess.run([sys.executable, '-B', *args, format_name], cwd=ROOT,
                                          env={'CODEX_HOME': str(selected_home)}, text=True,
                                          capture_output=True, timeout=10)
-                    self.assertEqual((run.returncode, run.stderr), (2, ''))
+                    self.assertEqual((run.returncode, run.stderr), (2, INCOMPLETE))
                     if format_name == 'json':
                         self.assertCountEqual(json.loads(run.stdout)['inspection_gaps'], gaps)
                     else:

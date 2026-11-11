@@ -16,6 +16,7 @@ import os
 from unittest.mock import patch
 
 from stay_safe.cli import main
+from tests.support import INCOMPLETE
 from tests.support import ConfigCase
 
 CONFIG = 'approval_policy="on-request"\nsandbox_mode="read-only"\n'
@@ -37,7 +38,7 @@ class PluginsCacheTests(ConfigCase):
         with patch.dict(os.environ, {'CODEX_HOME': str(home)}, clear=True), \
                 redirect_stdout(out), redirect_stderr(err):
             code = main(['--format', 'json', *args])
-        self.assertEqual(err.getvalue(), '')
+        self.assertEqual(err.getvalue(), INCOMPLETE if code == 2 else "")
         return code, json.loads(out.getvalue())['inspection_gaps']
 
     def test_version_folder_gives_the_gap_and_exits_2(self):
