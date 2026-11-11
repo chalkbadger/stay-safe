@@ -394,6 +394,14 @@ def note(report, files):
 WITHHELD = "The value is left out of this report."
 # JSON gap text, without its source label -> Markdown lead. {label} stands for the setting a gap names.
 GAPS = {
+    "Unchecked section {label}; its settings were not evaluated.":
+        "**Not checked: `{label}`.** Its settings were not evaluated.",
+    "projects contains {label} recognized trusted declarations; project settings were not inspected.":
+        "**Not checked: project settings.** Projects marked as trusted in your file: {label}. "
+        "Their settings were not inspected.",
+    "projects contains malformed or unsupported data; its declarations could not be fully assessed.":
+        "**Not checked: some project declarations.** The project declarations could not be fully assessed. "
+        "Some data is malformed or unsupported, so a reported count covers only recognized declarations.",
     "Input is not a regular file.":
         "**Not checked: your config file.** It isn't a regular file, so stay-safe didn't read it.",
     "Input exceeds the 1 MiB size limit.":
@@ -550,6 +558,12 @@ ABSENT = {
 }
 # JSON gap text -> what the reader can do about it (reading check). {label} stands for the setting a gap names.
 STEPS = {
+    "Unchecked section {label}; its settings were not evaluated.":
+        "Review the `{label}` section in your selected file yourself.",
+    "projects contains {label} recognized trusted declarations; project settings were not inspected.":
+        "Review the `projects` section in your selected file and the settings for projects you trust.",
+    "projects contains malformed or unsupported data; its declarations could not be fully assessed.":
+        "Check each entry in the `projects` section of your selected file yourself.",
     "Input is not a regular file.": "Make sure the path is a regular file, then run stay-safe again.",
     "Input exceeds the 1 MiB size limit.": "Check that you selected the right file and that it's under 1 MiB.",
     "Input is missing, unreadable, a symlink, or invalid UTF-8 TOML; raw errors were withheld.":

@@ -285,7 +285,29 @@ class Reader:
                 self.gaps = before
             self.add(["apps", name], "app policy", obs + policy, {} if template else facts)
 
+    def projects(self, projects):
+        """Count literal declarations only; never use project keys as filesystem paths."""
+        count = 0
+        incomplete = not isinstance(projects, dict)
+        if isinstance(projects, dict):
+            for project in projects.values():
+                if not isinstance(project, dict):
+                    incomplete = True
+                    continue
+                trust = project.get("trust_level")
+                count += trust == "trusted"
+                if not isinstance(trust, str) or trust not in {"trusted", "untrusted"} or project.keys() - {"trust_level"}:
+                    incomplete = True
+            self.gap(f"projects contains {count} recognized trusted declarations; project settings were not inspected.")
+        if incomplete:
+            self.gap("projects contains malformed or unsupported data; its declarations could not be fully assessed.")
+
     def read(self, data):
+        unchecked = {"plugins", "marketplaces", "desktop"}
+        for section in unchecked & data.keys():
+            self.gap(f"Unchecked section {section}; its settings were not evaluated.")
+        if "projects" in data:
+            self.projects(data["projects"])
         if "profile" in data or "profiles" in data:
             self.gap("Profiles are outside reader coverage; a selected profile can override the reported settings.")
         self.approval(data)
@@ -337,7 +359,7 @@ class Reader:
                 self.add(["web_search"], "connection policy", [value])
             else:
                 self.gap("web_search is unsupported or invalid; its value was withheld.")
-        known = PREFERENCES | {"approval_policy", "sandbox_mode", "sandbox_workspace_write", "mcp_servers", "apps",
+        known = PREFERENCES | unchecked | {"projects", "approval_policy", "sandbox_mode", "sandbox_workspace_write", "mcp_servers", "apps",
                                "model_providers", "notify", "hooks", "web_search", "default_permissions", "permissions",
                                "shell_environment_policy", "profile", "profiles", "features"}
         self.unknown(data, known, "Configuration")
