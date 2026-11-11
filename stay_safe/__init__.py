@@ -10,7 +10,7 @@ import sys
 
 
 def command(path):
-    """Whether `path` is a file anyone may execute, read from its metadata only; stay-safe never starts it."""
+    """Whether `path` is a file with an execute bit set, read from its metadata only; stay-safe never starts it."""
     try:
         return path.is_file() and bool(path.stat().st_mode & (stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH))
     except OSError:

@@ -69,10 +69,13 @@ class PythonEntryTests(unittest.TestCase):
         self.assertIn("/blob/", sample.stdout)
 
     def test_too_old_python_names_the_newest_python_on_the_path_and_exits_2(self):
-        with tempfile.TemporaryDirectory() as first, tempfile.TemporaryDirectory() as second:
-            # python3.13 here can't be run, so it is not a command; python3.12 is the newest one found.
-            path = (commands(first, ["python3", "python3.10", "python3.11"], plain=["python3.13"]) + ":"
-                    + commands(second, ["python3.12", "python3.11"]))
+        with tempfile.TemporaryDirectory() as first, tempfile.TemporaryDirectory() as second, \
+                tempfile.TemporaryDirectory() as third:
+            # python3.13 in `first` can't be run and in `third` is a folder, so neither is a command;
+            # python3.12 is the newest one found.
+            (Path(third) / "python3.13").mkdir()
+            path = (commands(first, ["python3", "python3.10", "python3.11"], plain=["python3.13"]) + ":" + third
+                    + ":" + commands(second, ["python3.12", "python3.11"]))
             for way in ("module", "folder"):
                 with self.subTest(way=way):
                     result = old_python(way, path)
@@ -87,7 +90,8 @@ class PythonEntryTests(unittest.TestCase):
     def test_too_old_python_without_a_newer_one_says_to_install_it_and_exits_2(self):
         install = "Install Python 3.11 or newer, then run: python3.11 -m stay_safe\n"
         with tempfile.TemporaryDirectory() as folder:
-            path = commands(folder, ["python3", "python3.9", "python3.10", "python3.14"])
+            # A PATH entry too long to look up is skipped rather than ending in a traceback.
+            path = commands(folder, ["python3", "python3.9", "python3.10", "python3.14"]) + ":/" + "a" * 5000
             for way in ("module", "folder"):
                 with self.subTest(way=way):
                     result = old_python(way, path)
