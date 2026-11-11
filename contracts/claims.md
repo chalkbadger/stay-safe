@@ -210,3 +210,12 @@ Tests: [tests/explains_incomplete_inspection/](../tests/explains_incomplete_insp
 - Neither output stream reveals the private input name or value. `test_status.py::test_reports_with_gaps_explain_exit_two_on_stderr_only`
 - I get no incomplete-inspection explanation for a complete report or an invalid invocation that produces no report. `test_status.py::test_complete_reports_and_invalid_arguments_do_not_get_the_explanation`
 - The report is flushed to stdout before the explanation is written to stderr. `test_status.py::test_report_is_flushed_before_the_explanation_is_written`
+
+## [explains_save_path] I pass a path to `--save`, and the error tells me how to save the report.
+Issue: https://github.com/chalkbadger/stay-safe/issues/19
+Tests: [tests/explains_save_path/](../tests/explains_save_path/)
+
+- I supply a destination after `--save`, and the command exits 2 with the fixed explanation and no report. `test_arguments.py::test_save_path_explains_the_supported_form_without_echoing_the_path`
+- My supplied destination appears in neither output stream. `test_arguments.py::test_save_path_explains_the_supported_form_without_echoing_the_path`
+- The mistaken invocation stops before discovery, inspection or saving. `test_arguments.py::test_save_path_stops_before_discovery_inspection_or_save`
+- Other invalid invocations retain the generic error. `test_arguments.py::test_other_invalid_arguments_keep_the_generic_message`
