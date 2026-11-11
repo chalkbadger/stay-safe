@@ -230,11 +230,9 @@ STEPS = {
        for message in PLAIN if message.endswith(" contains a name that cannot be included in a shareable report.")
        and not message.startswith("A tool")},
     "A tool approval mode is unsupported or invalid; its value was withheld.":
-        "Set it to `\"auto\"`, `\"prompt\"`, `\"writes\"` or `\"approve\"`; `\"prompt\"` requires approval unless another exemption applies. "
-        "Review and host settings can still change the outcome.",
+        "Set it to `\"auto\"`, `\"prompt\"`, `\"writes\"` or `\"approve\"`; use `\"prompt\"` to request approval.",
     "A per-tool approval mode is unsupported or invalid; its value was withheld.":
-        "Set it to `\"auto\"`, `\"prompt\"`, `\"writes\"` or `\"approve\"`; `\"prompt\"` requires approval unless another exemption applies. "
-        "Review and host settings can still change the outcome.",
+        "Set it to `\"auto\"`, `\"prompt\"`, `\"writes\"` or `\"approve\"`; use `\"prompt\"` to request approval.",
     "A tool allow/deny list contains a name that cannot be included in a shareable report.":
         "Review the full list in your config file yourself.",
     "A tool allow/deny list is invalid; tool availability is unknown.":

@@ -63,7 +63,7 @@ class ShareableTests(ReportRuns, ConfigCase):
                              "before sharing."}
         names = {"json": "config-1:mcp_servers.acme-merger",
                  "markdown": "MCP server `acme-merger`: on, connects over HTTP (address left out), tool approval left "
-                             "at the default, `auto` (approval depends on server hints, other exemptions and review)"}
+                             "at the default, `auto`"}
         path = self.config('approval_policy="on-request"\nsandbox_mode="read-only"\n'
                            '[mcp_servers.acme-merger]\nurl="https://example.com/mcp"\n')
         for format_name in ("markdown", "json"):

@@ -24,7 +24,7 @@ RULES = (
          "The configuration can launch a program; a compromised command or configuration could execute unwanted code.",
          ("I13", "I14", "I19")),
     Rule("automatic_tools",
-         "With strict automatic review off, configured approve mode makes tool calls allowed without asking. This is approval, not successful execution; untrusted tool content could lead to unwanted operations. Strict automatic review is runtime state requiring automated review unless a permission hook decides first. Tool hints, remembered approvals, effective permission profiles and reviewer state are not inspected.",
+         "Tool approval mode is approve; untrusted tool content could lead to unwanted operations.",
          ("I15", "I20")),
     Rule("destructive_tools",
          "Destructive connector operations are enabled; a mistaken operation could change or delete connected data.",
@@ -33,7 +33,7 @@ RULES = (
          "The configuration permits network access; injected instructions could send private data to an outside service.",
          ("I15", "I21")),
     Rule("self_described_tools",
-         "Documented in source, not yet observed: approval depends on server-declared hints. With strict automatic review off, hints can make calls allowed without asking, even under never; other exemptions can also apply. This is approval, not successful execution. Strict automatic review is runtime state requiring automated review unless a permission hook decides first. Tool hints, remembered approvals, effective permission profiles and reviewer state are not inspected.",
+         "Documented in source, not yet observed: auto and writes use server-declared hints for tool approval.",
          ("I15", "I21")),
     Rule("environment_inheritance",
          "The selected configuration starts shell command environments from the parent process environment, "

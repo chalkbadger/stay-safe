@@ -87,9 +87,7 @@ def cell(value):
 # rule's explanation and each gap's text; these lines say the same thing to the person whose setup it is, say how
 # the rule's cited incidents went wrong and what to do, then give the ids.
 PROGRAM = "If that program or your config file were tampered with, it could run code you didn't intend."
-AUTOMATIC = ("With strict automatic review off, `approve` makes calls allowed without asking. "
-             "This is permission to proceed, not successful execution. "
-             "Untrusted tool content could lead to unwanted actions.")
+AUTOMATIC = "Untrusted tool content could lead to unwanted actions."
 DESTRUCTIVE = "A mistaken operation could change or delete data in the connected service."
 SOURCE_ONLY = "Based on Codex's source code, not yet seen in a live run."
 INJECTION = ("Instructions hidden in public GitHub issues and issue comments could take over agents that read them.")
@@ -120,7 +118,7 @@ FINDINGS = {
         "how": "Flaws in other agents let repository settings run commands on collaborators' machines, and a worm "
                "wrote itself into an agent's settings so its code ran at every start."},
     "automatic_tools": {
-        "headline": ("{Subject}'s tools are set to be allowed without asking you.", "{Subject} is set to be allowed without asking you."),
+        "headline": ("{Subject}'s tool approval mode is `approve`.", "{Subject} has approval mode `approve`."),
         "why": AUTOMATIC,
         "how": "Hidden instructions in public GitHub issues could take over agents using a GitHub MCP server, and "
                "injected text got another agent to turn off its own approvals."},
@@ -136,8 +134,8 @@ FINDINGS = {
                "outside service.",
         "how": INJECTION},
     "self_described_tools": {
-        "headline": ("{Subject}'s tools can be allowed without asking you.", "{Subject} can be allowed without asking you."),
-        "why": 'Codex uses server-declared hints to decide whether approval is required. With strict automatic review off, hints can make calls allowed without asking, even under `never`. Other exemptions can also apply. This is permission to proceed, not successful execution. ' + SOURCE_ONLY,
+        "headline": ("{Subject} uses server hints for tool approval.", "{Subject} uses server hints for tool approval."),
+        "why": '`auto` and `writes` use hints supplied by the server. ' + SOURCE_ONLY,
         "how": INJECTION},
     "environment_inheritance": {
         "headline": "With these settings, commands Codex runs get your environment variables.",
@@ -160,28 +158,27 @@ FINDINGS = {
 # (openai/codex 086ccc8, codex-mcp/src/mcp/mod.rs L91-L110, core/src/mcp_tool_call.rs L1691-L1698).
 NOTE = ("*Before you change anything:* {placeholders}Codex reads the whole file to edit it. The app, profiles and flags "
         "such as `--ask-for-approval`, `--sandbox`, `--profile` and `-c` can override any file. Codex can allow or "
-        "block a tool call without asking you. This report does not test which calls Codex allows. Tool hints, remembered tool approvals, effective permission profiles and reviewer state are not inspected. Strict automatic review sends calls to an automated reviewer unless a permission hook decides first. It is a runtime state, not a sandbox mode.")
+        "block a tool call without asking you. This report does not test which calls Codex allows.")
 PLACEHOLDERS = ("`<config-1>` and similar labels stand for a file you passed with `--config` or `--rules`; put its "
                 "path in before you paste. ")
 TOP = "near the top of the file, before any `[section]`"
 SAVED_STILL = "commands a saved approval allows still run outside the sandbox."
 TOOL_PROMPT = {
-    "what": "Set `approval_mode = \"prompt\"` for this tool to require approval unless another exemption applies. Review can still change the outcome.",
+    "what": "Set `approval_mode = \"prompt\"` for this tool.",
     "where": "under `[{table}]`",
     "ask": "Edit {file} to set `approval_mode = \"prompt\"` for the `{tool}` tool of my `{name}` {kind}"}
-# Conditional approval meanings: harnesses/codex.md#tool-approval-decisions.
+# Approval mode settings: harnesses/codex.md.
 AUTOMATIC_GROUP = {
-    "what": "Set `default_tools_approval_mode = \"writes\"` (a read-only hint can exempt approval; "
-            "other exemptions and review still apply){allowlist}. Stricter: `default_tools_approval_mode = \"prompt\"`, to require approval unless another exemption applies. Review can still change the outcome.",
-    "allowlist": ", or list only the tools you use in `enabled_tools` (their approval modes still apply)",
+    "what": "Set `default_tools_approval_mode = \"writes\"` (uses server hints){allowlist}. "
+            "Stricter: `default_tools_approval_mode = \"prompt\"`.",
+    "allowlist": ", or list only the tools you use in `enabled_tools`",
     "where": "under `[{table}]`",
     "ask": "Edit {file} to set `default_tools_approval_mode = \"writes\"` for my `{name}` {kind}"}
 # Rows: default_tools_approval_mode `prompt`, tools.*.approval_mode `approve`, enabled_tools (MCP servers only).
 LABELS_GROUP = {
-    "what": "Set `default_tools_approval_mode = \"prompt\"` with `approval_mode = \"approve\"` only for tools you trust "
-            "(allowed without asking when strict automatic review is off){allowlist}. Stricter: `default_tools_approval_mode = \"prompt\"` for every "
-            "tool, to require approval unless another exemption applies. Review can still change the outcome.",
-    "allowlist": ", or list only the tools you use in `enabled_tools` (those still follow their labels)",
+    "what": "Set `default_tools_approval_mode = \"prompt\"` with `approval_mode = \"approve\"` only for tools you trust"
+            "{allowlist}. Stricter: `default_tools_approval_mode = \"prompt\"` for every tool.",
+    "allowlist": ", or list only the tools you use in `enabled_tools`",
     "where": "under `[{table}]`, with each trusted tool's `approval_mode` under `[{table}.tools.<tool>]`",
     "ask": "Edit {file} so my `{name}` {kind} uses `default_tools_approval_mode = \"prompt\"` with `approval_mode = \"approve\"` only for these tools I trust: <tool names>"}
 # Rows: approval_policy `on-request`, sandbox_mode `workspace-write` and `read-only`. The advice never suggests a
@@ -583,11 +580,9 @@ STEPS = {
         "Review that entry yourself, since it isn't in this report.",
     "{label} contains an entry that is not a table.": "Rewrite it as a group of settings, then run stay-safe again.",
     "A tool approval mode is unsupported or invalid; its value was withheld.":
-        "Set it to `\"auto\"`, `\"prompt\"`, `\"writes\"` or `\"approve\"`; `\"prompt\"` requires approval unless another exemption applies. "
-        "Review and host settings can still change the outcome.",
+        "Set it to `\"auto\"`, `\"prompt\"`, `\"writes\"` or `\"approve\"`; use `\"prompt\"` to request approval.",
     "A per-tool approval mode is unsupported or invalid; its value was withheld.":
-        "Set it to `\"auto\"`, `\"prompt\"`, `\"writes\"` or `\"approve\"`; `\"prompt\"` requires approval unless another exemption applies. "
-        "Review and host settings can still change the outcome.",
+        "Set it to `\"auto\"`, `\"prompt\"`, `\"writes\"` or `\"approve\"`; use `\"prompt\"` to request approval.",
     "A tool allow/deny list contains a name that cannot be included in a shareable report.":
         "Review the full list in your config file yourself.",
     "A tool allow/deny list is invalid; tool availability is unknown.":
@@ -745,19 +740,12 @@ SETUP_WORDS = {
         "only when Codex is signed in with ChatGPT (stay-safe doesn't check sign-in)",
     "features.apps = false turns it off": "`features.apps = false` turns it off",
     "broad: one-token prefix": "covers every use of that program",
-    "never": "`never` (doesn't ask before commands; remaining tool human-review requests are denied)", "on-request": "`on-request` (Codex can ask before commands; remaining tool human-review requests require a decision)",
+    "never": "`never` (doesn't ask before commands)", "on-request": "`on-request` (Codex can ask before commands)",
     "read-only": "`read-only` (commands can't write files)",
     "workspace-write": "`workspace-write` (commands can write in your workspace)",
     "danger-full-access": "`danger-full-access` (no sandbox)",
 }
-# Mode summaries refer to the ordered approval table in harnesses/codex.md.
-APPROVAL_MODES = {
-    "auto": "approval depends on server hints, other exemptions and review",
-    "approve": "allowed without asking when strict automatic review is off",
-    "prompt": "requires approval unless another exemption applies; review can change the outcome",
-    "writes": "a read-only hint exempts approval when strict automatic review is off; "
-              "other exemptions and review still apply",
-}
+APPROVAL_MODES = {"auto", "approve", "prompt", "writes"}
 INHERIT = {"all": "all variables passed on", "core": "only core variables passed on", "none": "none passed on"}
 ORIGIN = {"explicit": "you set this", "default": "default"}
 
@@ -772,7 +760,7 @@ def setup_words(keys, observation):
         return SETUP_WORDS[observation]
     found = re.fullmatch(r"tool approval: (\w+)( \(default\))?", observation)
     if found and found[1] in APPROVAL_MODES:
-        mode = f"`{found[1]}` ({APPROVAL_MODES[found[1]]})"
+        mode = f"`{found[1]}`"
         return f"tool approval left at the default, {mode}" if found[2] else f"tool approval {mode}"
     found = re.fullmatch(r"destructive tools (enabled|disabled) by (.+)", observation)
     if found:

@@ -23,7 +23,7 @@ RISK = ("**With these settings, Codex runs commands without asking you.** It won
 SETUP = [
     "**Config file `config-1`**: the first file you passed with `--config`. Codex reads settings from config files "
     "like this.",
-    "- Approval: `never` (doesn't ask before commands; remaining tool human-review requests are denied)",
+    "- Approval: `never` (doesn't ask before commands)",
     "- ChatGPT Apps connection: an MCP connection to ChatGPT, only when Codex is signed in with ChatGPT (stay-safe "
     "doesn't check sign-in), `features.apps = false` turns it off",
     "- Sandbox: `read-only` (commands can't write files)",
@@ -119,7 +119,7 @@ class RiskOutputTests(ConfigCase):
                     explanation = next(r["explanation"] for r in report["risks"] if r["rule"] == "self_described_tools")
                     self.assertIn("Documented in source, not yet observed", explanation)
                     self.assertIn("server-declared hints", explanation)
-                    self.assertIn("allowed without asking", explanation)
+                    self.assertIn("auto and writes use server-declared hints for tool approval", explanation)
                     for identifier, url in report["incident_links"].items():
                         self.assertTrue(url.startswith("https://github.com/chalkbadger/stay-safe/blob/" + identify()["source_revision"] + "/incidents.md#" + identifier.lower() + "-"))
                 else:
