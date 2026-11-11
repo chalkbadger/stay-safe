@@ -200,3 +200,13 @@ Issue: https://github.com/chalkbadger/stay-safe/issues/5
 Tests: [tests/challenge_a_wrong_finding/](../tests/challenge_a_wrong_finding/)
 
 - I open the challenge form and find exactly five labeled multiline fields with valid ids, all required except the full report. `test_form.py::test_form_declares_the_challenge_record_as_required_and_the_report_as_optional`
+
+## [explains_incomplete_inspection] When my report has gaps, I see why the run exits 2.
+Issue: https://github.com/chalkbadger/stay-safe/issues/18
+Tests: [tests/explains_incomplete_inspection/](../tests/explains_incomplete_inspection/)
+
+- I get the fixed exit-2 explanation on stderr for Markdown, JSON and saved reports with gaps. `test_status.py::test_reports_with_gaps_explain_exit_two_on_stderr_only`
+- The report stays on stdout without the explanation, and JSON output remains one parseable document. `test_status.py::test_reports_with_gaps_explain_exit_two_on_stderr_only`
+- Neither output stream reveals the private input name or value. `test_status.py::test_reports_with_gaps_explain_exit_two_on_stderr_only`
+- I get no incomplete-inspection explanation for a complete report or an invalid invocation that produces no report. `test_status.py::test_complete_reports_and_invalid_arguments_do_not_get_the_explanation`
+- The report is flushed to stdout before the explanation is written to stderr. `test_status.py::test_report_is_flushed_before_the_explanation_is_written`

@@ -17,6 +17,7 @@ from contextlib import redirect_stdout
 from unittest.mock import patch
 
 from stay_safe.cli import main
+from tests.support import INCOMPLETE
 from tests.support import ConfigCase, ROOT
 
 POLICY = 'approval_policy="on-request"\nsandbox_mode="read-only"\n[shell_environment_policy]\ninherit="{}"\n'
@@ -46,7 +47,7 @@ class CodexHomeTests(ConfigCase):
         run = subprocess.run([sys.executable, '-B', '-m', 'stay_safe', '--format', 'json'], cwd=self.work,
                              env={'HOME': str(self.home), 'PYTHONPATH': str(ROOT), **env},
                              text=True, capture_output=True, timeout=10)
-        self.assertEqual(run.stderr, '')
+        self.assertEqual(run.stderr, INCOMPLETE if run.returncode == 2 else "")
         return run.returncode, json.loads(run.stdout)
 
     def in_process(self, env):

@@ -22,6 +22,7 @@ import os
 from unittest.mock import patch
 
 from stay_safe.cli import main
+from tests.support import INCOMPLETE
 from tests.support import ConfigCase
 
 CONFIG = 'approval_policy="on-request"\nsandbox_mode="read-only"\n'
@@ -42,7 +43,7 @@ class HooksJsonTests(ConfigCase):
         out, err = io.StringIO(), io.StringIO()
         with patch.dict(os.environ, env, clear=True), redirect_stdout(out), redirect_stderr(err):
             code = main(['--format', 'json'])
-        self.assertEqual(err.getvalue(), '')
+        self.assertEqual(err.getvalue(), INCOMPLETE if code == 2 else "")
         return code, out.getvalue()
 
     def test_hooks_json_file_gives_a_gap_naming_it_and_exits_2(self):

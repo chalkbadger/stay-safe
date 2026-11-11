@@ -125,7 +125,7 @@ class SavedPageTests(ConfigCase):
             args += ["--rules", str(self.config(rules, "selected.rules"))]
         markdown = run_checkout(checkout, *args, cwd=work)
         saved = run_checkout(checkout, *args, "--save", cwd=work)
-        self.assertEqual((saved.returncode, saved.stderr), (markdown.returncode, ""))
+        self.assertEqual((saved.returncode, saved.stderr), (markdown.returncode, markdown.stderr))
         return markdown.stdout, (checkout / REPORT).read_text(encoding="utf-8")
 
     def test_saved_page_shows_the_markdown_reports_words_links_bold_and_code_text(self):
@@ -165,7 +165,7 @@ class SavedPageTests(ConfigCase):
             with self.subTest(label=label):
                 markdown = run_checkout(checkout, cwd=work, env=env)
                 saved = run_checkout(checkout, "--save", cwd=work, env=env)
-                self.assertEqual((saved.returncode, saved.stderr), (markdown.returncode, ""))
+                self.assertEqual((saved.returncode, saved.stderr), (markdown.returncode, markdown.stderr))
                 page = (checkout / REPORT).read_text(encoding="utf-8")
                 parsed = Page(page)
                 self.assertEqual(parsed.view(), markdown_view(markdown.stdout))

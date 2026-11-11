@@ -4,6 +4,7 @@ import sys
 
 from html import escape
 
+from tests.support import INCOMPLETE
 from tests.support import (ConfigCase, HARD_WORDS, NEAR_PROGRAMS, PROGRAMS, REPORT, ROOT, copy_checkout,
                            gap_items, run_checkout, section)
 from tests.see_every_connection_and_setting.test_plain_gaps import gap_text
@@ -21,7 +22,7 @@ class ShareableRulesTests(ConfigCase):
             with self.subTest(format=fmt):
                 run = subprocess.run([sys.executable, '-B', '-m', 'stay_safe', '--rules', str(path), '--format', fmt],
                                      cwd=ROOT, capture_output=True, text=True, timeout=10)
-                self.assertEqual((run.returncode, run.stderr), (2, ''))
+                self.assertEqual((run.returncode, run.stderr), (2, INCOMPLETE))
                 if fmt == 'json':
                     report = json.loads(run.stdout)
                     self.assertEqual((report['catalog'], report['risks'], report['inspection_gaps']), ([], [], [gap]))
@@ -57,7 +58,7 @@ class ShareableRulesTests(ConfigCase):
                 runs = [subprocess.run([sys.executable, '-B', '-m', 'stay_safe', '--rules', str(path), '--format', fmt],
                                        cwd=ROOT, capture_output=True, text=True, timeout=10) for path in paths]
                 run = runs[0]
-                self.assertEqual(run.stderr, '')
+                self.assertEqual(run.stderr, INCOMPLETE if run.returncode == 2 else "")
                 for entry in ids:
                     self.assertIn(entry, run.stdout)
                 if fmt == 'json':
