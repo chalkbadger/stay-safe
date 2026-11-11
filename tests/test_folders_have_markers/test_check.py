@@ -31,17 +31,19 @@ class LayoutCheckTests(unittest.TestCase):
         result = subprocess.run(self.command, cwd=self.root, capture_output=True, text=True, timeout=15)
         return result.returncode, result.stdout + result.stderr
 
-    def sentinel(self, folder, passing=False):
-        path = self.root / 'tests' / folder / 'test_sentinel.py'
+    def sentinel(self, folder, passing=False, filename='test_sentinel.py'):
+        path = self.root / 'tests' / folder / filename
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text('import unittest\nclass Sentinel(unittest.TestCase):\n'
                         '    def test_sentinel(self):\n'
                         f'        self.assertTrue({passing!r}, "sentinel executed")\n')
 
     def test_missing_direct_and_intermediate_markers_stop_the_complete_check(self):
-        for folder, missing in [('direct', 'direct'), ('outer/inner', 'outer')]:
-            with self.subTest(folder=folder):
-                self.sentinel(folder)
+        for folder, missing, filename in [('direct', 'direct', 'test_sentinel.py'),
+                                           ('direct', 'direct', 'test.py'),
+                                           ('outer/inner', 'outer', 'testplain.py')]:
+            with self.subTest(folder=folder, filename=filename):
+                self.sentinel(folder, filename=filename)
                 if '/' in folder:
                     (self.root / 'tests' / folder / '__init__.py').touch()
                 code, output = self.run_check()
@@ -52,14 +54,14 @@ class LayoutCheckTests(unittest.TestCase):
                 shutil.rmtree(self.root / 'tests' / folder.split('/')[0])
 
     def test_restored_markers_run_the_failing_sentinel_then_allow_its_pass(self):
-        self.sentinel('outer/inner')
+        self.sentinel('outer/inner', filename='testplain.py')
         for folder in ['outer', 'outer/inner']:
             (self.root / 'tests' / folder / '__init__.py').touch()
         code, output = self.run_check()
         self.assertNotEqual(code, 0, output)
         self.assertIn('sentinel executed', output)
         self.assertIn('FAILED (failures=1)', output)
-        self.sentinel('outer/inner', passing=True)
+        self.sentinel('outer/inner', passing=True, filename='testplain.py')
         code, output = self.run_check()
         self.assertEqual(code, 0, output)
         self.assertIn('Ran 2 tests', output)
