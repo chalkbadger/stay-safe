@@ -1,8 +1,11 @@
 # stay-safe
 
-stay-safe shows people what their coding agent is connected to, what is risky about
-that setup, and what agents like theirs have actually done, as a diagnostic they can
-share.
+stay-safe helps people check their Codex files for risky settings. Its report
+explains each warning and suggests what to do.
+
+It reads settings and saved approvals from files. Only some settings are covered.
+It does not test live connections or what Codex will actually allow. The
+[full scope](report.md#full-scope) explains the limits.
 
 ## How review works
 
@@ -30,10 +33,9 @@ and a challenge outlives the maintainer's verdict.
 
 ## What the report shows
 
-- **What can change a finding.** The report names every connection (where code or
-  data can go) and each permission that can change a risk it shows. An inspection gap
-  appears only for a problem that could change a finding.
-- **What Codex would do.** Where Codex's source is clear, stay-safe reads a setting
-  the same way and cites the source in the [meanings table](../harnesses/codex.md).
-- **No silent all-clear.** When stay-safe can't tell, it shows the risk or a gap. A
-  report without a finding never implies a safety it can't support.
+- **What it found.** The report shows what stay-safe found in the files it read.
+  It names the defaults it used.
+- **What the settings mean.** The [meanings table](../harnesses/codex.md) lists
+  the settings stay-safe checks and the Codex sources it uses.
+- **What remains unknown.** The report says when it could not complete a check.
+  A report with no warnings does not mean the setup is safe.

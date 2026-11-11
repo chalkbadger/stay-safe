@@ -1,6 +1,10 @@
 # Stay safe
 
-Get a deterministic, shareable report that names every Codex connection, each permission that can change a finding, and the reported incidents behind matching risk rules. Here is a finding from a run on a [test configuration](tests/runs_without_a_coding_agent/sample.toml):
+Check your Codex files for risky settings. See what each warning means and what you can do about it.
+
+stay-safe reads settings and saved approvals from files. Only some settings are covered. The report names the defaults it uses and the checks it could not complete. It does not test live connections or what Codex will actually allow. See the [full scope](docs/report.md#full-scope).
+
+Here is a finding from a run on a [test configuration](tests/runs_without_a_coding_agent/sample.toml):
 
 > **Your config turns off Codex's sandbox.** Commands Codex runs aren't limited to your project, so a mistaken command could damage files elsewhere on your computer.
 >
@@ -20,7 +24,7 @@ cd stay-safe
 python3 -m stay_safe
 ```
 
-By default it reads `~/.codex/config.toml` (`$CODEX_HOME/config.toml` when `CODEX_HOME` is set), the same configuration Codex uses in the ChatGPT app and the CLI. [Usage](docs/usage.md) covers the options, `--save` and exit status.
+By default it reads `~/.codex/config.toml` (`$CODEX_HOME/config.toml` when `CODEX_HOME` is set). [Usage](docs/usage.md) covers the inspected files, options, `--save` and exit status.
 
 ## Ask Codex
 
@@ -39,11 +43,11 @@ again". If Codex can't download, see [Usage](docs/usage.md#if-codex-cant-downloa
 
 ## What it checks and what it can't see
 
-- It reads your Codex configuration and saved approvals, and changes nothing in your setup.
-- Each finding names its rule, your setting and the [reported incidents](incidents.md) behind it; [reading the report](docs/report.md) explains each part.
-- Settings are read as the [Codex meanings table](harnesses/codex.md) says, citing Codex's sources; anything it can't read or check is listed.
-- It can't see settings chosen in the app or with command-line flags, or whether connections work.
-- Names such as server, app and tool names are shown as written, so check them before sharing. The [full scope](docs/report.md#full-scope) lists every limit.
+- It reads the files listed in [Usage](docs/usage.md) and changes nothing in your setup.
+- Each warning names its rule and the setting behind it, and links to [incident reports](incidents.md). [Reading the report](docs/report.md) explains each part.
+- The [Codex meanings table](harnesses/codex.md) lists the settings it checks and the sources it uses. The report says when it used a default or could not complete a check.
+- The [full scope](docs/report.md#full-scope) explains what it does not inspect.
+- It shows server, app and tool names as written. Check those names before sharing the report.
 
 ## Challenge a finding
 
