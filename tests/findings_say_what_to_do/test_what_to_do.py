@@ -12,6 +12,7 @@ import re
 import subprocess
 import sys
 
+from stay_safe.report import inspect, render
 from tests.support import FIRST, NOTE_LABEL, SECOND, ConfigCase, ROOT, finding_items, section
 
 # Meanings rows (setting, value) an option rests on. Mode meanings are defined once, on the MCP server rows; the app
@@ -77,13 +78,15 @@ SHOW = "; show only what you change."
 TOP = "near the top of the file, before any `[section]`"
 # One shared note before the findings (re-review F15 step 1): placeholders, Codex reads the file, what overrides a
 # file (`codex --help` 0.167.0: `-a, --ask-for-approval`, `-s, --sandbox`, `-p, --profile`, `-c, --config`), and
-# that under approval_policy = "never" Codex asks before no tool call in any mode (openai/codex 086ccc8,
-# codex-mcp/src/mcp/mod.rs L91-L110, core/src/mcp_tool_call.rs L1691-L1698).
+# Codex can allow or block a call without showing a prompt. (Issue #30; openai/codex
+# 086ccc833bc9cf01024ad2dd6af7dbd421b6bf9a, codex-rs/codex-mcp/src/mcp/mod.rs L91-L110
+# and codex-rs/core/src/mcp_tool_call.rs L1691-L1698.)
+# stay-safe does not run Codex to test these decisions.
 PLACEHOLDERS = ("`<config-1>` and similar labels stand for a file you passed with `--config` or `--rules`; put its "
                 "path in before you paste. ")
 NOTE = ("*Before you change anything:* {placeholders}Codex reads the whole file to edit it. The app, profiles and flags "
-        "such as `--ask-for-approval`, `--sandbox`, `--profile` and `-c` can override any file. Under "
-        "`approval_policy = \"never\"`, Codex asks before no tool call, whatever its approval mode.")
+        "such as `--ask-for-approval`, `--sandbox`, `--profile` and `-c` can override any file. Codex can allow or "
+        "block a tool call without asking you. This report does not test which calls Codex allows.")
 
 
 def block(what, where, ask, check=None):
@@ -359,6 +362,17 @@ class WhatToDoTests(ConfigCase):
                                                             'shell_environment_policy = { inherit = "core" }\n'
                                                             'features = { apps = false }\n'))).stdout
         self.assertNotIn(NOTE_LABEL, clean)
+
+    def test_shared_note_keeps_approval_outcomes_unassessed_for_each_policy(self):
+        never = 'approval_policy = "never"\n'
+        on_request = 'approval_policy = "on-request"\n'
+        for policies in ((never,), (on_request,), ("",), (never, on_request)):
+            with self.subTest(policies=policies):
+                paths = [self.config(text, f"policy-{index}.toml") for index, text in enumerate(policies)]
+                markdown = render(inspect(paths), "markdown")
+                self.assertEqual(section(markdown, "Findings").split("\n\n", 1)[0],
+                                 NOTE.format(placeholders=PLACEHOLDERS))
+                self.assertEqual(markdown.count(NOTE_LABEL), 1)
 
     def test_commands_advice_never_loosens_the_configured_sandbox(self):
         for sandbox_mode in ("read-only", "workspace-write", "danger-full-access", None):

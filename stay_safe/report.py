@@ -156,11 +156,11 @@ FINDINGS = {
 # event, {tool} its tool, {kind} "MCP server" or "app", {line} its rules line; {value} and {label} a sandbox another
 # inspected file sets.
 # The note: `codex --help` (0.167.0) lists `-a, --ask-for-approval`, `-s, --sandbox`, `-p, --profile` and
-# `-c, --config`, which override a file; under approval_policy = "never", Codex asks before no tool call in any mode
+# `-c, --config`, which override a file. Codex can allow or block a call without showing a prompt.
 # (openai/codex 086ccc8, codex-mcp/src/mcp/mod.rs L91-L110, core/src/mcp_tool_call.rs L1691-L1698).
 NOTE = ("*Before you change anything:* {placeholders}Codex reads the whole file to edit it. The app, profiles and flags "
-        "such as `--ask-for-approval`, `--sandbox`, `--profile` and `-c` can override any file. Under "
-        "`approval_policy = \"never\"`, Codex asks before no tool call, whatever its approval mode.")
+        "such as `--ask-for-approval`, `--sandbox`, `--profile` and `-c` can override any file. Codex can allow or "
+        "block a tool call without asking you. This report does not test which calls Codex allows.")
 PLACEHOLDERS = ("`<config-1>` and similar labels stand for a file you passed with `--config` or `--rules`; put its "
                 "path in before you paste. ")
 TOP = "near the top of the file, before any `[section]`"
