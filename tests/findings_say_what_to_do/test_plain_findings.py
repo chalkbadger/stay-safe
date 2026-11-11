@@ -118,6 +118,9 @@ class PlainFindingTests(ConfigCase):
         self.assertTrue(report["incident_links"], "This checkout must link its incidents for the links to be checked.")
         expected = []
         for risk in report["risks"]:
+            if risk["rule"] == "automatic_tools":
+                self.assertEqual(risk["explanation"], "Tool approval mode is approve; untrusted tool content "
+                                 "could lead to unwanted operations.")
             lead = EXPECTED[(risk["rule"], risk["entry"])]
             citations = ", ".join(f"[{i}]({report['incident_links'][i]})" for i in risk["incidents"])
             kind = "rules entry" if risk["entry"].startswith("rules-") else "setting"
