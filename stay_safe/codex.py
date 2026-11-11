@@ -178,52 +178,213 @@ class Reader:
                 valid = False
             elif key in server:
                 names = [name for name in values if public_name(name, tool=True)]
-                obs = …33826 tokens truncated…proval_policy', 'config-1:features.apps', 'config-1:sandbox_mode', 'config-1:shell_environment_policy']
-RULES_GAP = 'rules-1: Rules input is unreadable, a symlink or invalid UTF-8; raw errors were withheld.'
-RULES_IDS = ['rules-1:prefix_rule.1']
+                obs = ["configured names: " + ", ".join(names) if names else "no reportable configured names"]
+                if len(names) != len(values):
+                    obs.append("some names withheld")
+                    self.gap("A tool allow/deny list contains a name that cannot be included in a shareable report.")
+                self.add(parts + [key], "tool filter", obs)
+        if not valid:
+            self.gap("A tool allow/deny list is invalid; tool availability is unknown.")
+        allow, deny = server.get("enabled_tools"), server.get("disabled_tools", [])
+        def permitted(name):
+            return valid and (allow is None or name in allow) and name not in deny
+        mode, configs = server.get("default_tools_approval_mode"), tool_tables(server)
+        applies = valid and (allow is None or any(permitted(n) and "approval_mode" not in configs.get(n, {}) for n in allow))
+        observations, facts = self.tool_approval(mode, enabled is True and applies, "tool")
+        if "tools" in server:
+            for name, config in self.named(self.table(server["tools"], "tools"), "tools"):
+                self.unknown(config, {"approval_mode", "output_token_limit"}, "tools")
+                self.tool(parts, name, config, mode, enabled is True and permitted(name), False)
+        return observations, facts
+
+    def mcp(self, data):
+        servers = self.table(data.get("mcp_servers", {}), "mcp_servers")
+        known = {"command", "args", "env", "env_vars", "cwd", "url", "http_headers", "env_http_headers",
+                 "bearer_token_env_var", "oauth", "oauth_resource", "auth", "scopes", "name", "enabled",
+                 "enabled_tools", "disabled_tools", "startup_timeout_sec", "startup_timeout_ms", "tool_timeout_sec",
+                 "required", "startup_readiness", "default_tools_approval_mode", "tools", "http_headers_helper",
+                 "environment_id", "supports_parallel_tool_calls", "tool_input_schema_max_bytes", "omit_tools_from"}
+        for name, server in self.named(servers, "mcp_servers"):
+            parts = ["mcp_servers", name]
+            self.unknown(server, known, "mcp_servers")
+            enabled = self.boolean(server, "enabled", True, "mcp_servers")
+            obs = ["configured enabled" if enabled is True else "disabled" if enabled is False else "enablement unknown"]
+            command, url = server.get("command"), server.get("url")
+            valid_command = isinstance(command, str) and bool(command.strip())
+            # Codex uses HTTP for any string url without command: harnesses/codex.md [mcp-transport].
+            valid_url = isinstance(url, str)
+            valid = (valid_command and url is None) or (valid_url and command is None)
+            if valid:
+                obs.append("stdio; command withheld" if valid_command else "HTTP; endpoint withheld")
+            else:
+                obs.append("transport unknown")
+                self.gap("An MCP transport is missing, conflicting or invalid.")
+            policy, facts = self.mcp_tools(server, parts, enabled is True and valid)
+            helper = server.get("http_headers_helper")
+            valid_helper = isinstance(helper, str) and bool(helper.strip())
+            if helper is not None and not valid_helper:
+                self.gap("An MCP header-helper command is invalid; its value was withheld.")
+            facts["configured_program"] = enabled is True and valid and (valid_command or valid_helper)
+            self.add(parts, "MCP server", obs + policy, facts)
+
+    def app_tools(self, app, name, enabled, mode, tools_enabled):
+        # Without default_tools_enabled = true, only tools enabled by name take the app's mode.
+        applies = tools_enabled is True or any("approval_mode" not in config and config.get("enabled") is True
+                                               for config in tool_tables(app).values())
+        observations, facts = self.tool_approval(mode, enabled is True and applies, "tool")
+        if "tools" in app and name != "_default":
+            for tool, config in self.named(self.table(app["tools"], "tools"), "tools"):
+                self.unknown(config, {"approval_mode", "enabled"}, "tools")
+                available = self.boolean(config, "enabled", tools_enabled, "tools") is True and enabled is True
+                self.tool(["apps", name], tool, config, mode, available, available and config.get("enabled") is True)
+        return observations, facts
+
+    def apps(self, data):
+        apps = self.table(data.get("apps", {}), "apps")
+        default = apps.get("_default", {})
+        if not isinstance(default, dict):
+            self.gap("apps._default must be a table.")
+            apps = {k: v for k, v in apps.items() if k != "_default"}
+            # A template that is not a table leaves every setting an app takes from it unknown.
+            default = dict.fromkeys(("default_tools_approval_mode", "destructive_enabled"), UNKNOWN)
+        for name, app in self.named(apps, "apps"):
+            before = set(self.gaps)
+            # What the app takes from apps._default; the code below reads only this and the app's own fields.
+            # Not enabled: apps._default.enabled disables no named app (harnesses/codex.md [app-enabled]).
+            settings = {**{k: v for k, v in default.items() if k != "enabled"}, **app}
+            template = name == "_default"
+            allowed = {"enabled", "destructive_enabled", "open_world_enabled", "default_tools_approval_mode", "approvals_reviewer"}
+            if not template:
+                allowed |= {"default_tools_enabled", "tools", "links", "omit_tools_from"}
+            self.unknown(app, allowed, "apps._default" if template else "apps")
+            enabled = self.boolean(settings, "enabled", True, "apps")
+            tools_enabled = True if template else self.boolean(app, "default_tools_enabled", True, "apps")
+            obs = ["configured enabled" if enabled is True else "disabled" if enabled is False else "enablement unknown"]
+            if tools_enabled is not True:
+                obs.append("default tools disabled or unknown")
+            policy, facts = self.app_tools(app, name, enabled, settings.get("default_tools_approval_mode"), tools_enabled)
+            # Codex decides by default_tools_enabled, then destructive_enabled: harnesses/codex.md [app-tool-policy].
+            source = ("destructive_enabled" if "destructive_enabled" in app
+                      else "apps._default.destructive_enabled" if "destructive_enabled" in settings else "Codex default")
+            destructive = settings.get("destructive_enabled", True)
+            if destructive is UNKNOWN:
+                destructive = None
+            elif type(destructive) is not bool:
+                self.gap("apps has an invalid destructive_enabled flag.")
+                destructive = None
+            if not template and "default_tools_enabled" in app:
+                destructive, source = (True, "default_tools_enabled") if tools_enabled is True else (None, None)
+            # A disabled app is decided before destructive_enabled is read; _default is only a template.
+            if destructive is not None and enabled is True and not template:
+                obs.append(f"destructive tools {'enabled' if destructive else 'disabled'} by {source}")
+                facts["destructive_tools"] = destructive
+            if "links" in app:
+                self.gap("Per-account app policy is not evaluated; account identifiers were withheld.")
+            if enabled is False and not template:
+                # Codex disables every tool of a disabled app whatever else it sets (app_tool_policy.rs
+                # L272-L277 at 086ccc8), so its other settings can't change a finding and give no gap.
+                self.gaps = before
+            self.add(["apps", name], "app policy", obs + policy, {} if template else facts)
+
+    def read(self, data):
+        if "profile" in data or "profiles" in data:
+            self.gap("Profiles are outside reader coverage; a selected profile can override the reported settings.")
+        self.approval(data)
+        self.sandbox(data)
+        self.shell_environment(data)
+        self.mcp(data)
+        self.apps(data)
+        if "model_providers" in data:
+            for name, provider in self.named(self.table(data["model_providers"], "model_providers"), "model_providers"):
+                self.add(["model_providers", name], "model provider", ["configured; endpoint and credentials withheld"])
+                if "auth" in provider:
+                    self.gap("Model-provider command-backed authentication is outside reader coverage.")
+        if "notify" in data:
+            notify = data["notify"]
+            # The first element is the program; later arguments may be empty.
+            if (isinstance(notify, list) and notify and all(isinstance(p, str) for p in notify)
+                    and notify[0]):
+                self.add(["notify"], "automation", ["notification command configured; command withheld"], {"configured_program": True})
+            else:
+                self.gap("notify is not a command list with a nonempty program.")
+        if "hooks" in data:
+            hooks = self.table(data["hooks"], "hooks")
+            self.unknown(hooks, HOOKS | {"state"}, "hooks")
+            for name in HOOKS & hooks.keys():
+                if not isinstance(hooks[name], list):
+                    self.gap("hooks contains an invalid event configuration.")
+                    continue
+                program = False
+                for group in hooks[name]:
+                    if not isinstance(group, dict) or not isinstance(group.get("hooks", []), list):
+                        self.gap("hooks contains an invalid handler group.")
+                        continue
+                    # Matchers, options and hooks.state do not stop a command: harnesses/codex.md [hooks].
+                    program = program or any(
+                        isinstance(h, dict) and h.get("type") == "command"
+                        and isinstance(h.get("command"), str) and bool(h["command"].strip())
+                        for h in group.get("hooks", []))
+                self.add(["hooks", name], "automation", ["contents withheld"], {"configured_program": program})
+            self.gap("Hook execution policy is outside reader coverage.")
+        features = self.table(data.get("features", {}), "features")
+        self.unknown(features, {"apps"}, "features")
+        # Codex adds the ChatGPT Apps connection at ChatGPT sign-in unless this is false: harnesses/codex.md [apps-feature].
+        if self.boolean(features, "apps", True, "features.apps"):
+            self.add(["features", "apps"], "MCP server", ["ChatGPT Apps", "exists only if Codex is signed in with ChatGPT, "
+                     "which is not checked", "features.apps = false turns it off"])
+        if "web_search" in data:
+            value = data["web_search"]
+            if isinstance(value, str) and value in {"disabled", "cached", "indexed", "live"}:
+                self.add(["web_search"], "connection policy", [value])
+            else:
+                self.gap("web_search is unsupported or invalid; its value was withheld.")
+        known = PREFERENCES | {"approval_policy", "sandbox_mode", "sandbox_workspace_write", "mcp_servers", "apps",
+                               "model_providers", "notify", "hooks", "web_search", "default_permissions", "permissions",
+                               "shell_environment_policy", "profile", "profiles", "features"}
+        self.unknown(data, known, "Configuration")
+        self.entries.sort(key=lambda e: e["name"])
+        return self.entries, sorted(self.gaps)
 
 
-class SymlinkPolicyTests(ConfigCase):
-    def setUp(self):
-        super().setUp()
-        self.home = self.root / 'home'
-        (self.home / 'rules').mkdir(parents=True)
-        self.targets = self.root / 'targets'
-        self.targets.mkdir()
-        (self.targets / 'config.toml').write_text(CONFIG)
-        (self.targets / 'default.rules').write_text(ALLOW)
+def open_input(path):
+    """Open a file read-only; O_NOFOLLOW refuses a symlink as the final component."""
+    return os.open(path, os.O_RDONLY | os.O_NONBLOCK | os.O_NOFOLLOW)
 
-    def report(self, *args):
-        output = io.StringIO()
-        with patch.dict(os.environ, {'CODEX_HOME': str(self.home)}, clear=True), redirect_stdout(output):
-            status = main([*args, '--format', 'json'])
-        report = json.loads(output.getvalue())
-        return status, report['inspection_gaps'], sorted(e['id'] for e in report['catalog'])
 
-    def test_symlinked_explicit_inputs_are_gaps(self):
-        config = self.root / 'link.toml'
-        config.symlink_to(self.targets / 'config.toml')
-        rules = self.root / 'link.rules'
-        rules.symlink_to(self.targets / 'default.rules')
-        for option, path, gap in [('--config', config, 'config-1: Selected config file is a symlink and was not followed. Select its target file explicitly with --config.'), ('--rules', rules, RULES_GAP)]:
-            with self.subTest(option=option):
-                self.assertEqual(self.report(option, str(path)), (2, [gap], []))
-
-    def test_symlinked_default_files_are_gaps(self):
-        config, rules = self.home / 'config.toml', self.home / 'rules' / 'default.rules'
-        for link, regular, text, gap, ids in [(config, rules, ALLOW, CONFIG_GAP, RULES_IDS),
-                                              (rules, config, CONFIG, RULES_GAP, CONFIG_IDS)]:
-            with self.subTest(link=link.name):
-                link.unlink(missing_ok=True)
-                link.symlink_to(self.targets / link.name)
-                regular.unlink(missing_ok=True)
-                regular.write_text(text)
-                self.assertEqual(self.report(), (2, [gap], ids))
-
-    def test_regular_explicit_and_default_files_are_still_read(self):
-        read = (0, [], [*CONFIG_IDS, *RULES_IDS])
-        explicit = ('--config', str(self.targets / 'config.toml'), '--rules', str(self.targets / 'default.rules'))
-        self.assertEqual(self.report(*explicit), read)
-        (self.home / 'config.toml').write_text(CONFIG)
-        (self.home / 'rules' / 'default.rules').write_text(ALLOW)
-        self.assertEqual(self.report(), read)
+def read_file(path: Path, source: str, *, discovered=False):
+    reader = Reader(source)
+    try:
+        try:
+            fd = open_input(path)
+        except FileNotFoundError:
+            if not discovered:
+                raise
+            reader.add(["config"], "configuration file", [
+                "No default Codex configuration file was found; documented shell-environment defaults assessed.",
+            ])
+            return reader.read({})
+        with os.fdopen(fd, "rb") as stream:
+            info = os.fstat(stream.fileno())
+            if not stat.S_ISREG(info.st_mode):
+                reader.gap("Input is not a regular file.")
+                return [], sorted(reader.gaps)
+            content = stream.read(MAX_BYTES + 1)
+        if len(content) > MAX_BYTES:
+            reader.gap("Input exceeds the 1 MiB size limit.")
+            return [], sorted(reader.gaps)
+        data = tomllib.loads(content.decode("utf-8"))
+    except (OSError, RecursionError, ValueError) as error:
+        if not discovered and isinstance(error, FileNotFoundError):
+            reader.gap('Selected config file is missing. Check the path supplied to --config.')
+        elif not discovered and isinstance(error, OSError) and error.errno == errno.ELOOP:
+            reader.gap('Selected config file is a symlink and was not followed. Select its target file explicitly with --config.')
+        elif not discovered and isinstance(error, OSError):
+            reader.gap('Selected config file could not be read. Check its permissions and that it is a readable regular file.')
+        elif not discovered and isinstance(error, UnicodeDecodeError):
+            reader.gap('Selected config file is not valid UTF-8. Save a copy as UTF-8 and select it with --config.')
+        elif not discovered and isinstance(error, tomllib.TOMLDecodeError):
+            reader.gap('Selected config file is not valid TOML. Fix the TOML syntax locally, then run stay-safe again.')
+        else:
+            reader.gap("Input is missing, unreadable, a symlink, or invalid UTF-8 TOML; raw errors were withheld.")
+        return [], sorted(reader.gaps)
+    return reader.read(data)
