@@ -660,16 +660,6 @@ STEPS = {
 }
 # With no Codex config file found, the absent-setting follow-ups say to create one.
 ABSENT_STEPS = {
-    'Selected config file is missing. Check the path supplied to --config.':
-        'Check the path supplied to --config.',
-    'Selected config file is a symlink and was not followed. Select its target file explicitly with --config.':
-        'Select its target file explicitly with --config.',
-    'Selected config file could not be read. Check its permissions and that it is a readable regular file.':
-        'Check its permissions and that it is a readable regular file.',
-    'Selected config file is not valid UTF-8. Save a copy as UTF-8 and select it with --config.':
-        'Save a copy as UTF-8 and select it with --config.',
-    'Selected config file is not valid TOML. Fix the TOML syntax locally, then run stay-safe again.':
-        'Fix the TOML syntax locally, then run stay-safe again.',
     "approval_policy is absent; the reader does not infer its effective value.":
         "Check the approval setting wherever you run Codex (the app or the command line). To set it in a file, "
         "create `~/.codex/config.toml` (or `config.toml` in the folder `CODEX_HOME` names) with "

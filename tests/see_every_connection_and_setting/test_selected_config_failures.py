@@ -47,12 +47,18 @@ class SelectedConfigFailureTests(ConfigCase):
                     if format_name == 'json':
                         report = json.loads(text)
                         self.assertEqual(report['inspection_gaps'], ['config-1: ' + expected])
-                        self.assertTrue(report['risks'])
+                        self.assertEqual({(risk['rule'], risk['entry']) for risk in report['risks']}, {
+                            ('commands_without_prompts', 'config-2:approval_policy'),
+                            ('environment_inheritance', 'config-2:shell_environment_policy'),
+                        })
                         self.assertEqual({e['source'] for e in report['catalog']}, {'config-2'})
                     else:
                         self.assertIn(words, text)
                         self.assertIn(expected.split('. ', 1)[1], text.replace('`', ''))
-                        self.assertIn('config-2:approval_policy', text)
+                        self.assertIn('**With these settings, Codex runs commands without asking you.**', text)
+                        self.assertIn('**With these settings, commands Codex runs get your environment variables.**', text)
+                        self.assertIn('Rule `commands_without_prompts` · setting `config-2:approval_policy`', text)
+                        self.assertIn('Rule `environment_inheritance` · setting `config-2:shell_environment_policy`', text)
                     for private in (str(self.root), 'alice@example.com', 'private-content-marker', 'private-error-marker'):
                         self.assertNotIn(private, text)
                     self.assertNotIn('readlink', text)
