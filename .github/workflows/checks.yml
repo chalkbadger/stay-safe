@@ -34,6 +34,11 @@ jobs:
         with:
           python-version: '3.9'
       - run: python tests/runs_without_a_coding_agent/old_python_check.py
-      # Apple's own python3, 3.9 on current macOS; the script says so and passes if it is 3.11 or newer.
+      # Apple's own python3, 3.9 on current macOS. If Apple ships 3.11 or newer, this step says so and checks nothing.
       - if: runner.os == 'macOS'
-        run: /usr/bin/python3 tests/runs_without_a_coding_agent/old_python_check.py
+        run: |
+          if /usr/bin/python3 -c 'import sys; sys.exit(sys.version_info >= (3, 11))'; then
+            /usr/bin/python3 tests/runs_without_a_coding_agent/old_python_check.py
+          else
+            echo "Skipped: /usr/bin/python3 is $(/usr/bin/python3 -V 2>&1), 3.11 or newer, so it can't show the old-Python message."
+          fi

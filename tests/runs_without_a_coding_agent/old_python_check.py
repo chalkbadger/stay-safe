@@ -4,7 +4,7 @@ The CI job in .github/workflows/checks.yml runs this with Python 3.9, and on mac
 Each run gets a PATH holding only a temporary folder: empty, so the message says to install Python 3.11 or newer, or
 holding a runnable python3.12 (and a python3.13 that can't be run), so the message names python3.12. It checks the
 exit status 2, the exact line on stderr, an empty stdout, and that the fake python3.12 was not started. On Python 3.11
-or newer it has nothing to check, says so and exits 0. Not a unittest module: the test suite runs on Python 3.11+.
+or newer nothing is checked, so it fails. Not a unittest module: the test suite runs on Python 3.11+.
 """
 import os
 from pathlib import Path
@@ -20,8 +20,8 @@ FAKE = "#!/bin/sh\necho started > \"$(dirname \"$0\")/started-$(basename \"$0\")
 def main():
     this = "%d.%d.%d" % tuple(sys.version_info[:3])
     if sys.version_info >= (3, 11):
-        print("Python %s at %s is 3.11 or newer; nothing to check." % (this, sys.executable))
-        return 0
+        print("FAIL: Python %s at %s is 3.11 or newer, so nothing was checked." % (this, sys.executable))
+        return 1
     start = "stay-safe needs Python 3.11 or newer; this is Python %s. " % this
     failures = 0
     with tempfile.TemporaryDirectory() as empty, tempfile.TemporaryDirectory() as newer:

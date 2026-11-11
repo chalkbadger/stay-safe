@@ -9,12 +9,14 @@ from tests.support import ROOT
 
 SAMPLE = ROOT / "tests" / "runs_without_a_coding_agent" / "sample.toml"
 # Runs stay-safe the way `python3 -m stay_safe` (module) or `python3 stay_safe` (folder) does, after making the
-# interpreter report itself as Python 3.9.6, macOS's own python3 (issue #48). It prints which stay-safe modules and
-# whether tomllib (new in Python 3.11) were loaded when stay-safe stopped, then exits with stay-safe's status.
+# interpreter report itself as the version given, such as 3.9.6, macOS's own python3 (issue #48). It prints which
+# stay-safe modules and whether tomllib (new in Python 3.11) were loaded when stay-safe stopped, then exits with
+# stay-safe's status.
 OLD_PYTHON = """import collections, json, runpy, sys
-sys.version = "3.9.6 (default, simulated) [Clang 13.0.0]"
-sys.version_info = collections.namedtuple("version_info", "major minor micro releaselevel serial")(3, 9, 6, "final", 0)
-way = sys.argv.pop(1)
+way, version = sys.argv.pop(1), sys.argv.pop(1)
+sys.version = version + " (default, simulated) [Clang 13.0.0]"
+sys.version_info = collections.namedtuple("version_info", "major minor micro releaselevel serial")(
+    *map(int, version.split(".")), "final", 0)
 try:
     if way == "module":
         runpy.run_module("stay_safe", run_name="__main__", alter_sys=True)
@@ -36,9 +38,9 @@ def run(*args, env=None):
                           timeout=20)
 
 
-def old_python(way, path):
-    """Run stay-safe under the simulated Python 3.9.6 with only `path` on the PATH."""
-    return run("-c", OLD_PYTHON, way, "--config", str(SAMPLE), env={"PATH": path})
+def old_python(way, path, version="3.9.6"):
+    """Run stay-safe under a simulated Python `version` with only `path` on the PATH."""
+    return run("-c", OLD_PYTHON, way, version, "--config", str(SAMPLE), env={"PATH": path})
 
 
 def commands(folder, executable, plain=()):
@@ -56,7 +58,7 @@ class PythonEntryTests(unittest.TestCase):
     def test_running_the_folder_without_m_gives_the_same_report_and_exit_status(self):
         with tempfile.TemporaryDirectory() as tmp:
             for args in (["--config", str(SAMPLE)], ["--config", str(SAMPLE), "--format", "json"],
-                         ["--config", str(Path(tmp) / "missing.toml")], ["--unknown"]):
+                         ["--config", str(Path(tmp) / "missing.toml")], ["--unknown"], ["--help"]):
                 with self.subTest(args=args):
                     module = run("-m", "stay_safe", *args)
                     folder = run("stay_safe", *args)
@@ -83,14 +85,24 @@ class PythonEntryTests(unittest.TestCase):
                                     if p.name.startswith("started-")), [])
 
     def test_too_old_python_without_a_newer_one_says_to_install_it_and_exits_2(self):
+        install = "Install Python 3.11 or newer, then run: python3.11 -m stay_safe\n"
         with tempfile.TemporaryDirectory() as folder:
             path = commands(folder, ["python3", "python3.9", "python3.10", "python3.14"])
             for way in ("module", "folder"):
                 with self.subTest(way=way):
                     result = old_python(way, path)
+                    self.assertEqual((result.returncode, result.stderr, result.stdout), (2, TOO_OLD + install, "[]\n"))
+                # The edges of "older than 3.11": the last 3.10 release is too old; 3.11.0 runs the report.
+                with self.subTest(way=way, version="3.10.19"):
+                    result = old_python(way, path, "3.10.19")
                     self.assertEqual((result.returncode, result.stderr, result.stdout),
-                                     (2, TOO_OLD + "Install Python 3.11 or newer, then run: python3.11 -m stay_safe\n",
+                                     (2, "stay-safe needs Python 3.11 or newer; this is Python 3.10.19. " + install,
                                       "[]\n"))
+                with self.subTest(way=way, version="3.11.0"):
+                    result = old_python(way, path, "3.11.0")
+                    report = run("-m", "stay_safe", "--config", str(SAMPLE))
+                    self.assertEqual((result.returncode, result.stderr), (0, ""))
+                    self.assertTrue(result.stdout.startswith(report.stdout), result.stdout[:300])
 
     def test_version_check_runs_before_any_module_needing_3_11_and_parses_as_python_3_9(self):
         with tempfile.TemporaryDirectory() as folder:
@@ -99,7 +111,15 @@ class PythonEntryTests(unittest.TestCase):
                     result = old_python(way, folder)
                     self.assertEqual((result.returncode, result.stdout), (2, "[]\n"))
         # `python3 -m stay_safe` runs __init__.py first; `python3 stay_safe` compiles __main__.py first.
+        # ast's feature_version is best-effort: it rejects newer statements such as `match`, but accepts f-strings
+        # written as only Python 3.12 allows, and annotations such as `str | None`, which Python 3.9 evaluates and
+        # fails on. So these two files must also hold no f-string and no annotation.
         for name in ("__init__.py", "__main__.py"):
             with self.subTest(name=name):
-                ast.parse((ROOT / "stay_safe" / name).read_text(encoding="utf-8"), filename=name,
-                          feature_version=(3, 9))
+                tree = ast.parse((ROOT / "stay_safe" / name).read_text(encoding="utf-8"), filename=name,
+                                 feature_version=(3, 9))
+                newer = [type(node).__name__ for node in ast.walk(tree)
+                         if isinstance(node, (ast.JoinedStr, ast.AnnAssign))
+                         or isinstance(node, ast.arg) and node.annotation is not None
+                         or isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.returns is not None]
+                self.assertEqual(newer, [])
