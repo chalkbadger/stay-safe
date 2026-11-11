@@ -139,6 +139,8 @@ Issue: https://github.com/chalkbadger/stay-safe/issues/7
 Tests: [tests/works_without_a_config_file/](../tests/works_without_a_config_file/)
 
 - I have no config file, and both formats tell me it is absent and show the cited default environment finding, with approval and sandbox gaps and exit status `2`. `test_report.py::test_both_formats_report_cited_defaults_and_retained_gaps`
+- With no config file, the notice in both formats names the command environment and ChatGPT Apps as assessed defaults. `test_report.py::test_both_formats_report_cited_defaults_and_retained_gaps`
+- With no config file, both formats say the ChatGPT Apps connection depends on sign-in, which was not checked. `test_report.py::test_both_formats_report_cited_defaults_and_retained_gaps`
 - With `~/.codex` missing and `CODEX_HOME` unset, I still get the default assessment. `test_report.py::test_missing_home_dot_codex_with_unset_codex_home_uses_defaults`
 - With `CODEX_HOME` empty or unset, stay-safe reads my `~/.codex`, not my working folder. `test_home.py::test_empty_or_unset_codex_home_reads_home_dot_codex_not_the_working_directory`
 - When I set `CODEX_HOME`, it is read even when the home folder lookup fails. `test_home.py::test_set_codex_home_is_read_when_the_home_lookup_fails`

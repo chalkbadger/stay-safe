@@ -731,7 +731,7 @@ SETUP_WORDS = {
     "notification command configured; command withheld": "start a program (command left out)",
     "contents withheld": "set (contents left out)", "absent": "none found",
     "no reportable configured names": "no names that can be shown", "some names withheld": "some names left out",
-    "No default Codex configuration file was found; documented shell-environment defaults assessed.":
+    "No default Codex configuration file was found. Assessed defaults: command environment and ChatGPT Apps.":
         "none found, so stay-safe assessed Codex's documented defaults (the environment of commands and the ChatGPT "
         "Apps connection)",
     # The ChatGPT Apps connection (harnesses/codex.md row `features.apps` `omitted`, archived issue #121).
