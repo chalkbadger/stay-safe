@@ -87,8 +87,7 @@ def cell(value):
 # rule's explanation and each gap's text; these lines say the same thing to the person whose setup it is, say how
 # the rule's cited incidents went wrong and what to do, then give the ids.
 PROGRAM = "If that program or your config file were tampered with, it could run code you didn't intend."
-AUTOMATIC = ("Codex approves these tool calls for you, so untrusted content from a tool could lead to actions "
-             "you didn't want.")
+AUTOMATIC = "Untrusted tool content could lead to unwanted actions."
 DESTRUCTIVE = "A mistaken operation could change or delete data in the connected service."
 SOURCE_ONLY = "Based on Codex's source code, not yet seen in a live run."
 INJECTION = ("Instructions hidden in public GitHub issues and issue comments could take over agents that read them.")
@@ -119,7 +118,7 @@ FINDINGS = {
         "how": "Flaws in other agents let repository settings run commands on collaborators' machines, and a worm "
                "wrote itself into an agent's settings so its code ran at every start."},
     "automatic_tools": {
-        "headline": ("{Subject}'s tools are set to run without asking you.", "{Subject} is set to run without asking you."),
+        "headline": ("{Subject}'s tool approval mode is `approve`.", "{Subject} has approval mode `approve`."),
         "why": AUTOMATIC,
         "how": "Hidden instructions in public GitHub issues could take over agents using a GitHub MCP server, and "
                "injected text got another agent to turn off its own approvals."},
@@ -135,9 +134,8 @@ FINDINGS = {
                "outside service.",
         "how": INJECTION},
     "self_described_tools": {
-        "headline": ("{Subject}'s tools can run without asking you.", "{Subject} can run without asking you."),
-        "why": (f"Codex trusts the read-only labels the server gives its tools and doesn't check them. {SOURCE_ONLY}",
-                f"Codex trusts the read-only label the tool's own server gives it and doesn't check it. {SOURCE_ONLY}"),
+        "headline": ("{Subject} uses server hints for tool approval.", "{Subject} uses server hints for tool approval."),
+        "why": '`auto` and `writes` use hints supplied by the server. ' + SOURCE_ONLY,
         "how": INJECTION},
     "environment_inheritance": {
         "headline": "With these settings, commands Codex runs get your environment variables.",
@@ -166,27 +164,23 @@ PLACEHOLDERS = ("`<config-1>` and similar labels stand for a file you passed wit
 TOP = "near the top of the file, before any `[section]`"
 SAVED_STILL = "commands a saved approval allows still run outside the sandbox."
 TOOL_PROMPT = {
-    "what": "Set `approval_mode = \"prompt\"` for this tool, so Codex asks before calling it.",
+    "what": "Set `approval_mode = \"prompt\"` for this tool.",
     "where": "under `[{table}]`",
     "ask": "Edit {file} to set `approval_mode = \"prompt\"` for the `{tool}` tool of my `{name}` {kind}"}
-# Rows: default_tools_approval_mode `writes` (asks unless the tool declares readOnlyHint=true, which the server sets
-# and Codex doesn't check: core/src/mcp_tool_call.rs L2621-L2623) and `prompt`; `enabled_tools`, an MCP server
-# setting only, leaves the listed tools on their mode.
+# Approval mode settings: harnesses/codex.md.
 AUTOMATIC_GROUP = {
-    "what": "Set `default_tools_approval_mode = \"writes\"` (Codex then asks unless the server labels a tool read-only, "
-            "which Codex doesn't check){allowlist}. Stricter: `default_tools_approval_mode = \"prompt\"`, so Codex asks "
-            "before every call.",
-    "allowlist": ", or list only the tools you use in `enabled_tools` (those still run without asking)",
+    "what": "Set `default_tools_approval_mode = \"writes\"` (uses server hints){allowlist}. "
+            "Stricter: `default_tools_approval_mode = \"prompt\"`.",
+    "allowlist": ", or list only the tools you use in `enabled_tools`",
     "where": "under `[{table}]`",
     "ask": "Edit {file} to set `default_tools_approval_mode = \"writes\"` for my `{name}` {kind}"}
 # Rows: default_tools_approval_mode `prompt`, tools.*.approval_mode `approve`, enabled_tools (MCP servers only).
 LABELS_GROUP = {
-    "what": "Set `default_tools_approval_mode = \"prompt\"` with `approval_mode = \"approve\"` only for tools you trust "
-            "(those run without asking){allowlist}. Stricter: `default_tools_approval_mode = \"prompt\"` for every "
-            "tool, so Codex asks before every call.",
-    "allowlist": ", or list only the tools you use in `enabled_tools` (those still follow their labels)",
+    "what": "Set `default_tools_approval_mode = \"prompt\"` with `approval_mode = \"approve\"` only for tools you trust"
+            "{allowlist}. Stricter: `default_tools_approval_mode = \"prompt\"` for every tool.",
+    "allowlist": ", or list only the tools you use in `enabled_tools`",
     "where": "under `[{table}]`, with each trusted tool's `approval_mode` under `[{table}.tools.<tool>]`",
-    "ask": "Edit {file} so my `{name}` {kind} asks before every tool call except these tools I trust: <tool names>"}
+    "ask": "Edit {file} so my `{name}` {kind} uses `default_tools_approval_mode = \"prompt\"` with `approval_mode = \"approve\"` only for these tools I trust: <tool names>"}
 # Rows: approval_policy `on-request`, sandbox_mode `workspace-write` and `read-only`. The advice never suggests a
 # sandbox looser than one set by the finding's file or another inspected file: `workspace-write` only when none sets
 # the stricter `read-only`. With `default_permissions`, the permission profile, not `sandbox_mode`, decides
@@ -525,6 +519,8 @@ GAPS = {
     "Codex home: CODEX_HOME is unset and the home directory cannot be determined; no default files were inspected.":
         "**Not checked: your Codex folder.** `CODEX_HOME` isn't set and stay-safe couldn't find your home "
         "folder, so it read no files.",
+    "Codex home: Could not check the plugin cache. Check that you can open plugins/cache in your Codex folder.":
+        "**Not checked: your Codex plugins.** Could not check the plugin cache.",
     "Codex home: plugins/cache holds Codex plugins that were not inspected.":
         "**Not checked: your Codex plugins.** Your Codex folder has plugins in `plugins/cache`, which stay-safe "
         "doesn't read.",
@@ -600,11 +596,9 @@ STEPS = {
         "Review that entry yourself, since it isn't in this report.",
     "{label} contains an entry that is not a table.": "Rewrite it as a group of settings, then run stay-safe again.",
     "A tool approval mode is unsupported or invalid; its value was withheld.":
-        "Set it to `\"auto\"`, `\"prompt\"`, `\"writes\"` or `\"approve\"`; `\"prompt\"` asks before every call "
-        "unless `approval_policy = \"never\"`.",
+        "Set it to `\"auto\"`, `\"prompt\"`, `\"writes\"` or `\"approve\"`; use `\"prompt\"` to request approval.",
     "A per-tool approval mode is unsupported or invalid; its value was withheld.":
-        "Set it to `\"auto\"`, `\"prompt\"`, `\"writes\"` or `\"approve\"`; `\"prompt\"` asks before every call "
-        "unless `approval_policy = \"never\"`.",
+        "Set it to `\"auto\"`, `\"prompt\"`, `\"writes\"` or `\"approve\"`; use `\"prompt\"` to request approval.",
     "A tool allow/deny list contains a name that cannot be included in a shareable report.":
         "Review the full list in your config file yourself.",
     "A tool allow/deny list is invalid; tool availability is unknown.":
@@ -644,6 +638,8 @@ STEPS = {
     "Codex home: hooks.json exists and was not inspected.": "Review the hooks in `hooks.json` yourself.",
     "System config folder: /etc/codex holds Codex configuration that was not inspected.":
         "Review the files in `/etc/codex` yourself.",
+    "Codex home: Could not check the plugin cache. Check that you can open plugins/cache in your Codex folder.":
+        "Check that you can open `plugins/cache` in your Codex folder.",
     "Codex home: plugins/cache holds Codex plugins that were not inspected.":
         "Review the plugins in `plugins/cache` yourself.",
     "features.apps has an invalid boolean; its behavior is unknown.": "Set `features.apps` to `true` or `false`.",
@@ -753,7 +749,7 @@ SETUP_WORDS = {
     "notification command configured; command withheld": "start a program (command left out)",
     "contents withheld": "set (contents left out)", "absent": "none found",
     "no reportable configured names": "no names that can be shown", "some names withheld": "some names left out",
-    "No default Codex configuration file was found; documented shell-environment defaults assessed.":
+    "No default Codex configuration file was found. Assessed defaults: command environment and ChatGPT Apps.":
         "none found, so stay-safe assessed Codex's documented defaults (the environment of commands and the ChatGPT "
         "Apps connection)",
     # The ChatGPT Apps connection (harnesses/codex.md row `features.apps` `omitted`, archived issue #121).
@@ -767,10 +763,7 @@ SETUP_WORDS = {
     "workspace-write": "`workspace-write` (commands can write in your workspace)",
     "danger-full-access": "`danger-full-access` (no sandbox)",
 }
-# Under approval_policy = "never", Codex asks before no tool call in any mode (see NEVER above).
-APPROVAL_MODES = {"auto": "asks depending on the tool's labels, unless `approval_policy` is `never`", "approve": "never asks",
-                  "prompt": "asks before every call unless `approval_policy` is `never`",
-                  "writes": "asks unless the tool says it's read-only or `approval_policy` is `never`"}
+APPROVAL_MODES = {"auto", "approve", "prompt", "writes"}
 INHERIT = {"all": "all variables passed on", "core": "only core variables passed on", "none": "none passed on"}
 ORIGIN = {"explicit": "you set this", "default": "default"}
 
@@ -785,7 +778,7 @@ def setup_words(keys, observation):
         return SETUP_WORDS[observation]
     found = re.fullmatch(r"tool approval: (\w+)( \(default\))?", observation)
     if found and found[1] in APPROVAL_MODES:
-        mode = f"`{found[1]}` ({APPROVAL_MODES[found[1]]})"
+        mode = f"`{found[1]}`"
         return f"tool approval left at the default, {mode}" if found[2] else f"tool approval {mode}"
     found = re.fullmatch(r"destructive tools (enabled|disabled) by (.+)", observation)
     if found:

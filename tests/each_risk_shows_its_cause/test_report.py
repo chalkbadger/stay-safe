@@ -6,6 +6,7 @@ import sys
 
 from tests.see_every_connection_and_setting.test_config import FIXTURE
 from tests.findings_say_what_to_do.test_what_to_do import commands
+from tests.support import INCOMPLETE
 from tests.support import finding_items, CHATGPT_APPS, ConfigCase, ROOT, items, section, gap_items
 from tests.see_every_connection_and_setting.test_plain_gaps import gap_text
 from stay_safe.provenance import identify
@@ -56,7 +57,7 @@ class RiskOutputTests(ConfigCase):
         before = path.read_bytes()
         run = subprocess.run([sys.executable, "-B", "-m", "stay_safe", "--config", str(path)],
                              cwd=checkout, text=True, capture_output=True, timeout=10)
-        self.assertEqual((run.returncode, run.stderr), (2, ""))
+        self.assertEqual((run.returncode, run.stderr), (2, INCOMPLETE))
         self.assertEqual(run.stdout.splitlines()[2], "1 finding, 1 thing not checked.")
         self.assertEqual(section(run.stdout, "Your setup").splitlines(), SETUP)
         self.assertEqual(finding_items(run.stdout), [
@@ -83,7 +84,7 @@ class RiskOutputTests(ConfigCase):
                     run = subprocess.run([sys.executable, "-B", "-m", "stay_safe", "--config", str(config),
                                           "--format", format_name], cwd=checkout, text=True,
                                          capture_output=True, timeout=10)
-                    self.assertEqual((run.returncode, run.stderr), (2, ""))
+                    self.assertEqual((run.returncode, run.stderr), (2, INCOMPLETE))
                     if format_name == "json":
                         report = json.loads(run.stdout)
                         self.assertEqual([(e["id"], e["kind"], e["observations"]) for e in report["catalog"]], catalog)
@@ -119,7 +120,7 @@ class RiskOutputTests(ConfigCase):
                     explanation = next(r["explanation"] for r in report["risks"] if r["rule"] == "self_described_tools")
                     self.assertIn("Documented in source, not yet observed", explanation)
                     self.assertIn("server-declared hints", explanation)
-                    self.assertIn("labeled read-only can run without asking", explanation)
+                    self.assertIn("auto and writes use server-declared hints for tool approval", explanation)
                     for identifier, url in report["incident_links"].items():
                         self.assertTrue(url.startswith("https://github.com/chalkbadger/stay-safe/blob/" + identify()["source_revision"] + "/incidents.md#" + identifier.lower() + "-"))
                 else:

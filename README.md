@@ -24,6 +24,13 @@ cd stay-safe
 python3 -m stay_safe
 ```
 
+Without Git, [download the v0.2.0 ZIP](https://github.com/chalkbadger/stay-safe/archive/refs/tags/v0.2.0.zip) and extract it. Open a terminal in the folder containing the extracted `stay-safe-0.2.0` folder, then run:
+
+```sh
+cd stay-safe-0.2.0
+python3 -m stay_safe
+```
+
 By default it reads `~/.codex/config.toml` (`$CODEX_HOME/config.toml` when `CODEX_HOME` is set). [Usage](docs/usage.md) covers the inspected files, options, `--save` and exit status.
 
 ## Ask Codex
@@ -59,7 +66,8 @@ stay-safe is part of [chalkbadger](https://github.com/chalkbadger), which works 
 
 ## Develop
 
-Git is required for the development tests. Run `python3 -m unittest discover -s tests -v`.
+Git is required for the development tests. Run `python3 check_tests.py`.
+This checks test-folder package markers before running unittest discovery.
 
 ## Contribute
 

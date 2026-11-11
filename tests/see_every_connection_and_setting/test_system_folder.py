@@ -19,6 +19,7 @@ import os
 from unittest.mock import patch
 
 from stay_safe.cli import main
+from tests.support import INCOMPLETE
 from tests.support import ConfigCase
 
 CONFIG = 'approval_policy="on-request"\nsandbox_mode="read-only"\n'
@@ -48,7 +49,7 @@ class SystemFolderTests(ConfigCase):
         with patch('stay_safe.cli.SYSTEM', folder), patch.dict(os.environ, env, clear=True), \
                 redirect_stdout(out), redirect_stderr(err):
             code = main(['--format', 'json', *args])
-        self.assertEqual(err.getvalue(), '')
+        self.assertEqual(err.getvalue(), INCOMPLETE if code == 2 else "")
         self.assertNotIn(PRIVATE, out.getvalue())
         report = json.loads(out.getvalue())
         return code, report['inspection_gaps']

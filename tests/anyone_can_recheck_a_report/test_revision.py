@@ -5,6 +5,7 @@ from unittest.mock import patch
 
 from stay_safe.provenance import identify
 from stay_safe.report import inspect, render
+from tests.support import INCOMPLETE
 from tests.support import full_scope, items, section, gap_items
 from tests.anyone_can_recheck_a_report.git_support import GitCase
 from tests.see_every_connection_and_setting.test_plain_gaps import gap_text
@@ -103,7 +104,7 @@ class RevisionTests(GitCase):
         shutil.rmtree(checkout / ".git")
         for format_name in ("markdown", "json"):
             run = self.run_cli(checkout, config, format_name)
-            self.assertEqual((run.returncode, run.stderr), (2, ""))
+            self.assertEqual((run.returncode, run.stderr), (2, INCOMPLETE))
             self.assertIn("commands_without_prompts", run.stdout)
             self.assertNotIn("/blob/", run.stdout)
             if format_name == "json":

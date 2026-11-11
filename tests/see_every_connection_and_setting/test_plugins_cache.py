@@ -6,7 +6,7 @@ Expected results follow openai/codex@086ccc833bc9cf01024ad2dd6af7dbd421b6bf9a:
   (store.rs L112-L120).
 - A plugin's active version is a directory inside `<marketplace>/<plugin>`; with none, there is no plugin
   to load (installed.rs L47-L68).
-The gap text and the unlistable case follow the issue: it names plugins/cache as not inspected.
+The unreadable result and next step follow issue #41; discovery semantics stay unchanged.
 """
 
 from contextlib import redirect_stderr, redirect_stdout
@@ -16,6 +16,7 @@ import os
 from unittest.mock import patch
 
 from stay_safe.cli import main
+from tests.support import INCOMPLETE
 from tests.support import ConfigCase
 
 CONFIG = 'approval_policy="on-request"\nsandbox_mode="read-only"\n'
@@ -37,7 +38,7 @@ class PluginsCacheTests(ConfigCase):
         with patch.dict(os.environ, {'CODEX_HOME': str(home)}, clear=True), \
                 redirect_stdout(out), redirect_stderr(err):
             code = main(['--format', 'json', *args])
-        self.assertEqual(err.getvalue(), '')
+        self.assertEqual(err.getvalue(), INCOMPLETE if code == 2 else "")
         return code, json.loads(out.getvalue())['inspection_gaps']
 
     def test_version_folder_gives_the_gap_and_exits_2(self):
@@ -72,24 +73,43 @@ class PluginsCacheTests(ConfigCase):
             (home / 'plugins' / 'cache' / 'openai-curated' / 'github' / '1.0.0').write_text('')
             self.assertEqual(self.run_report(home), (0, []))
 
-    def test_unlistable_cache_gives_the_gap_and_exits_2(self):
-        # A plugins/cache that is a file cannot be listed as a directory; this holds even for uid 0.
+    def test_unlistable_cache_reports_failure_without_private_details(self):
+        failure = ('Codex home: Could not check the plugin cache. '
+                   'Check that you can open plugins/cache in your Codex folder.')
+        for level in ('', '/private-market', '/private-market/private-plugin'):
+            home = self.home('private-home-' + str(len(level)),
+                             ['plugins/cache/private-market/private-plugin'])
+            denied_path = home / ('plugins/cache' + level)
+            real = os.listdir
+
+            def denied(path):
+                if path == denied_path:
+                    raise PermissionError(13, 'private-error', str(path))
+                return real(path)
+
+            for fmt in ('json', 'markdown'):
+                with self.subTest(level=level, format=fmt):
+                    out, err = io.StringIO(), io.StringIO()
+                    with patch.dict(os.environ, {'CODEX_HOME': str(home)}, clear=True), \
+                            patch('os.listdir', denied), redirect_stdout(out), redirect_stderr(err):
+                        code = main(['--format', fmt])
+                    self.assertEqual(code, 2)
+                    self.assertEqual(err.getvalue(), INCOMPLETE)
+                    text = out.getvalue()
+                    if fmt == 'json':
+                        report = json.loads(text)
+                        self.assertEqual(report['inspection_gaps'], [failure])
+                        self.assertEqual([risk['rule'] for risk in report['risks']], ['environment_inheritance'])
+                    else:
+                        self.assertIn('Could not check the plugin cache.', text)
+                        self.assertIn('Check that you can open `plugins/cache` in your Codex folder.', text)
+                        self.assertIn('environment_inheritance', text)
+                        self.assertNotIn('Your Codex folder has plugins', text)
+                    for private in (str(home), 'private-market', 'private-plugin', 'private-error'):
+                        self.assertNotIn(private, text + err.getvalue())
         home = self.home('cache-file', ['plugins'])
         (home / 'plugins' / 'cache').write_text('')
-        self.assertEqual(self.run_report(home), (2, [GAP]))
-        # A plugins/cache directory whose listing is denied. Only this listing is denied.
-        home = self.home('cache-denied', ['plugins/cache'])
-        cache = home / 'plugins' / 'cache'
-        scandir, listdir = os.scandir, os.listdir
-
-        def denied(real):
-            def call(path='.'):
-                if os.fspath(path) == os.fspath(cache):
-                    raise PermissionError(13, 'Permission denied')
-                return real(path)
-            return call
-        with patch('os.scandir', denied(scandir)), patch('os.listdir', denied(listdir)):
-            self.assertEqual(self.run_report(home), (2, [GAP]))
+        self.assertEqual(self.run_report(home), (2, [failure]))
 
     def test_runs_with_file_arguments_give_no_plugins_cache_gap(self):
         home = self.home('plugins', ['plugins/cache/openai-curated/github/1.0.0'])

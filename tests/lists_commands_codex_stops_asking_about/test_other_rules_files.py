@@ -17,6 +17,7 @@ import os
 from unittest.mock import patch
 
 from stay_safe.cli import main
+from tests.support import INCOMPLETE
 from tests.support import ConfigCase, section, gap_items
 from tests.see_every_connection_and_setting.test_plain_gaps import gap_text
 
@@ -40,7 +41,7 @@ class OtherRulesFileTests(ConfigCase):
         out, err = io.StringIO(), io.StringIO()
         with patch.dict(os.environ, {'CODEX_HOME': str(self.codex_home)}), redirect_stdout(out), redirect_stderr(err):
             code = main(['--format', format_name, *args])
-        self.assertEqual(err.getvalue(), '')
+        self.assertEqual(err.getvalue(), INCOMPLETE if code == 2 else "")
         return code, out.getvalue()
 
     def approvals(self, report):
