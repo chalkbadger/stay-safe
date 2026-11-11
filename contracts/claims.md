@@ -1,5 +1,13 @@
 # stay-safe claims
 
+## [test_folders_have_markers] When I forget a test folder's package marker, the development check names it and fails.
+Issue: https://github.com/chalkbadger/stay-safe/issues/15
+Tests: [tests/test_folders_have_markers/](../tests/test_folders_have_markers/)
+
+- I omit a direct or intermediate test folder's marker, and the complete check names it and exits unsuccessfully before running the tests. `test_check.py::test_missing_direct_and_intermediate_markers_stop_the_complete_check`
+- I restore the markers, and the complete check discovers my failing sentinel; correcting the sentinel makes the check pass. `test_check.py::test_restored_markers_run_the_failing_sentinel_then_allow_its_pass`
+- I leave markers out of folders with no matching tests in them or their descendants, and the complete check passes. `test_check.py::test_folders_without_matching_tests_do_not_need_markers`
+
 ## [runs_without_a_coding_agent] I copy the README's first commands, with no coding agent, and they download a tagged release and run it; the README's sample finding is what it prints. If I run it the wrong way or with a Python that's too old, it either runs anyway or tells me the exact command to run.
 Issue: https://github.com/chalkbadger/stay-safe/issues/3
 Tests: [tests/runs_without_a_coding_agent/](../tests/runs_without_a_coding_agent/)
