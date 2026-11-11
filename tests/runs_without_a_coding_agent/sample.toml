@@ -1,0 +1,4 @@
+# The README's sample finding is copied from `python3 -m stay_safe --config` on this file (archived issue #137).
+approval_policy = "on-request"
+sandbox_mode = "danger-full-access"
+shell_environment_policy = { inherit = "core" }

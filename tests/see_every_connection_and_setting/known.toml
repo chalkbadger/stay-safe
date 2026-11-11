@@ -1,0 +1,49 @@
+approval_policy = "never"
+sandbox_mode = "workspace-write"
+web_search = "disabled"
+notify = ["python", "private-helper.py", "fake-secret-do-not-share"]
+
+[sandbox_workspace_write]
+network_access = false
+
+[mcp_servers.git]
+command = "python"
+args = ["fake-secret-do-not-share", "--account", "alice@example.com"]
+env = { TOKEN = "fake-secret-do-not-share" }
+default_tools_approval_mode = "prompt"
+
+[mcp_servers.lookup]
+url = "https://alice:fake-secret-do-not-share@example.com/private?token=fake-secret-do-not-share"
+default_tools_approval_mode = "approve"
+enabled_tools = ["search", "delete"]
+disabled_tools = ["delete"]
+
+[mcp_servers.lookup.tools.search]
+approval_mode = "prompt"
+
+[mcp_servers.lookup.tools.delete]
+approval_mode = "approve"
+
+[mcp_servers.mail]
+url = "https://example.com/private"
+enabled = false
+default_tools_approval_mode = "approve"
+http_headers = { Authorization = "fake-secret-do-not-share" }
+
+[apps._default]
+enabled = false
+
+[apps.calendar]
+enabled = true
+destructive_enabled = false
+default_tools_approval_mode = "writes"
+
+[apps.backup]
+enabled = false
+destructive_enabled = true
+default_tools_approval_mode = "approve"
+
+[model_providers.internal]
+name = "Alice's account"
+base_url = "https://alice@example.com"
+experimental_bearer_token = "fake-secret-do-not-share"

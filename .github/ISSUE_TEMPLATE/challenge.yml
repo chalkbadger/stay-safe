@@ -1,0 +1,42 @@
+{
+  "name": "Challenge a configuration finding",
+  "description": "Dispute a finding or show a risk the diagnostic missed.",
+  "title": "Challenge: ",
+  "body": [
+    {"type": "markdown",
+     "attributes": {
+       "value": "Attach the code-produced report after reviewing it for sensitive names.\nUse a minimal, synthetic configuration for reproduction. Do not include credentials, raw private configuration, account identifiers, or private file contents.\n"
+     }
+    },
+    {"type": "textarea", "id": "finding",
+     "attributes": {
+       "label": "Finding",
+       "description": "Copy the rule ID, entry ID, and exact finding text. For a missed risk, say what was missing."
+     }, "validations": {"required":true}
+    },
+    {"type": "textarea", "id": "revision",
+     "attributes": {
+       "label": "Report revisions",
+       "description": "Include the checkout commit and report format version. Copy any tool revision, rules revision and source status shown in the report."
+     }, "validations": {"required":true}
+    },
+    {"type": "textarea", "id": "disputed-claim",
+     "attributes": {
+       "label": "Disputed claim",
+       "description": "State which interpretation is wrong or incomplete and what the report should say instead."
+     }, "validations": {"required":true}
+    },
+    {"type": "textarea", "id": "evidence",
+     "attributes": {
+       "label": "Evidence and reproduction",
+       "description": "Include a minimal synthetic configuration, expected and actual output, exact reproduction steps, and pinned documentation or source links. Label any observed behavior with the harness version and recorded events."
+     }, "validations": {"required":true}
+    },
+    {"type": "textarea", "id": "report",
+     "attributes": {
+       "label": "Report or independent record",
+       "description": "Attach the full code-produced report or link your own public record. A challenge can also live in your repository."
+     }
+    }
+  ]
+}

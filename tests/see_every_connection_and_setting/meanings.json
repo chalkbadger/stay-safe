@@ -1,0 +1,423 @@
+[
+  {
+    "setting": "approval_policy",
+    "value": "never",
+    "config": "approval_policy=\"never\"\nsandbox_mode=\"read-only\"",
+    "entry": "approval_policy"
+  },
+  {
+    "setting": "approval_policy",
+    "value": "on-request",
+    "config": "approval_policy=\"on-request\"\nsandbox_mode=\"read-only\"\n",
+    "entry": "approval_policy"
+  },
+  {
+    "setting": "approval_policy",
+    "value": "untrusted",
+    "config": "approval_policy=\"untrusted\"\nsandbox_mode=\"read-only\"",
+    "entry": "approval_policy",
+    "gaps": [
+      "approval_policy has a known but unhandled value; its behavior is not evaluated."
+    ]
+  },
+  {
+    "setting": "approval_policy",
+    "value": "on-failure",
+    "config": "approval_policy=\"on-failure\"\nsandbox_mode=\"read-only\"",
+    "entry": "approval_policy",
+    "gaps": [
+      "approval_policy has a known but unhandled value; its behavior is not evaluated."
+    ]
+  },
+  {
+    "setting": "approval_policy",
+    "value": "granular",
+    "config": "sandbox_mode=\"read-only\"\n[approval_policy.granular]\nsandbox_approval=false\nrules=false\nmcp_elicitations=false\nrequest_permissions=false\nskill_approval=false",
+    "entry": "approval_policy",
+    "gaps": [
+      "approval_policy has a known but unhandled value; its behavior is not evaluated."
+    ]
+  },
+  {
+    "setting": "sandbox_mode",
+    "value": "read-only",
+    "config": "approval_policy=\"on-request\"\nsandbox_mode=\"read-only\"",
+    "entry": "sandbox_mode"
+  },
+  {
+    "setting": "sandbox_mode",
+    "value": "workspace-write",
+    "config": "approval_policy=\"on-request\"\nsandbox_mode=\"workspace-write\"",
+    "entry": "sandbox_mode"
+  },
+  {
+    "setting": "sandbox_mode",
+    "value": "danger-full-access",
+    "config": "approval_policy=\"on-request\"\nsandbox_mode=\"danger-full-access\"",
+    "entry": "sandbox_mode"
+  },
+  {
+    "setting": "default_permissions",
+    "value": "selected with sandbox_mode",
+    "config": "approval_policy=\"on-request\"\nsandbox_mode=\"danger-full-access\"\ndefault_permissions=\":read-only\"",
+    "entry": "sandbox_mode",
+    "gaps": [
+      "Named permission profiles are outside reader coverage; sandbox settings are not effective-permission evidence.",
+      "default_permissions and sandbox_mode conflict; effective sandbox selection is unknown."
+    ]
+  },
+  {
+    "setting": "permissions",
+    "value": "definitions without selection",
+    "config": "approval_policy=\"on-request\"\nsandbox_mode=\"danger-full-access\"\n[permissions.example]\nextends=\":read-only\"",
+    "entry": "sandbox_mode",
+    "gaps": [
+      "Named permission profiles are outside reader coverage; sandbox settings are not effective-permission evidence."
+    ]
+  },
+  {
+    "setting": "sandbox_workspace_write.network_access",
+    "value": "true",
+    "config": "approval_policy=\"on-request\"\nsandbox_mode=\"workspace-write\"\n[sandbox_workspace_write]\nnetwork_access=true",
+    "entry": "sandbox_workspace_write.network_access"
+  },
+  {
+    "setting": "sandbox_workspace_write.network_access",
+    "value": "false",
+    "config": "approval_policy=\"on-request\"\nsandbox_mode=\"workspace-write\"\n[sandbox_workspace_write]\nnetwork_access=false",
+    "entry": "sandbox_workspace_write.network_access"
+  },
+  {
+    "setting": "sandbox_workspace_write.*",
+    "value": "under read-only",
+    "config": "approval_policy=\"on-request\"\nsandbox_mode=\"read-only\"\n[sandbox_workspace_write]\nnetwork_access=true",
+    "entry": "sandbox_workspace_write.network_access"
+  },
+  {
+    "setting": "mcp_servers.*.enabled",
+    "value": "false",
+    "config": "approval_policy=\"on-request\"\nsandbox_mode=\"read-only\"\n[mcp_servers.remote]\ncommand=\"synthetic-command\"\nenabled=false",
+    "entry": "mcp_servers.remote"
+  },
+  {
+    "setting": "mcp_servers.*.command",
+    "value": "nonempty command, no url",
+    "config": "approval_policy=\"on-request\"\nsandbox_mode=\"read-only\"\n[mcp_servers.remote]\ncommand=\"synthetic-command\"",
+    "entry": "mcp_servers.remote"
+  },
+  {
+    "setting": "mcp_servers.*.url",
+    "value": "string, no command",
+    "config": "approval_policy=\"on-request\"\nsandbox_mode=\"read-only\"\n[mcp_servers.remote]\nurl=\"localhost:8080/mcp\"",
+    "entry": "mcp_servers.remote"
+  },
+  {
+    "setting": "mcp_servers.*.http_headers_helper",
+    "value": "nonempty command",
+    "config": "approval_policy=\"on-request\"\nsandbox_mode=\"read-only\"\n[mcp_servers.remote]\nurl=\"https://example.com\"\nhttp_headers_helper=\"synthetic-helper\"",
+    "entry": "mcp_servers.remote"
+  },
+  {
+    "setting": "mcp_servers.*.enabled_tools",
+    "value": "named allowlist",
+    "config": "approval_policy=\"on-request\"\nsandbox_mode=\"read-only\"\n[mcp_servers.remote]\nurl=\"https://example.com\"\nenabled_tools=[\"read\", \"files/write\"]",
+    "entry": "mcp_servers.remote.enabled_tools"
+  },
+  {
+    "setting": "mcp_servers.*.disabled_tools",
+    "value": "named denylist",
+    "config": "approval_policy=\"on-request\"\nsandbox_mode=\"read-only\"\n[mcp_servers.remote]\nurl=\"https://example.com\"\ndisabled_tools=[\"delete\"]",
+    "entry": "mcp_servers.remote.disabled_tools"
+  },
+  {
+    "setting": "mcp_servers.*.default_tools_approval_mode",
+    "value": "approve",
+    "config": "approval_policy=\"on-request\"\nsandbox_mode=\"read-only\"\n[mcp_servers.remote]\nurl=\"https://example.com\"\ndefault_tools_approval_mode=\"approve\"",
+    "entry": "mcp_servers.remote"
+  },
+  {
+    "setting": "mcp_servers.*.default_tools_approval_mode",
+    "value": "auto",
+    "config": "approval_policy=\"on-request\"\nsandbox_mode=\"read-only\"\n[mcp_servers.remote]\nurl=\"https://example.com\"\ndefault_tools_approval_mode=\"auto\"",
+    "entry": "mcp_servers.remote"
+  },
+  {
+    "setting": "mcp_servers.*.default_tools_approval_mode",
+    "value": "prompt",
+    "config": "approval_policy=\"on-request\"\nsandbox_mode=\"read-only\"\n[mcp_servers.remote]\nurl=\"https://example.com\"\ndefault_tools_approval_mode=\"prompt\"",
+    "entry": "mcp_servers.remote"
+  },
+  {
+    "setting": "mcp_servers.*.default_tools_approval_mode",
+    "value": "writes",
+    "config": "approval_policy=\"on-request\"\nsandbox_mode=\"read-only\"\n[mcp_servers.remote]\nurl=\"https://example.com\"\ndefault_tools_approval_mode=\"writes\"",
+    "entry": "mcp_servers.remote"
+  },
+  {
+    "setting": "mcp_servers.*.tools.*.approval_mode",
+    "value": "approve",
+    "config": "approval_policy=\"on-request\"\nsandbox_mode=\"read-only\"\n[mcp_servers.remote]\nurl=\"https://example.com\"\ndefault_tools_approval_mode=\"prompt\"\n[mcp_servers.remote.tools.\"files/write\"]\napproval_mode=\"approve\"",
+    "entry": "mcp_servers.remote.tools.\"files/write\""
+  },
+  {
+    "setting": "mcp_servers.*.tools.*.enabled",
+    "value": "false",
+    "config": "approval_policy=\"on-request\"\nsandbox_mode=\"read-only\"\n[mcp_servers.remote]\nurl=\"https://example.com\"\n[mcp_servers.remote.tools.write]\nenabled=false\napproval_mode=\"approve\"",
+    "entry": "mcp_servers.remote.tools.write",
+    "gaps": [
+      "tools contains fields outside reader coverage; their values were withheld."
+    ]
+  },
+  {
+    "setting": "apps._default.enabled",
+    "value": "false, named app without enabled",
+    "config": "approval_policy=\"on-request\"\nsandbox_mode=\"read-only\"\n[apps._default]\nenabled=false\n[apps.files]\ndefault_tools_approval_mode=\"approve\"",
+    "entry": "apps.files"
+  },
+  {
+    "setting": "apps.*.enabled",
+    "value": "false",
+    "config": "approval_policy=\"on-request\"\nsandbox_mode=\"read-only\"\n[apps.files]\nenabled=false\ndefault_tools_approval_mode=\"approve\"\ndestructive_enabled=true",
+    "entry": "apps.files"
+  },
+  {
+    "setting": "apps.*.default_tools_enabled",
+    "value": "false",
+    "config": "approval_policy=\"on-request\"\nsandbox_mode=\"read-only\"\n[apps.files]\ndefault_tools_enabled=false\ndefault_tools_approval_mode=\"approve\"",
+    "entry": "apps.files"
+  },
+  {
+    "setting": "apps.*.default_tools_enabled",
+    "value": "true",
+    "config": "approval_policy=\"on-request\"\nsandbox_mode=\"read-only\"\n[apps.files]\ndefault_tools_enabled=true\ndestructive_enabled=false",
+    "entry": "apps.files"
+  },
+  {
+    "setting": "apps._default.default_tools_enabled",
+    "value": "false",
+    "config": "approval_policy=\"on-request\"\nsandbox_mode=\"read-only\"\n[apps._default]\ndefault_tools_enabled=false\n[apps.files]\ndefault_tools_approval_mode=\"approve\"",
+    "entry": "apps.files",
+    "gaps": [
+      "apps._default contains fields outside reader coverage; their values were withheld."
+    ]
+  },
+  {
+    "setting": "apps.*.default_tools_approval_mode",
+    "value": "approve inherited from _default",
+    "config": "approval_policy=\"on-request\"\nsandbox_mode=\"read-only\"\n[apps._default]\ndefault_tools_approval_mode=\"approve\"\n[apps.files]",
+    "entry": "apps.files"
+  },
+  {
+    "setting": "apps.*.enabled_tools",
+    "value": "on an app",
+    "config": "approval_policy=\"on-request\"\nsandbox_mode=\"read-only\"\n[apps.drive]\ndefault_tools_approval_mode=\"approve\"\nenabled_tools=[]",
+    "entry": "apps.drive",
+    "gaps": [
+      "apps contains fields outside reader coverage; their values were withheld."
+    ]
+  },
+  {
+    "setting": "apps.*.disabled_tools",
+    "value": "on an app",
+    "config": "approval_policy=\"on-request\"\nsandbox_mode=\"read-only\"\n[apps.drive]\ndefault_tools_approval_mode=\"prompt\"\ndisabled_tools=[\"delete\"]\n[apps.drive.tools.delete]\napproval_mode=\"approve\"",
+    "entry": "apps.drive.tools.delete",
+    "gaps": [
+      "apps contains fields outside reader coverage; their values were withheld."
+    ]
+  },
+  {
+    "setting": "apps.*.tools.*.approval_mode",
+    "value": "approve",
+    "config": "approval_policy=\"on-request\"\nsandbox_mode=\"read-only\"\n[apps.files]\ndefault_tools_approval_mode=\"prompt\"\n[apps.files.tools.write]\napproval_mode=\"approve\"",
+    "entry": "apps.files.tools.write"
+  },
+  {
+    "setting": "apps.*.tools.*.enabled",
+    "value": "false",
+    "config": "approval_policy=\"on-request\"\nsandbox_mode=\"read-only\"\n[apps.files.tools.write]\nenabled=false\napproval_mode=\"approve\"",
+    "entry": "apps.files.tools.write"
+  },
+  {
+    "setting": "apps.*.tools.*.enabled",
+    "value": "true overrides default_tools_enabled",
+    "config": "approval_policy=\"on-request\"\nsandbox_mode=\"read-only\"\n[apps.files]\ndefault_tools_enabled=false\n[apps.files.tools.write]\nenabled=true\napproval_mode=\"approve\"",
+    "entry": "apps.files.tools.write"
+  },
+  {
+    "setting": "apps.*.destructive_enabled",
+    "value": "omitted",
+    "config": "approval_policy=\"on-request\"\nsandbox_mode=\"read-only\"\n[apps._default]\nenabled=false\n[apps.files]\nenabled=true",
+    "entry": "apps.files"
+  },
+  {
+    "setting": "apps.*.destructive_enabled",
+    "value": "true inherited from _default",
+    "config": "approval_policy=\"on-request\"\nsandbox_mode=\"read-only\"\n[apps._default]\nenabled=false\ndestructive_enabled=true\n[apps.files]\nenabled=true",
+    "entry": "apps.files"
+  },
+  {
+    "setting": "apps.*.destructive_enabled",
+    "value": "false inherited from _default",
+    "config": "approval_policy=\"on-request\"\nsandbox_mode=\"read-only\"\n[apps._default]\nenabled=false\ndestructive_enabled=false\n[apps.files]\nenabled=true",
+    "entry": "apps.files"
+  },
+  {
+    "setting": "apps.*.links",
+    "value": "per-account policy",
+    "config": "approval_policy=\"on-request\"\nsandbox_mode=\"read-only\"\n[apps.files.links.private-account]\nenabled=false",
+    "entry": "apps.files",
+    "gaps": [
+      "Per-account app policy is not evaluated; account identifiers were withheld."
+    ]
+  },
+  {
+    "setting": "model_providers.*",
+    "value": "definition",
+    "config": "approval_policy=\"on-request\"\nsandbox_mode=\"read-only\"\n[model_providers.internal]\nbase_url=\"https://example.com\"",
+    "entry": "model_providers.internal"
+  },
+  {
+    "setting": "model_providers.*.auth",
+    "value": "command-backed authentication",
+    "config": "approval_policy=\"on-request\"\nsandbox_mode=\"read-only\"\n[model_providers.internal.auth]\ncommand=\"synthetic-command\"",
+    "entry": "model_providers.internal",
+    "gaps": [
+      "Model-provider command-backed authentication is outside reader coverage."
+    ]
+  },
+  {
+    "setting": "notify",
+    "value": "command list with nonempty program",
+    "config": "approval_policy=\"on-request\"\nsandbox_mode=\"read-only\"\nnotify=[\"synthetic-command\"]",
+    "entry": "notify"
+  },
+  {
+    "setting": "hooks.*",
+    "value": "command handler with nonempty command",
+    "config": "approval_policy=\"on-request\"\nsandbox_mode=\"read-only\"\n[[hooks.PreToolUse]]\nmatcher=\"shell\"\nhooks=[{type=\"command\",command=\"synthetic-command\",timeout=30}]",
+    "entry": "hooks.PreToolUse",
+    "gaps": [
+      "Hook execution policy is outside reader coverage."
+    ]
+  },
+  {
+    "setting": "hooks.*",
+    "value": "no command handler with nonempty command",
+    "config": "approval_policy=\"on-request\"\nsandbox_mode=\"read-only\"\n[[hooks.PreToolUse]]\nhooks=[{type=\"prompt\"},{type=\"agent\"},{type=\"mcp_tool\",server=\"synthetic\",tool=\"synthetic\"},{type=\"command\",command=\"\"}]",
+    "entry": "hooks.PreToolUse",
+    "gaps": [
+      "Hook execution policy is outside reader coverage."
+    ]
+  },
+  {
+    "setting": "hooks.state",
+    "value": "trusts, distrusts or disables a hook",
+    "config": "approval_policy=\"on-request\"\nsandbox_mode=\"read-only\"\n[[hooks.PreToolUse]]\nhooks=[{type=\"command\",command=\"synthetic-command\"}]\n[hooks.state.\"/home/user/.codex/config.toml:pre_tool_use:0:0\"]\nenabled=false",
+    "entry": "hooks.PreToolUse",
+    "gaps": [
+      "Hook execution policy is outside reader coverage."
+    ]
+  },
+  {
+    "setting": "web_search",
+    "value": "disabled",
+    "config": "approval_policy=\"on-request\"\nsandbox_mode=\"read-only\"\nweb_search=\"disabled\"",
+    "entry": "web_search"
+  },
+  {
+    "setting": "web_search",
+    "value": "cached",
+    "config": "approval_policy=\"on-request\"\nsandbox_mode=\"read-only\"\nweb_search=\"cached\"",
+    "entry": "web_search"
+  },
+  {
+    "setting": "web_search",
+    "value": "indexed",
+    "config": "approval_policy=\"on-request\"\nsandbox_mode=\"read-only\"\nweb_search=\"indexed\"",
+    "entry": "web_search"
+  },
+  {
+    "setting": "web_search",
+    "value": "live",
+    "config": "approval_policy=\"on-request\"\nsandbox_mode=\"read-only\"\nweb_search=\"live\"",
+    "entry": "web_search"
+  },
+  {
+    "setting": "web_search",
+    "value": "unrecognized string",
+    "config": "approval_policy=\"on-request\"\nsandbox_mode=\"read-only\"\nweb_search=\"future-private-value\"",
+    "entry": "web_search",
+    "gaps": [
+      "web_search is unsupported or invalid; its value was withheld."
+    ]
+  },
+  {
+    "setting": "mcp_servers.*.default_tools_approval_mode",
+    "value": "omitted",
+    "config": "approval_policy=\"on-request\"\nsandbox_mode=\"read-only\"\n[mcp_servers.remote]\nurl=\"https://example.com\"",
+    "entry": "mcp_servers.remote"
+  },
+  {
+    "setting": "apps.*.default_tools_approval_mode",
+    "value": "omitted without _default mode",
+    "config": "approval_policy=\"on-request\"\nsandbox_mode=\"read-only\"\n[apps.files]",
+    "entry": "apps.files"
+  },
+  {
+    "setting": "apps.*.default_tools_approval_mode",
+    "value": "writes inherited from _default",
+    "config": "approval_policy=\"on-request\"\nsandbox_mode=\"read-only\"\n[apps._default]\ndefault_tools_approval_mode=\"writes\"\n[apps.files]",
+    "entry": "apps.files"
+  },
+  {
+    "setting": "shell_environment_policy",
+    "value": "omitted",
+    "config": "approval_policy=\"on-request\"\nsandbox_mode=\"read-only\"\n",
+    "entry": "shell_environment_policy"
+  },
+  {
+    "setting": "shell_environment_policy.inherit",
+    "value": "all",
+    "config": "approval_policy=\"on-request\"\nsandbox_mode=\"read-only\"\n[shell_environment_policy]\ninherit=\"all\"",
+    "entry": "shell_environment_policy"
+  },
+  {
+    "setting": "shell_environment_policy.inherit",
+    "value": "core",
+    "config": "approval_policy=\"on-request\"\nsandbox_mode=\"read-only\"\n[shell_environment_policy]\ninherit=\"core\"",
+    "entry": "shell_environment_policy"
+  },
+  {
+    "setting": "shell_environment_policy.inherit",
+    "value": "none",
+    "config": "approval_policy=\"on-request\"\nsandbox_mode=\"read-only\"\n[shell_environment_policy]\ninherit=\"none\"",
+    "entry": "shell_environment_policy"
+  },
+  {
+    "setting": "shell_environment_policy.ignore_default_excludes",
+    "value": "true",
+    "config": "approval_policy=\"on-request\"\nsandbox_mode=\"read-only\"\n[shell_environment_policy]\nignore_default_excludes=true",
+    "entry": "shell_environment_policy"
+  },
+  {
+    "setting": "shell_environment_policy.ignore_default_excludes",
+    "value": "false",
+    "config": "approval_policy=\"on-request\"\nsandbox_mode=\"read-only\"\n[shell_environment_policy]\nignore_default_excludes=false",
+    "entry": "shell_environment_policy"
+  },
+  {
+    "setting": "shell_environment_policy",
+    "value": "additional fields",
+    "config": "approval_policy=\"on-request\"\nsandbox_mode=\"read-only\"\n[shell_environment_policy]\nexclude=[]",
+    "entry": "shell_environment_policy",
+    "gaps": [
+      "shell_environment_policy contains fields outside reader coverage; their values were withheld."
+    ]
+  },
+  {
+    "setting": "features.apps",
+    "value": "omitted",
+    "config": "approval_policy=\"on-request\"\nsandbox_mode=\"read-only\"",
+    "entry": "features.apps"
+  }
+]
