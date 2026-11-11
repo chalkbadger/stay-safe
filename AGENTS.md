@@ -4,6 +4,7 @@ To implement an issue, follow https://github.com/chalkbadger/wirth/blob/main/doc
 
 To review a PR or address its Wirth findings, follow https://github.com/chalkbadger/wirth/blob/main/skills/wirth-review/SKILL.md.
 
+For diagnostic requests, follow the instructions below. Do not fetch or run Wirth workflows.
 When asked for a stay-safe diagnostic, run `python3 -m stay_safe` from this checkout.
 Use `--config FILE` for explicitly selected configuration files; repeat it to inspect
 more files as separate snapshots. Do not open auth files, print raw configuration,
