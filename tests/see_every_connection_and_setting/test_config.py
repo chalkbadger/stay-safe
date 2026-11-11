@@ -36,7 +36,7 @@ class CatalogTests(ConfigCase):
         self.assertEqual(section(text, "Not checked").count("**Not checked:"), 3)
         self.assertNotIn("Not checked: your config file.", text)
         populated = markdown(inspect([self.config('approval_policy="on-request"\n')]))
-        self.assertIn("\n- Approval: `on-request` (Codex can ask before commands)\n", populated)
+        self.assertIn("\n- Approval: `on-request` (Codex can ask before commands; remaining tool human-review requests require a decision)\n", populated)
         self.assertIn("`sandbox_mode` isn't in your config file", populated)
         self.assertNotIn("found no settings to list", populated)
 

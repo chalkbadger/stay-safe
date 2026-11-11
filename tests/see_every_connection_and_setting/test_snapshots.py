@@ -12,8 +12,8 @@ class SnapshotTests(ReportRuns, ConfigCase):
                               "reads files; it doesn't start Codex or contact any service. Watch what Codex asks "
                               "before it acts."]}
         approvals = {"json": (["config-1:approval_policy"], ["config-2:approval_policy"]),
-                     "markdown": (["Approval: `never` (doesn't ask before commands)"],
-                                  ["Approval: `on-request` (Codex can ask before commands)"])}
+                     "markdown": (["Approval: `never` (doesn't ask before commands; remaining tool human-review requests are denied)"],
+                                  ["Approval: `on-request` (Codex can ask before commands; remaining tool human-review requests require a decision)"])}
         user = self.config('approval_policy="never"\nsandbox_mode="read-only"\n', "user.toml")
         project = self.config('approval_policy="on-request"\nsandbox_mode="workspace-write"\n', "project.toml")
         for format_name in ("markdown", "json"):

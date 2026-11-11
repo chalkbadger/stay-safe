@@ -86,7 +86,7 @@ PLACEHOLDERS = ("`<config-1>` and similar labels stand for a file you passed wit
                 "path in before you paste. ")
 NOTE = ("*Before you change anything:* {placeholders}Codex reads the whole file to edit it. The app, profiles and flags "
         "such as `--ask-for-approval`, `--sandbox`, `--profile` and `-c` can override any file. Codex can allow or "
-        "block a tool call without asking you. This report does not test which calls Codex allows.")
+        "block a tool call without asking you. This report does not test which calls Codex allows. Tool hints, remembered tool approvals, effective permission profiles and reviewer state are not inspected. Strict automatic review sends calls to an automated reviewer unless a permission hook decides first. It is a runtime state, not a sandbox mode.")
 
 
 def block(what, where, ask, check=None):
@@ -99,12 +99,11 @@ def block(what, where, ask, check=None):
 # check: core/src/mcp_tool_call.rs L2621-L2623), server enabled_tools (MCP servers only; the listed tools keep their
 # mode, so they still run without asking), server/app prompt.
 def automatic_group(kind, name, table, file=FILE):
-    allowlist = (", or list only the tools you use in `enabled_tools` (those still run without asking)"
+    allowlist = (", or list only the tools you use in `enabled_tools` (their approval modes still apply)"
                  if kind == "MCP server" else "")
     return block(
-        "Set `default_tools_approval_mode = \"writes\"` (Codex then asks unless the server labels a tool read-only, "
-        f"which Codex doesn't check){allowlist}. Stricter: `default_tools_approval_mode = \"prompt\"`, so Codex asks "
-        "before every call.",
+        "Set `default_tools_approval_mode = \"writes\"` (a read-only hint can exempt approval; "
+        f"other exemptions and review still apply){allowlist}. Stricter: `default_tools_approval_mode = \"prompt\"`, to require approval unless another exemption applies. Review can still change the outcome.",
         f"under `[{table}]`",
         f"Edit {file} to set `default_tools_approval_mode = \"writes\"` for my `{name}` {kind}")
 
@@ -116,16 +115,16 @@ def labels_group(kind, name, table, file=FILE):
                  if kind == "MCP server" else "")
     return block(
         "Set `default_tools_approval_mode = \"prompt\"` with `approval_mode = \"approve\"` only for tools you trust "
-        f"(those run without asking){allowlist}. Stricter: `default_tools_approval_mode = \"prompt\"` for every tool, "
-        "so Codex asks before every call.",
+        f"(allowed without asking when strict automatic review is off){allowlist}. Stricter: `default_tools_approval_mode = \"prompt\"` for every tool, "
+        "to require approval unless another exemption applies. Review can still change the outcome.",
         f"under `[{table}]`, with each trusted tool's `approval_mode` under `[{table}.tools.<tool>]`",
-        f"Edit {file} so my `{name}` {kind} asks before every tool call except these tools I trust: <tool names>")
+        f"Edit {file} so my `{name}` {kind} uses `default_tools_approval_mode = \"prompt\"` with `approval_mode = \"approve\"` only for these tools I trust: <tool names>")
 
 
 # One tool's own mode: no lower-friction option has a row (server prompt row, tool override rows).
 def tool_prompt(tool, kind, name, table, file=FILE):
     return block(
-        "Set `approval_mode = \"prompt\"` for this tool, so Codex asks before calling it.",
+        "Set `approval_mode = \"prompt\"` for this tool to require approval unless another exemption applies. Review can still change the outcome.",
         f"under `[{table}]`",
         f"Edit {file} to set `approval_mode = \"prompt\"` for the `{tool}` tool of my `{name}` {kind}")
 

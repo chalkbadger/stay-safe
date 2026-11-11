@@ -13,12 +13,11 @@ import sys
 from tests.support import finding_items, FIRST, SECOND, ConfigCase, ROOT, items, section
 
 PROGRAM = "If that program or your config file were tampered with, it could run code you didn't intend."
-AUTOMATIC = ("Codex approves these tool calls for you, so untrusted content from a tool could lead to actions "
-             "you didn't want.")
+AUTOMATIC = 'With strict automatic review off, `approve` makes calls allowed without asking. This is permission to proceed, not successful execution. Untrusted tool content could lead to unwanted actions.'
 DESTRUCTIVE = "A mistaken operation could change or delete data in the connected service."
 SOURCE_ONLY = "Based on Codex's source code, not yet seen in a live run."
-GROUP_HINTS = f"Codex trusts the read-only labels the server gives its tools and doesn't check them. {SOURCE_ONLY}"
-TOOL_HINTS = f"Codex trusts the read-only label the tool's own server gives it and doesn't check it. {SOURCE_ONLY}"
+GROUP_HINTS = 'Codex uses server-declared hints to decide whether approval is required. With strict automatic review off, hints can make calls allowed without asking, even under `never`. Other exemptions can also apply. This is permission to proceed, not successful execution. ' + SOURCE_ONLY
+TOOL_HINTS = GROUP_HINTS
 # Rule -> one sentence on its cited incidents, from incidents.md (reading check, 2026-11-09).
 HOW = {
     "saved_approval": "A Codex user reported that a saved approval for `curl` let later `curl` commands run without "
@@ -51,35 +50,35 @@ EXPECTED = {
         "**With these settings, Codex runs commands without asking you.** It won't ask before any command it's "
         "allowed to run, so injected or mistaken instructions could make it run code you didn't want.",
     ("automatic_tools", "config-1:apps.calendar"):
-        f"**Your `calendar` app's tools are set to run without asking you.** {AUTOMATIC}",
+        f"**Your `calendar` app's tools are set to be allowed without asking you.** {AUTOMATIC}",
     ("destructive_tools", "config-1:apps.calendar"):
         f"**Your `calendar` app's tools that can change or delete data are turned on.** {DESTRUCTIVE}",
     ("destructive_tools", "config-1:apps.drive"):
         f"**Your `drive` app's tools that can change or delete data are turned on.** {DESTRUCTIVE}",
     ("self_described_tools", "config-1:apps.drive"):
-        f"**Your `drive` app's tools can run without asking you.** {GROUP_HINTS}",
+        f"**Your `drive` app's tools can be allowed without asking you.** {GROUP_HINTS}",
     ("automatic_tools", "config-1:apps.files.tools.delete"):
-        f"**The `delete` tool of your `files` app is set to run without asking you.** {AUTOMATIC}",
+        f"**The `delete` tool of your `files` app is set to be allowed without asking you.** {AUTOMATIC}",
     ("destructive_tools", "config-1:apps.files.tools.delete"):
         f"**The `delete` tool of your `files` app is turned on, even if it can change or delete data.** {DESTRUCTIVE}",
     ("destructive_tools", "config-1:apps.files.tools.read"):
         f"**The `read` tool of your `files` app is turned on, even if it can change or delete data.** {DESTRUCTIVE}",
     ("self_described_tools", "config-1:apps.files.tools.read"):
-        f"**The `read` tool of your `files` app can run without asking you.** {TOOL_HINTS}",
+        f"**The `read` tool of your `files` app can be allowed without asking you.** {TOOL_HINTS}",
     ("configured_program", "config-1:hooks.PreToolUse"):
         f"**Your `PreToolUse` hooks can start a program on your computer.** {PROGRAM}",
     ("self_described_tools", "config-1:mcp_servers.docs.tools.lookup"):
-        f"**The `lookup` tool of your `docs` MCP server can run without asking you.** {TOOL_HINTS}",
+        f"**The `lookup` tool of your `docs` MCP server can be allowed without asking you.** {TOOL_HINTS}",
     ("automatic_tools", "config-1:mcp_servers.docs.tools.publish"):
-        f"**The `publish` tool of your `docs` MCP server is set to run without asking you.** {AUTOMATIC}",
+        f"**The `publish` tool of your `docs` MCP server is set to be allowed without asking you.** {AUTOMATIC}",
     ("configured_program", "config-1:mcp_servers.github"):
         f"**Your `github` MCP server can start a program on your computer.** {PROGRAM}",
     ("self_described_tools", "config-1:mcp_servers.github"):
-        f"**Your `github` MCP server's tools can run without asking you.** {GROUP_HINTS}",
+        f"**Your `github` MCP server's tools can be allowed without asking you.** {GROUP_HINTS}",
     ("automatic_tools", "config-1:mcp_servers.search"):
-        f"**Your `search` MCP server's tools are set to run without asking you.** {AUTOMATIC}",
+        f"**Your `search` MCP server's tools are set to be allowed without asking you.** {AUTOMATIC}",
     ("self_described_tools", 'config-1:mcp_servers."team.wiki"'):
-        f"**Your `team.wiki` MCP server's tools can run without asking you.** {GROUP_HINTS}",
+        f"**Your `team.wiki` MCP server's tools can be allowed without asking you.** {GROUP_HINTS}",
     ("configured_program", "config-1:notify"):
         f"**Your `notify` setting can start a program on your computer.** {PROGRAM}",
     ("unrestricted_filesystem", "config-1:sandbox_mode"):

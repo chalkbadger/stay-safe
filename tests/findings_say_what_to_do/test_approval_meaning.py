@@ -47,7 +47,8 @@ class ApprovalMeaningTests(ConfigCase):
         self.assertIn('human-review requests require a decision', groups[2])
         self.assertNotIn('asks before every call', md)
         self.assertNotIn('https://private.example', md)
-        self.assertEqual(json.loads(render(report, 'json'))['inspection_gaps'], report['inspection_gaps'])
+        self.assertEqual(json.loads(render(report, 'json'))['inspection_gaps'],
+                         ['config-3: approval_policy is absent; the reader does not infer its effective value.'])
 
     def test_cli_approval_meaning_keeps_status_and_private_values_withheld(self):
         path = self.config('approval_policy = "never"\nsandbox_mode = "read-only"\n'

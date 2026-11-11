@@ -68,10 +68,10 @@ The `auto` default is defined by [AppToolApproval][tool-default].
 | `mcp_servers.*.http_headers_helper` | `nonempty command` | An HTTP header helper is a configured program; contents are withheld. Catalog: `configured enabled`, `HTTP; endpoint withheld`, `tool approval: auto (default)`. Rules: `configured_program`, `self_described_tools`. Gap: no. | [mcp] | documented |
 | `mcp_servers.*.enabled_tools` | `named allowlist` | Only listed names are allowed by this file, before the denylist; the list does not establish live availability. Catalog: `configured names: read, files/write`. Rules: none. Gap: no. | [mcp] | documented |
 | `mcp_servers.*.disabled_tools` | `named denylist` | Listed names are removed after applying the allowlist. Catalog: `configured names: delete`. Rules: none. Gap: no. | [mcp] | documented |
-| `mcp_servers.*.default_tools_approval_mode` | `approve` | Never asks before the tool call. Catalog: `configured enabled`, `HTTP; endpoint withheld`, `tool approval: approve`. Rules: `automatic_tools`. Gap: no. | [tool-approval] | documented in source |
-| `mcp_servers.*.default_tools_approval_mode` | `auto` | The default mode asks when destructiveHint=true, or when readOnlyHint is absent/false and destructiveHint or openWorldHint is absent/true. Only auto remembers session approvals. Catalog: `configured enabled`, `HTTP; endpoint withheld`, `tool approval: auto`. Rules: `self_described_tools`. Gap: no. | [tool-approval] | documented in source |
-| `mcp_servers.*.default_tools_approval_mode` | `prompt` | Always asks before a tool call; a session approval counts for one call. Catalog: `configured enabled`, `HTTP; endpoint withheld`, `tool approval: prompt`. Rules: none. Gap: no. | [tool-approval] | documented in source |
-| `mcp_servers.*.default_tools_approval_mode` | `writes` | Asks when the tool does not declare readOnlyHint=true; session approval is not remembered. Catalog: `configured enabled`, `HTTP; endpoint withheld`, `tool approval: writes`. Rules: `self_described_tools`. Gap: no. | [tool-approval] | documented in source |
+| `mcp_servers.*.default_tools_approval_mode` | `approve` | See the [tool approval decision table](#tool-approval-decisions). Catalog: `configured enabled`, `HTTP; endpoint withheld`, `tool approval: approve`. Rules: `automatic_tools`. Gap: no. | [tool-approval] | documented in source |
+| `mcp_servers.*.default_tools_approval_mode` | `auto` | See the [tool approval decision table](#tool-approval-decisions). Catalog: `configured enabled`, `HTTP; endpoint withheld`, `tool approval: auto`. Rules: `self_described_tools`. Gap: no. | [tool-approval] | documented in source |
+| `mcp_servers.*.default_tools_approval_mode` | `prompt` | See the [tool approval decision table](#tool-approval-decisions). Catalog: `configured enabled`, `HTTP; endpoint withheld`, `tool approval: prompt`. Rules: none. Gap: no. | [tool-approval] | documented in source |
+| `mcp_servers.*.default_tools_approval_mode` | `writes` | See the [tool approval decision table](#tool-approval-decisions). Catalog: `configured enabled`, `HTTP; endpoint withheld`, `tool approval: writes`. Rules: `self_described_tools`. Gap: no. | [tool-approval] | documented in source |
 | `mcp_servers.*.tools.*.approval_mode` | `approve` | A named tool override replaces the server default when the tool is permitted by its filters. Catalog: `configured enabled`, `tool approval: approve`. Rules: `automatic_tools`. Gap: no. | [mcp] | documented |
 | `mcp_servers.*.tools.*.enabled` | `false` | This app-style field is unsupported for MCP tools and does not disable the configured tool. Catalog: `configured enabled`, `tool approval: approve`. Rules: `automatic_tools`. Gap: yes. | [schema] | open |
 | `apps._default.enabled` | `false, named app without enabled` | Disables no named app: a named app's enablement comes from its own `enabled`, which defaults to `true` ([field][app-enabled-field]), so an app without it stays enabled, as a [recorded Codex 0.167.0 run][app-enabled-run] shows. Catalog: `configured enabled`, `destructive tools enabled by Codex default`, `tool approval: approve`. Rules: `automatic_tools`, `destructive_tools`. Gap: no. | [app-enabled] | documented in source |
@@ -102,7 +102,7 @@ The `auto` default is defined by [AppToolApproval][tool-default].
 | `web_search` | `unrecognized string` | An unrecognized mode is withheld and produces a coverage gap. Catalog: none. Rules: none. Gap: yes. | [schema] | open |
 | `mcp_servers.*.default_tools_approval_mode` | `omitted` | The documented auto default applies to an enabled server when no tool override replaces it. Catalog: `configured enabled`, `HTTP; endpoint withheld`, `tool approval: auto (default)`. Rules: `self_described_tools`. Gap: no. | [tool-approval] | documented in source |
 | `apps.*.default_tools_approval_mode` | `omitted without _default mode` | The documented auto default applies to a named enabled app when no app or tool override replaces it. Catalog: `configured enabled`, `destructive tools enabled by Codex default`, `tool approval: auto (default)`. Rules: `destructive_tools`, `self_described_tools`. Gap: no. | [tool-approval] | documented in source |
-| `apps.*.default_tools_approval_mode` | `writes inherited from _default` | The named app inherits the writes policy from its default; the hint-dependent meaning is defined in the mode rows above. Catalog: `configured enabled`, `destructive tools enabled by Codex default`, `tool approval: writes`. Rules: `destructive_tools`, `self_described_tools`. Gap: no. | [apps] | documented |
+| `apps.*.default_tools_approval_mode` | `writes inherited from _default` | The named app inherits the writes policy from its default; see the [tool approval decision table](#tool-approval-decisions). Catalog: `configured enabled`, `destructive tools enabled by Codex default`, `tool approval: writes`. Rules: `destructive_tools`, `self_described_tools`. Gap: no. | [apps] | documented |
 | `shell_environment_policy` | `omitted` | Catalog: `inherit: all (default)`, `ignore_default_excludes: true (default)`. Rules: `environment_inheritance`. Gap: no. | [shell-environment-input] | documented in source |
 | `shell_environment_policy.inherit` | `all` | Catalog: `inherit: all (explicit)`, `ignore_default_excludes: true (default)`. Rules: `environment_inheritance`. Gap: no. | [shell-environment] | documented in source |
 | `shell_environment_policy.inherit` | `core` | Catalog: `inherit: core (explicit)`, `ignore_default_excludes: true (default)`. Rules: none. Gap: no. | [shell-environment] | documented in source |
@@ -111,6 +111,59 @@ The `auto` default is defined by [AppToolApproval][tool-default].
 | `shell_environment_policy.ignore_default_excludes` | `false` | Catalog: `inherit: all (default)`, `ignore_default_excludes: false (explicit)`. Rules: `environment_inheritance`. Gap: no. | [shell-environment] | documented in source |
 | `shell_environment_policy` | `additional fields` | Catalog: none. Rules: none. Gap: yes. | [shell-environment] | open |
 | `features.apps` | `omitted` | Codex's apps feature is on by default ([default][apps-feature]). When Codex is signed in with ChatGPT, it adds an MCP connection to ChatGPT named `codex_apps` ([connection][apps-connection], [sign-in][apps-sign-in]); `false` removes it. The reader does not check sign-in. Catalog: `ChatGPT Apps`, `exists only if Codex is signed in with ChatGPT, which is not checked`, `features.apps = false turns it off`. Rules: none. Gap: no. | [apps-feature] | documented in source |
+
+## Tool approval decisions
+
+These are conditional source scenarios for an enabled, permitted MCP or app tool whose
+approval mode has already been resolved. They describe the **approval gate**, not
+whether a call succeeds. **Allowed without asking**, **requires approval**, and
+**denied** describe gate outcomes. **Unassessed** means stay-safe lacks the evidence
+to determine the live outcome; it is not another runtime outcome.
+
+The table assumes **strict automatic review is off**. Strict review is runtime state:
+a permission response can set `strict_auto_review`, which
+[`record_granted_permissions` stores for the turn and `strict_auto_review_enabled` reads][strict-state].
+The [permission-response field][strict-response] concerns review of later actions,
+not a stricter sandbox. When set, it prevents the early exemptions below and
+[requires Guardian automatic review unless a permission hook resolves the request][review-routing].
+This differs from asking the user. The selected reviewer can also choose automatic
+review when strict review is off.
+
+Read these cases in order. The first four come from the [automatic-approval helper][approval-helper]
+and [MCP approval path][approval-path]. The last two apply only when the request
+reaches the [human-review path][human-review], after any hook or automatic review.
+
+| Condition | Result at the approval gate |
+| --- | --- |
+| Resolved mode is `approve`. | Allowed without asking. |
+| Policy is `never`, and the effective permission profile is disabled or external, or is managed with full-disk write access. | Allowed without asking. A legacy sandbox label alone does not establish these conditions. |
+| No earlier exemption applies; mode is `auto` or `writes`, and the annotation rules below exempt the call. | Allowed without asking, including under `never`. |
+| No earlier exemption applies; an eligible remembered approval applies. | Allowed without a new request. |
+| Approval is still required and the request reaches human review under `never`. | Denied. |
+| Approval is still required and the request reaches human review under `on-request`. | Requires approval. The decision controls whether the call may proceed. |
+
+The [annotation rules][tool-approval] used in the third row are:
+
+- `auto`: `destructiveHint = true` requires approval even if `readOnlyHint = true`.
+  Otherwise, `readOnlyHint = true` exempts the call. Without that exemption, the call
+  requires approval if either `destructiveHint` or `openWorldHint` is true or missing.
+  It is exempt only when both are false. Missing `readOnlyHint` counts as false.
+- `writes`: only `readOnlyHint = true` exempts the call. False or missing requires
+  approval; this mode does not use the other hints.
+- `prompt` supplies no annotation exemption. `approve` uses the earlier exemption.
+
+Only `auto` has a [remembered session-approval key][approval-history]. A ChatGPT Apps
+call also needs a connector identity to have that key. `prompt` and `writes` do not
+reuse a session approval. These remembered MCP approvals are separate from the
+saved command rules described below.
+
+stay-safe does not inspect actual annotations, remembered MCP approvals, effective
+permission profiles, permission hooks, reviewer selection or strict-review state.
+The app, command line and host can override file settings. None of the table's
+conditions should be inferred merely because an uninspected value is absent.
+The `self_described_tools` finding therefore reports configured dependence on
+server hints, not a predicted call result. Hints can exempt a call before `never`
+would deny a human-review request, but hints are not the only gate.
 
 ## Saved approval records
 
@@ -173,3 +226,11 @@ and [runtime sandbox handling][saved-runtime] establish the declared meaning.
 [tool-default]: https://github.com/openai/codex/blob/086ccc833bc9cf01024ad2dd6af7dbd421b6bf9a/codex-rs/config/src/mcp_types.rs#L26-L34
 [shell-environment]: https://github.com/openai/codex/blob/086ccc833bc9cf01024ad2dd6af7dbd421b6bf9a/codex-rs/protocol/src/config_types.rs#L205-L272
 [shell-environment-input]: https://github.com/openai/codex/blob/086ccc833bc9cf01024ad2dd6af7dbd421b6bf9a/codex-rs/config/src/shell_environment_policy.rs#L133-L169
+
+[approval-helper]: https://github.com/openai/codex/blob/086ccc833bc9cf01024ad2dd6af7dbd421b6bf9a/codex-rs/codex-mcp/src/mcp/mod.rs#L91-L110
+[approval-path]: https://github.com/openai/codex/blob/086ccc833bc9cf01024ad2dd6af7dbd421b6bf9a/codex-rs/core/src/mcp_tool_call.rs#L1550-L1664
+[human-review]: https://github.com/openai/codex/blob/086ccc833bc9cf01024ad2dd6af7dbd421b6bf9a/codex-rs/core/src/mcp_tool_call.rs#L1666-L1698
+[approval-history]: https://github.com/openai/codex/blob/086ccc833bc9cf01024ad2dd6af7dbd421b6bf9a/codex-rs/core/src/mcp_tool_call.rs#L1845-L1874
+[strict-state]: https://github.com/openai/codex/blob/086ccc833bc9cf01024ad2dd6af7dbd421b6bf9a/codex-rs/core/src/session/turn_context.rs#L496-L529
+[strict-response]: https://github.com/openai/codex/blob/086ccc833bc9cf01024ad2dd6af7dbd421b6bf9a/codex-rs/protocol/src/request_permissions.rs#L64-L72
+[review-routing]: https://github.com/openai/codex/blob/086ccc833bc9cf01024ad2dd6af7dbd421b6bf9a/codex-rs/core/src/tools/approvals.rs#L557-L731
