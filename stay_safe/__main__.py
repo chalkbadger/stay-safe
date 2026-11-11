@@ -1,7 +1,19 @@
-import argparse
 import os
 from pathlib import Path
 import sys
+
+if not __package__:
+    # `python3 stay_safe` runs this file as a script, outside its package (issue #48). Put the checkout folder,
+    # rather than this one, first on the path, as `python3 -m stay_safe` from the checkout does, and run the package
+    # the same way; its __init__.py checks the Python version first. This file must parse on older Pythons.
+    import runpy
+
+    HERE = Path(__file__).resolve().parents[0]
+    sys.path[:] = [str(HERE.parents[0])] + [p for p in sys.path if Path(p).resolve() != HERE]
+    runpy.run_module("stay_safe", run_name="__main__", alter_sys=True)
+    raise SystemExit(0)  # Not reached: the package's main always exits.
+
+import argparse
 
 from .report import inspect, render
 from .save import NAME, save
