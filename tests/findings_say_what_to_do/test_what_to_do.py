@@ -13,6 +13,7 @@ import subprocess
 import sys
 
 from stay_safe.report import inspect, render
+from tests.support import INCOMPLETE
 from tests.support import FIRST, NOTE_LABEL, SECOND, ConfigCase, ROOT, finding_items, section
 
 # Meanings rows (setting, value) an option rests on. Mode meanings are defined once, on the MCP server rows; the app
@@ -95,37 +96,32 @@ def block(what, where, ask, check=None):
     return "\n\n".join(parts + ([f"*Check:* {check}"] if check else []))
 
 
-# Rows: server/app writes (asks unless the tool declares readOnlyHint=true, which the server sets and Codex doesn't
-# check: core/src/mcp_tool_call.rs L2621-L2623), server enabled_tools (MCP servers only; the listed tools keep their
-# mode, so they still run without asking), server/app prompt.
+# Approval mode settings: harnesses/codex.md.
 def automatic_group(kind, name, table, file=FILE):
-    allowlist = (", or list only the tools you use in `enabled_tools` (those still run without asking)"
+    allowlist = (", or list only the tools you use in `enabled_tools`"
                  if kind == "MCP server" else "")
     return block(
-        "Set `default_tools_approval_mode = \"writes\"` (Codex then asks unless the server labels a tool read-only, "
-        f"which Codex doesn't check){allowlist}. Stricter: `default_tools_approval_mode = \"prompt\"`, so Codex asks "
-        "before every call.",
+        "Set `default_tools_approval_mode = \"writes\"` (uses server hints)"
+        f"{allowlist}. Stricter: `default_tools_approval_mode = \"prompt\"`.",
         f"under `[{table}]`",
         f"Edit {file} to set `default_tools_approval_mode = \"writes\"` for my `{name}` {kind}")
 
 
-# Rows: server/app prompt, server/app tool approve (a tool set to approve runs without asking), server enabled_tools
-# (the listed tools keep following their labels).
+# Rows: server/app prompt, server/app tool approve and server enabled_tools.
 def labels_group(kind, name, table, file=FILE):
-    allowlist = (", or list only the tools you use in `enabled_tools` (those still follow their labels)"
+    allowlist = (", or list only the tools you use in `enabled_tools`"
                  if kind == "MCP server" else "")
     return block(
-        "Set `default_tools_approval_mode = \"prompt\"` with `approval_mode = \"approve\"` only for tools you trust "
-        f"(those run without asking){allowlist}. Stricter: `default_tools_approval_mode = \"prompt\"` for every tool, "
-        "so Codex asks before every call.",
+        "Set `default_tools_approval_mode = \"prompt\"` with `approval_mode = \"approve\"` only for tools you trust"
+        f"{allowlist}. Stricter: `default_tools_approval_mode = \"prompt\"` for every tool.",
         f"under `[{table}]`, with each trusted tool's `approval_mode` under `[{table}.tools.<tool>]`",
-        f"Edit {file} so my `{name}` {kind} asks before every tool call except these tools I trust: <tool names>")
+        f"Edit {file} so my `{name}` {kind} uses `default_tools_approval_mode = \"prompt\"` with `approval_mode = \"approve\"` only for these tools I trust: <tool names>")
 
 
 # One tool's own mode: no lower-friction option has a row (server prompt row, tool override rows).
 def tool_prompt(tool, kind, name, table, file=FILE):
     return block(
-        "Set `approval_mode = \"prompt\"` for this tool, so Codex asks before calling it.",
+        "Set `approval_mode = \"prompt\"` for this tool.",
         f"under `[{table}]`",
         f"Edit {file} to set `approval_mode = \"prompt\"` for the `{tool}` tool of my `{name}` {kind}")
 
@@ -331,7 +327,7 @@ class WhatToDoTests(ConfigCase):
     def run_cli(self, *args, env=None):
         run = subprocess.run([sys.executable, "-B", "-m", "stay_safe", *args], cwd=ROOT, env=env or {},
                              text=True, capture_output=True, timeout=10)
-        self.assertEqual(run.stderr, "")
+        self.assertEqual(run.stderr, INCOMPLETE if run.returncode == 2 else "")
         return run
 
     def findings(self, *args, env=None):

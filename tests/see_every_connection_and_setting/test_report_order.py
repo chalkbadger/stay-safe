@@ -4,6 +4,7 @@ import json
 import subprocess
 import sys
 
+from tests.support import INCOMPLETE
 from tests.support import ConfigCase, ROOT, full_scope, section, NOT_CHECKED_INTRO, NOTE_LABEL
 
 # Four findings (commands_without_prompts; configured_program and self_described_tools on github;
@@ -32,7 +33,7 @@ class ReportOrderTests(ConfigCase):
     def run_cli(self, text, format_name="markdown"):
         run = subprocess.run([sys.executable, "-B", "-m", "stay_safe", "--config", str(self.config(text)),
                               "--format", format_name], cwd=ROOT, env={}, text=True, capture_output=True, timeout=10)
-        self.assertEqual(run.stderr, "")
+        self.assertEqual(run.stderr, INCOMPLETE if run.returncode == 2 else "")
         return run
 
     def test_summary_then_findings_and_gaps_then_setup_sources_limits_and_a_footer_last(self):

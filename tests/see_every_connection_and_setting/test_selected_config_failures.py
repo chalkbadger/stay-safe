@@ -6,7 +6,7 @@ from unittest.mock import patch
 
 from stay_safe.cli import main
 from stay_safe.codex import open_input
-from tests.support import ConfigCase
+from tests.support import ConfigCase, INCOMPLETE
 
 MISSING = 'Selected config file is missing. Check the path supplied to --config.'
 SYMLINK = 'Selected config file is a symlink and was not followed. Select its target file explicitly with --config.'
@@ -43,7 +43,7 @@ class SelectedConfigFailureTests(ConfigCase):
                     with patch('stay_safe.codex.open_input', side_effect=permission_failure), redirect_stdout(stdout), redirect_stderr(stderr):
                         status = main(['--config', str(path), '--config', str(good), '--format', format_name])
                     text = stdout.getvalue()
-                    self.assertEqual((status, stderr.getvalue()), (2, ''))
+                    self.assertEqual((status, stderr.getvalue()), (2, INCOMPLETE))
                     if format_name == 'json':
                         report = json.loads(text)
                         self.assertEqual(report['inspection_gaps'], ['config-1: ' + expected])

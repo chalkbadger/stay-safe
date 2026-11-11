@@ -1,6 +1,7 @@
 import json
 
 from stay_safe.provenance import identify
+from tests.support import INCOMPLETE
 from tests.support import items, section, gap_items
 from tests.anyone_can_recheck_a_report.git_support import GitCase
 from tests.see_every_connection_and_setting.test_plain_gaps import gap_text
@@ -72,7 +73,7 @@ class InvalidMetadataTests(GitCase):
         for format_name in ("markdown", "json"):
             with self.subTest(format_name):
                 run = self.run_cli(checkout, config, format_name)
-                self.assertEqual((run.returncode, run.stderr), (2, ""))
+                self.assertEqual((run.returncode, run.stderr), (2, INCOMPLETE))
                 self.assertNotIn(SECRET, run.stdout)
                 self.assertNotIn(ZERO, run.stdout)
                 self.assertNotIn("/blob/", run.stdout)

@@ -17,6 +17,7 @@ from unittest.mock import patch
 
 from stay_safe.cli import main
 from tests.see_every_connection_and_setting.test_report_order import AFTER
+from tests.support import INCOMPLETE
 from tests.support import ConfigCase, REPORT, copy_checkout, run_checkout, tree_state
 
 NO_GAPS = 'approval_policy = "on-request"\nsandbox_mode = "read-only"\nshell_environment_policy = { inherit = "none" }\n'
@@ -50,14 +51,14 @@ class SaveTests(ConfigCase):
         for args in (["--config", config], ["--config", config, "--format", "json"], []):
             with self.subTest(args=args):
                 run = self.run_save(*args)
-                self.assertEqual((run.returncode, run.stderr), (2, ""))
+                self.assertEqual((run.returncode, run.stderr), (2, INCOMPLETE))
                 self.assertEqual(tree_state(self.root), before)
         for previous in (None, "an older report\n"):
             with self.subTest(previous=previous):
                 if previous:
                     report.write_text(previous, encoding="utf-8")
                 run = self.run_save("--config", config, "--save")
-                self.assertEqual((run.returncode, run.stderr), (2, ""))
+                self.assertEqual((run.returncode, run.stderr), (2, INCOMPLETE))
                 after = tree_state(self.root)
                 self.assertEqual(set(after) - set(before), {str(report)})
                 self.assertEqual({k: v for k, v in after.items() if k != str(report)}, before)
@@ -69,7 +70,7 @@ class SaveTests(ConfigCase):
             report.symlink_to(outside)
             before = tree_state(self.root)
             run = self.run_save("--config", config, "--save")
-            self.assertEqual((run.returncode, run.stderr), (2, ""))
+            self.assertEqual((run.returncode, run.stderr), (2, INCOMPLETE))
             self.assertEqual(outside.read_text(encoding="utf-8"), "outside\n")
             self.assertFalse(report.is_symlink())
             self.assertTrue(report.is_file())
@@ -86,7 +87,7 @@ class SaveTests(ConfigCase):
                 config = str(self.config(text, f"status-{status}.toml"))
                 plain = self.run_save("--config", config)
                 run = self.run_save("--config", config, "--save")
-                self.assertEqual((run.returncode, run.stderr, plain.returncode), (status, "", status))
+                self.assertEqual((run.returncode, run.stderr, plain.returncode), (status, INCOMPLETE if status == 2 else "", status))
                 self.assertTrue(plain.stdout.startswith("# Codex configuration diagnostic\n"))
                 self.assertEqual(run.stdout[:len(plain.stdout)], plain.stdout)
                 last = run.stdout[len(plain.stdout):]
@@ -147,7 +148,7 @@ class SaveTests(ConfigCase):
                     markdown = self.run_save("--config", config, user=user)
                     before = tree_state(self.root)
                     run = self.run_save("--config", config, "--save", user=user)
-                    self.assertEqual((run.returncode, run.stderr, run.stdout), (status, NOT_SAVED, markdown.stdout))
+                    self.assertEqual((run.returncode, run.stderr, run.stdout), (status, NOT_SAVED + (INCOMPLETE if status == 2 else ""), markdown.stdout))
                     self.assertTrue(markdown.stdout.startswith("# Codex configuration diagnostic\n"))
                     self.assertEqual(tree_state(self.root), before)
 

@@ -2,6 +2,7 @@ import json
 import subprocess
 import sys
 
+from tests.support import INCOMPLETE
 from tests.support import ConfigCase, ROOT, items, section, gap_items
 from tests.see_every_connection_and_setting.test_plain_gaps import gap_text
 
@@ -23,7 +24,7 @@ class MultiFileGapTests(ConfigCase):
                     [sys.executable, '-B', '-m', 'stay_safe', *arguments, '--format', format_name],
                     cwd=ROOT, env={}, capture_output=True, text=True, timeout=10,
                 )
-                self.assertEqual((run.returncode, run.stderr), (2, ''))
+                self.assertEqual((run.returncode, run.stderr), (2, INCOMPLETE))
                 if format_name == 'json':
                     report = json.loads(run.stdout)
                     self.assertEqual(report['file_inspection'], 'incomplete')

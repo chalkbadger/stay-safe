@@ -13,6 +13,7 @@ import sys
 from unittest.mock import patch
 
 from stay_safe.report import inspect, render
+from tests.support import INCOMPLETE
 from tests.support import ConfigCase, ROOT
 
 BASE = 'approval_policy="on-request"\nsandbox_mode="read-only"\n'
@@ -127,7 +128,7 @@ class EnvironmentInheritanceTests(ConfigCase):
                     run = subprocess.run([sys.executable, '-B', '-m', 'stay_safe', '--config', str(path),
                                           '--format', format_name], cwd=ROOT, text=True,
                                          capture_output=True, timeout=10)
-                    self.assertEqual((run.returncode, run.stderr), (status, ''))
+                    self.assertEqual((run.returncode, run.stderr), (status, INCOMPLETE if status == 2 else ""))
                     if format_name == 'json':
                         self.assertIn(EXPLANATION, run.stdout)
                         report = json.loads(run.stdout)

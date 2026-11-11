@@ -1,5 +1,13 @@
 # stay-safe claims
 
+## [test_folders_have_markers] When I forget a test folder's package marker, the development check names it and fails.
+Issue: https://github.com/chalkbadger/stay-safe/issues/15
+Tests: [tests/test_folders_have_markers/](../tests/test_folders_have_markers/)
+
+- I omit a direct or intermediate test folder's marker, and the complete check names it and exits unsuccessfully before running the tests. `test_check.py::test_missing_direct_and_intermediate_markers_stop_the_complete_check`
+- I restore the markers, and the complete check discovers my failing sentinel; correcting the sentinel makes the check pass. `test_check.py::test_restored_markers_run_the_failing_sentinel_then_allow_its_pass`
+- I leave markers out of folders with no matching tests in them or their descendants, and the complete check passes. `test_check.py::test_folders_without_matching_tests_do_not_need_markers`
+
 ## [runs_without_a_coding_agent] I copy the README's first commands, with no coding agent, and they download a tagged release and run it; the README's sample finding is what it prints. If I run it the wrong way or with a Python that's too old, it either runs anyway or tells me the exact command to run.
 Issue: https://github.com/chalkbadger/stay-safe/issues/3
 Tests: [tests/runs_without_a_coding_agent/](../tests/runs_without_a_coding_agent/)
@@ -85,10 +93,10 @@ Tests: [tests/each_risk_shows_its_cause/](../tests/each_risk_shows_its_cause/)
 - I see no `destructive_tools` for a disabled app, whatever its tools set, or, when none of its tools sets `enabled = true`, for an app whose `default_tools_enabled` is `false` or whose `destructive_enabled` is `false` with `default_tools_enabled` unset. `test_destructive_tools.py::test_no_risk_when_no_setting_lets_destructive_tools_run`
 
 ## [findings_say_what_to_do] Each finding tells me in plain words what is wrong and what to do, with a stricter option if I want one.
-Issue: https://github.com/chalkbadger/stay-safe/issues/30
+Issue: https://github.com/chalkbadger/stay-safe/issues/12
 Tests: [tests/findings_say_what_to_do/](../tests/findings_say_what_to_do/)
 
-- I read a finding in Markdown: it starts with a bold headline and plain sentences written for its rule and entry, including any source status, then how it has gone wrong, with its incident labels marked reported, not verified, then what to do, and ends with one line giving its rule ID, entry ID and configured evidence; the rule and meanings source links appear once, in the Sources section. `test_plain_findings.py::test_each_finding_leads_with_its_meaning_then_incidents_next_step_and_trace_and_sources_close_the_report`
+- I read a finding in Markdown: it starts with a bold headline and plain sentences written for its rule and entry, including any source status; tool-approval findings describe the setting without predicting a live decision, and the JSON preapproval explanation names its mode. Then it says how it has gone wrong, with its incident labels marked reported, not verified, then what to do, and ends with one line giving its rule ID, entry ID and configured evidence; the rule and meanings source links appear once, in the Sources section. `test_plain_findings.py::test_each_finding_leads_with_its_meaning_then_incidents_next_step_and_trace_and_sources_close_the_report`
 - I see one note before the findings. It explains that Codex reads the whole file when editing it. App settings, profiles and command-line options can override the file's settings. Codex can allow or block calls without asking me. The report does not test those decisions. The note explains file labels only when a finding uses one. `test_what_to_do.py::test_findings_open_with_one_shared_note`
 - I see the same note when my files set an approval policy, leave it out, or use different policies. `test_what_to_do.py::test_shared_note_keeps_approval_outcomes_unassessed_for_each_policy`
 - In Markdown, each finding's What to do is one line naming its lower-friction option, with its trade-off, where the Codex meanings table backs one, then its stricter option; Change it is one line telling me where the setting goes and giving a sentence that asks Codex to make the edit and show only what it changes. `test_what_to_do.py::test_each_finding_gives_lower_friction_then_stricter_option_then_how_to_change_it`
@@ -97,6 +105,7 @@ Tests: [tests/findings_say_what_to_do/](../tests/findings_say_what_to_do/)
 - The advice I get never suggests a sandbox looser than one a file I inspect sets: for `approval_policy = "never"` it keeps a `read-only` or `workspace-write` sandbox set in the same file, and it suggests `workspace-write` only when no file I inspect sets `read-only`. `test_what_to_do.py::test_advice_never_loosens_a_sandbox_another_inspected_file_sets`
 - When my file selects a permission profile with `default_permissions`, its approval advice gives no `sandbox_mode` advice and tells me the profile decides what commands can write. `test_what_to_do.py::test_a_selected_permission_profile_gets_no_sandbox_mode_advice`
 - Every setting the report's options tell me to change rests on a Codex meanings row whose status is documented or documented in source. `test_what_to_do.py::test_every_setting_an_option_names_rests_on_a_confirmed_meanings_row`
+
 
 ## [warns_when_codex_shares_my_environment] If Codex hands my whole shell environment to the commands it runs, the report tells me, whether I set that or it is Codex's default.
 Issue: https://github.com/chalkbadger/stay-safe/issues/2
@@ -194,3 +203,13 @@ Issue: https://github.com/chalkbadger/stay-safe/issues/5
 Tests: [tests/challenge_a_wrong_finding/](../tests/challenge_a_wrong_finding/)
 
 - I open the challenge form and find exactly five labeled multiline fields with valid ids, all required except the full report. `test_form.py::test_form_declares_the_challenge_record_as_required_and_the_report_as_optional`
+
+## [explains_incomplete_inspection] When my report has gaps, I see why the run exits 2.
+Issue: https://github.com/chalkbadger/stay-safe/issues/18
+Tests: [tests/explains_incomplete_inspection/](../tests/explains_incomplete_inspection/)
+
+- I get the fixed exit-2 explanation on stderr for Markdown, JSON and saved reports with gaps. `test_status.py::test_reports_with_gaps_explain_exit_two_on_stderr_only`
+- The report stays on stdout without the explanation, and JSON output remains one parseable document. `test_status.py::test_reports_with_gaps_explain_exit_two_on_stderr_only`
+- Neither output stream reveals the private input name or value. `test_status.py::test_reports_with_gaps_explain_exit_two_on_stderr_only`
+- I get no incomplete-inspection explanation for a complete report or an invalid invocation that produces no report. `test_status.py::test_complete_reports_and_invalid_arguments_do_not_get_the_explanation`
+- The report is flushed to stdout before the explanation is written to stderr. `test_status.py::test_report_is_flushed_before_the_explanation_is_written`

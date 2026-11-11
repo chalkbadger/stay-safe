@@ -17,6 +17,7 @@ from unittest.mock import patch
 
 from stay_safe.cli import main
 from stay_safe.codex_rules import PROGRAMS as CODE_PROGRAMS
+from tests.support import INCOMPLETE
 from tests.support import ConfigCase, HARD_WORDS, NEAR_PROGRAMS, PROGRAMS, ROOT, full_scope
 
 CONFIG = 'approval_policy="on-request"\nsandbox_mode="read-only"\n'
@@ -36,7 +37,7 @@ class SavedApprovalTests(ConfigCase):
                 code = main([*args, '--format', format_name])
             except SystemExit as exc:
                 code = exc.code
-        self.assertEqual((code, err.getvalue()), (status, ''))
+        self.assertEqual((code, err.getvalue()), (status, INCOMPLETE if status == 2 else ""))
         completeness = 'incomplete' if status else 'complete for supported fields'
         if format_name == 'json':
             report = json.loads(out.getvalue())
@@ -247,7 +248,7 @@ prefix_rule(pattern=["curl"], decision="allow")
         os.mkfifo(fifo)
         run = subprocess.run([sys.executable, '-B', '-m', 'stay_safe', '--rules', str(fifo), '--format', 'json'],
                              cwd=ROOT, capture_output=True, text=True, timeout=5)
-        self.assertEqual((run.returncode, run.stderr), (2, ''))
+        self.assertEqual((run.returncode, run.stderr), (2, INCOMPLETE))
         self.assertEqual(json.loads(run.stdout)['catalog'], [])
 
     def test_both_formats_repeat_and_removing_a_rule_removes_its_finding(self):

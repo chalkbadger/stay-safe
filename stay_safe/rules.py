@@ -24,7 +24,7 @@ RULES = (
          "The configuration can launch a program; a compromised command or configuration could execute unwanted code.",
          ("I13", "I14", "I19")),
     Rule("automatic_tools",
-         "Tool permission prompts are configured as preapproved; untrusted tool content could lead to unwanted operations.",
+         "Tool approval mode is approve; untrusted tool content could lead to unwanted operations.",
          ("I15", "I20")),
     Rule("destructive_tools",
          "Destructive connector operations are enabled; a mistaken operation could change or delete connected data.",
@@ -33,7 +33,7 @@ RULES = (
          "The configuration permits network access; injected instructions could send private data to an outside service.",
          ("I15", "I21")),
     Rule("self_described_tools",
-         "Documented in source, not yet observed: tool approval depends on server-declared hints, so a tool labeled read-only can run without asking.",
+         "Documented in source, not yet observed: auto and writes use server-declared hints for tool approval.",
          ("I15", "I21")),
     Rule("environment_inheritance",
          "The selected configuration starts shell command environments from the parent process environment, "

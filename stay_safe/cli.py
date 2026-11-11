@@ -129,5 +129,8 @@ def main(argv=None):
     sys.stdout.write(render(result, args.format or "markdown", files))
     if path is not None:
         sys.stdout.write(open_command(path))
+    if status == 2:
+        sys.stdout.flush()
+        sys.stderr.write("Inspection incomplete (exit 2). See the report for what wasn't checked.\n")
     return status
 

@@ -13,6 +13,7 @@ from contextlib import redirect_stdout
 from unittest.mock import patch
 
 from stay_safe.cli import main
+from tests.support import INCOMPLETE
 from tests.support import CHATGPT_APPS, ConfigCase, ROOT, items, section, gap_items
 from tests.see_every_connection_and_setting.test_plain_gaps import gap_text
 
@@ -52,7 +53,7 @@ class DefaultConfigTests(ConfigCase):
         for format_name in ('markdown', 'json'):
             with self.subTest(format=format_name):
                 run = self.cli('--format', format_name)
-                self.assertEqual((run.returncode, run.stderr), (2, ''))
+                self.assertEqual((run.returncode, run.stderr), (2, INCOMPLETE))
                 self.assertNotIn('Input is missing', run.stdout)
                 if format_name == 'json':
                     self.assertIn(NOTICE, run.stdout)
@@ -154,7 +155,7 @@ class DefaultConfigTests(ConfigCase):
         self.require_no_system_folder()
         os.mkfifo(self.root / 'config.toml')
         run = self.cli('--format', 'json')
-        self.assertEqual((run.returncode, run.stderr), (2, ''))
+        self.assertEqual((run.returncode, run.stderr), (2, INCOMPLETE))
         report = json.loads(run.stdout)
         self.assertEqual(report['inspection_gaps'], ['config-1: Input is not a regular file.'])
         self.assertEqual(report['risks'], [])
