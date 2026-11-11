@@ -9,7 +9,6 @@ from html.parser import HTMLParser
 import re
 
 from tests.see_every_connection_and_setting.test_report_order import AFTER
-from tests.support import INCOMPLETE
 from tests.support import FIRST, SECOND, ConfigCase, REPORT, copy_checkout, run_checkout
 from tests.findings_say_what_to_do.test_plain_findings import EXPECTED, RULES
 from tests.see_every_connection_and_setting.test_plain_gaps import PLAIN

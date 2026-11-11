@@ -62,8 +62,8 @@ Python 3.11 and the latest 3.x; Windows is untested.
 
 Exit status `0` means the supported fields in the selected files were inspected;
 it is not a safety score. Status `2` means the report names inspection gaps (listed under Not checked), or the arguments were invalid and no report was produced.
-After a report with gaps, a short explanation of exit `2` goes to stderr; JSON
-stdout remains the report alone.
+See [the incomplete-inspection explanation contract](../contracts/claims.md#explains_incomplete_inspection-when-my-report-has-gaps-i-see-why-the-run-exits-2)
+for what accompanies a report with gaps.
 
 ## If Codex can't download
 
