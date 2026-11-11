@@ -55,8 +55,8 @@ Tests: [tests/see_every_connection_and_setting/](../tests/see_every_connection_a
 - I run with `--config` or `--rules` and see no `plugins/cache` gap. `test_plugins_cache.py::test_runs_with_file_arguments_give_no_plugins_cache_gap`
 - I open the full scope section of `docs/report.md` and find every scope line of the JSON report, including that local modifications are not checked. `test_report_order.py::test_the_full_scope_holds_every_scope_line`
 
-## [each_risk_shows_its_cause] For each risk, I see which of my settings causes it and real incidents where that setting went wrong.
-Issue: https://github.com/chalkbadger/stay-safe/issues/1
+## [each_risk_shows_its_cause] For each risk, I see its supporting configuration observation and the incident reports cited by its rule.
+Issue: https://github.com/chalkbadger/stay-safe/issues/13
 Tests: [tests/each_risk_shows_its_cause/](../tests/each_risk_shows_its_cause/)
 
 - I run stay-safe on a known config file and see each risk tied to the config entry I'd expect for its rule. `test_report.py::test_cli_risks_have_expected_entries_incidents_and_status_in_both_formats`
