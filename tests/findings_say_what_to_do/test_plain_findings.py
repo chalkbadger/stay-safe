@@ -24,7 +24,7 @@ HOW = {
     "saved_approval": "A Codex user reported that a saved approval for `curl` let later `curl` commands run without "
                       "asking, even after restarting in another workspace.",
     "commands_without_prompts": "Agents running commands without approval have run a delete command aimed at a home "
-                                "directory, wiped a drive and updated drivers when asked only to diagnose.",
+                                "directory and wiped a drive. Another user reported an automatic driver update while getting help with GPU performance.",
     "unrestricted_filesystem": "Agents have deleted a home directory and wiped a whole drive with one mistaken delete "
                                "command.",
     "configured_program": "Flaws in other agents let repository settings run commands on collaborators' machines, "
