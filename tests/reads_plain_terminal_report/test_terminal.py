@@ -98,7 +98,9 @@ class TerminalTests(ConfigCase):
         _, output, _ = self.terminal('--config', str(path))
         self.assertIn('Your ' + name + ' MCP server', output)
         self.assertIn('MCP server ' + name + ':', output)
-        self.assertIn('mcp_servers.' + json.dumps(name), output)
+        self.assertIn('Change it: under [mcp_servers.' + json.dumps(name) + ']', output)
+        self.assertIn('Rule configured_program · setting config-1:mcp_servers.' + json.dumps(name) + ' = configured enabled;', output)
+        self.assertIn('Sandbox: read-only', output)
         self.assertNotIn('private-command', output)
 
     def test_save_keeps_html_and_suppresses_hint_even_when_save_fails(self):

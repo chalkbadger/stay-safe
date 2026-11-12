@@ -134,9 +134,13 @@ def main(argv=None):
     if args.save and path is None:
         sys.stderr.write(NOT_SAVED)
         sys.stderr.flush()
-    sys.stdout.write(render(result, args.format or "markdown", files))
+    terminal = args.format is None and sys.stdout.isatty()
+    sys.stdout.write(render(result, args.format or ("plain" if terminal else "markdown"), files))
     if path is not None:
         sys.stdout.write(open_command(path))
+    if terminal and not args.save:
+        sys.stdout.flush()
+        sys.stderr.write("Use --save to save a formatted HTML report.\n")
     if status == 2:
         sys.stdout.flush()
         sys.stderr.write("Inspection incomplete (exit 2). See the report for what wasn't checked.\n")
