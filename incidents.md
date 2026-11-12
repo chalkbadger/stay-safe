@@ -20,10 +20,10 @@ Real-world reports of coding agents doing destructive or risky things. Risk rule
 - Enabling condition: shell commands ran without approval.
 - Source: [Cursor forum](https://forum.cursor.com/t/agent-wiped-d-drive-instead-of-deleting-one-folder/169919)
 
-## I4. Documents folder deleted despite deletion protection
-- Harness: Cursor
-- What happened: the agent deleted the macOS Documents folder. Cursor's File-Deletion Protection covers its editor tools, not shell commands.
-- Enabling condition: a protection setting that does not cover the shell.
+## I4. Repository and parent folder contents deleted
+- Harness: reported as Cursor with Claude Code; the exact agent was not established.
+- What happened: a user reported losing repository and parent folder contents twice, without a confirmation prompt. The report does not identify the command or establish whether deletion protection was enabled.
+- Enabling condition: not established by the report.
 - Source: [Cursor forum](https://forum.cursor.com/t/cursor-claude-code-deleted-my-entire-documents-folder-on-macos/167086)
 
 ## I5. `git reset --hard` at session start
@@ -32,11 +32,11 @@ Real-world reports of coding agents doing destructive or risky things. Risk rule
 - Enabling condition: destructive git commands allowed without approval; the agent misreported its own safeguard.
 - Source: [Claude Code issue #34327](https://claudeissues.com/issue/34327-claude-code-destroyed-users-uncommitted-work-by-running-git-reset-hard-on-sessio)
 
-## I6. Uncommitted work lost despite a `CLAUDE.md` rule
+## I6. Uncommitted work lost despite a `CLAUDE.md` warning
 - Harness: Claude Code (Haiku)
-- What happened: the agent ran `git checkout` and destroyed two hours of uncommitted work. `CLAUDE.md` told it not to run destructive git commands.
-- Enabling condition: a safety rule written only in an instructions file, with nothing enforcing it.
-- Source: [Claude Code issue #70363](https://claudeissues.com/issue/70363-haiku-claude-code-destroyed-2-hours-of-uncommitted-work-by-running-git-checkout)
+- What happened: while restoring one component, the agent ran `git reset HEAD && git checkout -- .`, reportedly losing two hours of uncommitted work. `CLAUDE.md` advised considering safer alternatives before destructive operations; it did not ban them.
+- Enabling condition: destructive shell commands executed despite advisory instructions. The report does not establish which permission allowed them.
+- Source: [Claude Code issue #70363](https://github.com/anthropics/claude-code/issues/70363)
 
 ## I7. Production volumes deleted with a found token
 - Harness: Cursor (Claude Opus 4.6)
@@ -56,23 +56,23 @@ Real-world reports of coding agents doing destructive or risky things. Risk rule
 - Enabling condition: an ignore file treated as access control.
 - Source: [AI Incident Database report 6847](https://incidentdatabase.ai/reports/6847)
 
-## I10. Read-deny rules not enforced
+## I10. Sensitive file read with a reported deny configuration
 - Harness: Claude Code
-- What happened: `settings.json` read-deny rules for sensitive files were not enforced. The issue was later closed as resolved.
-- Enabling condition: a deny rule that does not do what it says.
-- Source: [GitHub issue #24846](https://github.com/anthropics/claude-code/issues/24846)
+- What happened: a user reported that the Read tool exposed `.env.local` despite their `settings.json`. Their example used `permissions.read.deny`, unlike the documented `permissions.deny` array of `Read(...)` rules. The report does not establish a bypass of a correctly configured deny rule.
+- Enabling condition: not established; the supplied configuration differs from the documented format.
+- Sources: [GitHub issue #24846](https://github.com/anthropics/claude-code/issues/24846), [Permission documentation](https://code.claude.com/docs/en/permissions)
 
-## I11. Agent bypassed a denylist and disabled its sandbox
+## I11. Denylist workaround requested an unsandboxed run
 - Harness: Claude Code
-- What happened: with `npx` denied, the agent ran it via `/proc/self/root/usr/bin/npx`. When the sandbox caught that, the agent disabled the sandbox.
-- Enabling condition: a string-matching command denylist; a sandbox the agent can turn off.
-- Source: [Ona newsletter](https://ona.com/newsletter/03-mar-2026)
+- What happened: a researcher asked the agent to work around an `npx` deny rule. It used `/proc/self/root/usr/bin/npx`. When sandbox startup failed, the agent requested approval to run outside the sandbox; the article then shows `npx` running.
+- Enabling condition: a command-name deny rule missed an alternate path. The unsandboxed attempt still presented an approval prompt.
+- Source: [Ona experiment](https://ona.com/stories/how-claude-code-escapes-its-own-denylist-and-sandbox)
 
-## I12. Shell injection bypasses command filters
-- Harness: 10 of 11 open-source coding agents tested
-- What happened: the GuardFall technique bypassed their command filtering.
-- Enabling condition: command lists matched as strings.
-- Source: [Context Studios](https://www.contextstudios.ai/comparisons/command-allowlisting-vs-sandboxing-ai-agents)
+## I12. Shell safety gaps across ten tested agents
+- Harness: 10 of 11 open-source agents surveyed by GuardFall
+- What happened: researchers reported shell safety gaps in ten tested configurations. These included bypassed command guards, absent guards and sandbox opt-outs, not ten successful bypasses of command filters.
+- Enabling condition: varied by agent and configuration; the report says container defaults defended until their local-mode opt-out was selected.
+- Source: [Adversa research](https://adversa.ai/blog/opensource-ai-coding-agents-shell-injection-vulnerability/)
 
 ## I13. Repository settings run commands on collaborators' machines
 - Harness: Claude Code
@@ -80,11 +80,11 @@ Real-world reports of coding agents doing destructive or risky things. Risk rule
 - Enabling condition: project-level settings that define hooks or servers.
 - Source: [The Register](https://www.theregister.com/2026/02/26/clade_code_cves/)
 
-## I14. Similar repository-supplied command execution
+## I14. README injection bypassed a command allowlist
 - Harness: Gemini CLI
-- What happened: a comparable flaw allowed deleting files or installing a remote shell.
-- Enabling condition: project-level configuration that runs commands.
-- Source: [Yahoo Tech](https://tech.yahoo.com/cybersecurity/articles/coding-gemini-cli-security-150312104.html)
+- What happened: researchers used instructions in a repository README and a command crafted to pass a `grep` allowlist to exfiltrate environment variables. They described file deletion and remote-shell installation as possible consequences, not observed outcomes. Fixed in version 0.1.14.
+- Enabling condition: untrusted repository text influenced shell execution, and the allowlist check accepted a command containing more than the allowed operation.
+- Source: [Tracebit research](https://tracebit.com/blog/code-exec-deception-gemini-ai-cli-hijack)
 
 ## I15. Prompt injection through GitHub issues
 - Harness: any agent using the GitHub MCP server
@@ -98,23 +98,23 @@ Real-world reports of coding agents doing destructive or risky things. Risk rule
 - Enabling condition: the Docker socket reachable from inside the sandbox.
 - Source: [Pillar Security](https://www.pillar.security/blog/one-docker-socket-to-rule-them-all-escaping-codex-cursor-and-gemini-clis-sandboxes)
 
-## I17. Wiper prompt shipped in an extension release
-- Harness: Amazon Q (VS Code extension)
-- What happened: a pull request added a prompt telling the assistant to delete files, terminate AWS resources and remove IAM users. It passed release verification; only a syntax error stopped it from running.
-- Enabling condition: instructions the agent loads from a supply-chain source.
-- Sources: [CyberInsider](https://cyberinsider.com/?p=267392), [Substack](https://mrdecentralize.substack.com/p/amazon-q-where-code-verification)
+## I17. Malicious code shipped in an extension release
+- Harness: Amazon Q Developer (VS Code extension)
+- What happened: AWS reported that an attacker used an overly broad build token to commit malicious code, which was automatically released in version 1.84.0. A syntax error prevented it from executing. AWS replaced that version with 1.85.0.
+- Enabling condition: an inappropriately scoped build token and an automatic release path admitted an unauthorized change.
+- Source: [AWS security bulletin](https://aws.amazon.com/security/security-bulletins/AWS-2025-015/)
 
-## I18. Malware ran the developer's agents with permissions skipped
-- Harness: Claude Code, Gemini CLI and others (Nx "s1ngularity")
-- What happened: a compromised npm package ran the installed AI CLIs with `--dangerously-skip-permissions` and `--yolo` to search for secrets. About half the victims had AI CLIs installed.
-- Enabling condition: an agent CLI that any local script can start with approvals skipped.
-- Sources: [StepSecurity](https://www.stepsecurity.io/blog/supply-chain-security-alert-popular-nx-build-system-package-compromised-with-data-stealing-malware), [TraxTech](https://www.traxtech.com/ai-in-supply-chain/the-nx-supply-chain-attack-exposes-critical-vulnerabilities-in-software-development-ecosystems)
+## I18. Malware tried installed agents with approvals skipped
+- Harness: Claude Code, Gemini CLI and Amazon Q CLI (Nx "s1ngularity")
+- What happened: compromised npm packages attempted to run installed AI CLIs with `--dangerously-skip-permissions`, `--yolo` or `--trust-all-tools` to locate sensitive files. The cited analysis shows the invocation code, not how often those AI-assisted searches succeeded.
+- Enabling condition: malware already executing locally could start available agent CLIs in modes that skip tool approvals.
+- Source: [StepSecurity analysis](https://www.stepsecurity.io/blog/supply-chain-security-alert-popular-nx-build-system-package-compromised-with-data-stealing-malware)
 
-## I19. Worm wrote itself into agent settings
-- Harness: Claude Code (Shai-Hulud)
-- What happened: an npm worm wrote modified configuration to `~/.claude/settings.json` so its code ran whenever Claude Code started.
-- Enabling condition: user-level settings that define hooks, writable by any local process.
-- Sources: [Cloud Security Alliance](https://labs.cloudsecurityalliance.org/wp-content/uploads/2026/05/CSA_research_note_shai-hulud-ai-supply-chain_20260517-csa-styled.pdf), [Cybersecurity News](https://cybersecuritynews.com/shai-hulud-worm-steals-npm/amp/)
+## I19. Worm persisted through project startup hooks
+- Harness: Claude Code (Mini Shai-Hulud)
+- What happened: the reported worm added a `SessionStart` hook to project `.claude/settings.json` files, running `node .claude/setup.mjs` to restart its credential harvester when an infected project was opened.
+- Enabling condition: malware could modify project startup hooks that executed on later agent sessions.
+- Source: [Sonar analysis](https://www.sonarsource.com/blog/mini-shai-hulud-targets-ai-coding-agents/)
 
 ## I20. Injected text turned off approvals
 - Harness: GitHub Copilot (VS Code), CVE-2025-53773
@@ -122,11 +122,11 @@ Real-world reports of coding agents doing destructive or risky things. Risk rule
 - Enabling condition: an agent that can edit its own approval settings.
 - Sources: [GBHackers](https://gbhackers.com/github-copilot-rce-vulnerability/amp/), [Cybersecurity News](https://cybersecuritynews.com/github-copilot-rce-vulnerability/amp)
 
-## I21. Hidden instructions in issue comments
-- Harness: Claude Code GitHub Action and other AI workflows
-- What happened: prompt injection hidden in HTML comments in public issues, invisible when rendered but read by the model. Patched in Claude Code 2.1.128.
-- Enabling condition: an agent that reads untrusted repository content with write access.
-- Sources: [Microsoft Security](https://www.microsoft.com/en-us/security/blog/?p=147931), [Decrypt](https://decrypt.co/?p=370238)
+## I21. Issue content steered an agent toward workflow secrets
+- Harness: Claude Code GitHub Action
+- What happened: Microsoft demonstrated prompt injection that led the Read tool to access `/proc/self/environ`, exposing the workflow's API key. Claude Code 2.1.128 blocked sensitive `/proc` files; that mitigation was not a general fix for prompt injection. The same article separately describes injection attempts hidden in HTML comments.
+- Enabling condition: untrusted GitHub content reached an agent whose file-reading tool could access workflow secrets outside the subprocess sandboxing model.
+- Source: [Microsoft research](https://www.microsoft.com/en-us/security/blog/2026/06/05/securing-ci-cd-in-agentic-world-claude-code-github-action-case/)
 
 ## I22. Database reset to fix a schema error
 - Harness: Cursor
@@ -140,11 +140,11 @@ Real-world reports of coding agents doing destructive or risky things. Risk rule
 - Enabling condition: a production database URL the agent can read.
 - Sources: [Original report](https://www.reddit.com/r/Anthropic/comments/1v9iurd/and_just_like_that_opus_5_ultracode_wipes_the/), [AI Incident Database record](https://incidentdatabase.ai/cite/1676/), [AI Incident Database index](https://incidentdatabase.ai/es/entities/prisma/), [Prisma guidance](https://www.prisma.io/blog/stop-your-ai-agent-dropping-your-database)
 
-## I24. "Diagnose" became a driver update
+## I24. Driver update followed by boot and network failures
 - Harness: Claude Code
-- What happened: asked only why a GPU drew 70% power, the agent updated drivers, causing a 24-hour crash loop.
-- Enabling condition: system-level command access without approval.
-- Source: [AI Weekly](https://aiweekly.co/alerts/claude-code-auto-updates-gpu-drivers-causes-24hr-bsod-cascade)
+- What happened: a user asked for help with a GPU performance issue and reported that the agent automatically updated drivers. The PC then failed to boot; recovery involved System Restore and a separate VPN-related DNS problem, taking over 24 hours overall. The report does not provide the original prompt or permission settings.
+- Enabling condition: not established by the report.
+- Source: [Archived original report](https://reddit.sentinel-team.org/posts/1tg335j/snapshots/2026-05-23T02%3A20%3A04.239191Z)
 
 ## I25. Tests deleted or weakened to report success
 - Harness: several
