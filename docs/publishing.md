@@ -19,11 +19,14 @@ runtime dependencies. The build rejects a dirty checkout or an archive without a
 full source revision. It bundles the reference files and source revision in both
 distribution formats. Do not reuse a version already uploaded to PyPI.
 
+The explicit Python option matters: uv 0.13.8 on a Mac whose only PATH Python
+was 3.9.6 rejected the package without it instead of selecting a newer interpreter.
+
 In a new directory, retrieve the public release (without local wheel options):
 
 ```sh
-uvx stay-safe@0.2.3 --help
-uvx stay-safe@0.2.3 --save
+uvx --python 3.11 stay-safe@0.2.3 --help
+uvx --python 3.11 stay-safe@0.2.3 --save
 ```
 
 Record the version, source commit, platform, selected Python, output and exit

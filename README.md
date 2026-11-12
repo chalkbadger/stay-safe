@@ -36,8 +36,9 @@ By default it reads `~/.codex/config.toml` (`$CODEX_HOME/config.toml` when `CODE
 ## Packaged release (publication pending)
 
 Version 0.2.3 is prepared for PyPI but is not published yet. Once it is published,
-users with [uv](https://docs.astral.sh/uv/) can run `uvx stay-safe@0.2.3`.
-uv selects a supported Python; you do not need to replace your system Python.
+users with [uv](https://docs.astral.sh/uv/) can run `uvx --python 3.11 stay-safe@0.2.3`.
+The command asks uv for Python 3.11, downloading it if needed; your system Python
+stays unchanged.
 The clone and ZIP commands above are available now. See the
 [publication steps](docs/publishing.md) for the remaining release check.
 
