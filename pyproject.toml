@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=77", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "stay-safe"
+version = "0.2.3"
+description = "Read Codex configuration files and print a shareable safety report"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+
+[project.urls]
+Repository = "https://github.com/chalkbadger/stay-safe"
+Issues = "https://github.com/chalkbadger/stay-safe/issues"
+
+[project.scripts]
+stay-safe = "stay_safe.cli:main"
+
+[tool.setuptools]
+packages = ["stay_safe"]

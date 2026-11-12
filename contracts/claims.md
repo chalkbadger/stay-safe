@@ -181,7 +181,7 @@ Tests: [tests/share_without_exposing_secrets/](../tests/share_without_exposing_s
 - When my input has a gap, the report shows neither its private text nor raw error messages. `test_report.py::test_malformed_and_private_identifiers_never_echo_raw_input`
 - A rules line of mine with an invalid escape, such as `\q`, is reported as a gap without its text or the raw error. `test_rules_file.py::test_invalid_json_escape_does_not_disclose_private_source`
 
-## [nothing_in_my_setup_changes] Running stay-safe changes nothing in my setup. With `--save`, it writes one report file in its own folder and nothing else.
+## [nothing_in_my_setup_changes] Running stay-safe changes nothing in my setup. With `--save`, it writes one report file: in the current directory when installed, or its own folder for a clone or ZIP.
 Issue: https://github.com/chalkbadger/stay-safe/issues/1
 Tests: [tests/nothing_in_my_setup_changes/](../tests/nothing_in_my_setup_changes/)
 

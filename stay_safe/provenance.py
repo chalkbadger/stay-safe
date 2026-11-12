@@ -7,6 +7,7 @@ from pathlib import Path
 import re
 
 ROOT = Path(__file__).resolve().parents[1]
+INSTALLED = (ROOT / "stay_safe/package.txt").is_file()
 REPOSITORY = "https://github.com/chalkbadger/stay-safe"
 SOURCE_FILES = (
     "stay_safe/__init__.py", "stay_safe/__main__.py", "stay_safe/cli.py", "stay_safe/codex.py",
@@ -78,6 +79,12 @@ def source_revision(root=ROOT):
     """Where a .git entry exists (a folder, a worktree's file, or anything else), use only Git; otherwise read the
     revision file. If the folder can't be listed, the revision is unknown rather than taken from the revision file.
     """
+    if (root / "stay_safe/package.txt").is_file():
+        try:
+            value = (root / "stay_safe/package.txt").read_text(encoding="utf-8").strip()
+        except (OSError, ValueError):
+            return None, None
+        return (value if COMMIT.fullmatch(value) else None), "installed package commit"
     try:
         names = os.listdir(root)
     except OSError:
@@ -87,11 +94,18 @@ def source_revision(root=ROOT):
     return archive_revision(root), "release archive commit"
 
 
+def resource(name, root=ROOT):
+    """Resolve bundled references while preserving their repository paths in reports."""
+    if (root / "stay_safe/package.txt").is_file() and not name.startswith("stay_safe/"):
+        return root / "stay_safe/data" / name
+    return root / name
+
+
 def fingerprints(root=ROOT):
     hashes = {}
     for name in SOURCE_FILES:
         try:
-            hashes[name] = hashlib.sha256((root / name).read_bytes()).hexdigest()
+            hashes[name] = hashlib.sha256(resource(name, root).read_bytes()).hexdigest()
         except OSError:
             hashes[name] = None
     return hashes

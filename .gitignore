@@ -2,3 +2,6 @@ __pycache__/
 *.py[cod]
 /stay-safe-report.html
 /.stay-safe-report.*.tmp
+/build/
+/dist/
+/*.egg-info/

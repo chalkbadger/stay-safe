@@ -40,12 +40,12 @@ class PackageTests(unittest.TestCase):
             work = base / 'working directory'
             work.mkdir()
             config = work / 'config.toml'
-            config.write_text('sandbox_mode = "danger-full-access"\n[mcp_servers.sample]\nurl = "https://private.invalid"\n')
+            config.write_text('approval_policy = "on-request"\nsandbox_mode = "danger-full-access"\n[mcp_servers.sample]\nurl = "https://private.invalid"\n')
             env = dict(os.environ, PYTHONPATH=str(install), PYTHONDONTWRITEBYTECODE='1')
             args = ('-m', 'stay_safe', '--config', str(config))
             installed = run(sys.executable, *args, '--format', 'json', cwd=work, env=env)
             clone = run(sys.executable, *args, '--format', 'json', cwd=source)
-            self.assertEqual(installed.returncode, 0, installed.stderr)
+            self.assertEqual(installed.returncode, 0, installed.stdout + installed.stderr)
             result, expected = json.loads(installed.stdout), json.loads(clone.stdout)
             self.assertEqual(result['inspection_gaps'], [])
             self.assertEqual(result['provenance']['source_revision'], revision)

@@ -38,11 +38,12 @@ settings remain unknown, so this assessment still exits `2`. See the
 ## Save the report as a page: `--save`
 
 `--save` also writes the report as a self-contained page, `stay-safe-report.html`, in
-this checkout, replacing the one from the previous run. It prints the same Markdown report,
+the current directory for an installed package, or the stay-safe folder for a clone
+or ZIP, replacing the one from the previous run. It prints the same Markdown report,
 then one last line with a command that opens the page: `open '<path>'` on macOS,
 `xdg-open '<path>'` elsewhere, with the path quoted for the shell. Paste that command to
 read the formatted report in your browser; stay-safe doesn't run it. Attach the file to
-share it; the last line names your checkout's folder, so leave it out when you share the
+share it; the last line names the saved location, so leave it out when you share the
 printed report. The page has the same content as the Markdown
 report, and no scripts or network requests. It is the only file stay-safe's code writes,
 and only with `--save`; Python itself may cache compiled code in `stay_safe/__pycache__`. If the page can't be written, for example in a read-only sandbox,

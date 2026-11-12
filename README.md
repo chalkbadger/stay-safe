@@ -33,6 +33,14 @@ python3 -m stay_safe
 
 By default it reads `~/.codex/config.toml` (`$CODEX_HOME/config.toml` when `CODEX_HOME` is set). [Usage](docs/usage.md) covers the inspected files, options, `--save` and exit status.
 
+## Packaged release (publication pending)
+
+Version 0.2.3 is prepared for PyPI but is not published yet. Once it is published,
+users with [uv](https://docs.astral.sh/uv/) can run `uvx stay-safe@0.2.3`.
+uv selects a supported Python; you do not need to replace your system Python.
+The clone and ZIP commands above are available now. See the
+[publication steps](docs/publishing.md) for the remaining release check.
+
 ## Ask Codex
 
 Paste this into Codex in the ChatGPT app or the CLI:
@@ -66,7 +74,9 @@ stay-safe is part of [chalkbadger](https://github.com/chalkbadger), which works 
 
 ## Develop
 
-Git is required for the development tests. Run `python3 check_tests.py`.
+Git is required for the development tests. In a development virtual environment,
+install the build tools with `python3 -m pip install build "setuptools>=77" wheel`,
+then run `python3 check_tests.py`.
 This checks test-folder package markers before running unittest discovery.
 
 ## Contribute
