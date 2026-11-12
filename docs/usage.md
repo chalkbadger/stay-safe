@@ -67,14 +67,14 @@ for what accompanies a report with gaps.
 
 ## If Codex can't download
 
-Some sandboxes block Codex's download. Remove any `stay-safe-0.2.1*` file (any case)
+Some sandboxes block Codex's download. Remove any `stay-safe-0.2.2*` file (any case)
 from the project Codex is working in, then download
-https://github.com/chalkbadger/stay-safe/archive/refs/tags/v0.2.1.zip into it, so it is
+https://github.com/chalkbadger/stay-safe/archive/refs/tags/v0.2.2.zip into it, so it is
 the only such file. Then paste this into Codex:
 
 ```text
-Unzip stay-safe-0.2.1.zip from this project into a new temporary folder and run
-`python3 -m stay_safe` from the `stay-safe-0.2.1` folder inside. Show the report exactly
+Unzip stay-safe-0.2.2.zip from this project into a new temporary folder and run
+`python3 -m stay_safe` from the `stay-safe-0.2.2` folder inside. Show the report exactly
 as printed, with its exit status, then your notes under "Agent's own report". Don't
 open auth files or change files outside the new temporary folder.
 ```
