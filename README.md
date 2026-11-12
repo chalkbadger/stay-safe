@@ -75,9 +75,9 @@ stay-safe is part of [chalkbadger](https://github.com/chalkbadger), which works 
 
 ## Develop
 
-Git is required for the development tests. In a development virtual environment,
-install the build tools with `python3 -m pip install build "setuptools>=77" wheel`,
-then run `python3 check_tests.py`.
+Git is required for the development tests. Run `python3 check_tests.py` in a
+development virtual environment. Before the first run, install the build tools
+with `python3 -m pip install build "setuptools>=77" wheel`.
 This checks test-folder package markers before running unittest discovery.
 
 ## Contribute
