@@ -7,9 +7,9 @@ import unittest
 from unittest.mock import patch
 
 from stay_safe.cli import main
-from tests.support import ROOT
+from tests.support import FEEDBACK, ROOT
 
-MESSAGE = "--save takes no path. It saves stay-safe-report.html in the stay-safe folder.\n"
+MESSAGE = "--save takes no path. It saves stay-safe-report.html in the stay-safe folder.\n" + FEEDBACK
 PRIVATE = "/private/customer-token/report.html"
 
 
@@ -39,4 +39,4 @@ class SavePathTests(unittest.TestCase):
                 with self.assertRaises(SystemExit) as stopped:
                     main(args)
                 self.assertEqual((stopped.exception.code, out.getvalue(), err.getvalue()),
-                                 (2, "", "Invalid arguments. Use --help.\n"))
+                                 (2, "", "Invalid arguments. Use --help.\n" + FEEDBACK))

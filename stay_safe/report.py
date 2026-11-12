@@ -949,7 +949,7 @@ def markdown(report, files=None):
               else "Full scope of this report: see the Full scope section of stay-safe's docs/report.md.",
               "", "---", "",
               f"Made by stay-safe {made_by(report['provenance']) if guide else '(commit unknown)'} · report format "
-              f"{report['format_version']} · [challenge a finding]({REPOSITORY}/issues/new?template=challenge.yml)"]
+              f"{report['format_version']} · [Report a problem or suggest an idea]({REPOSITORY}/issues/new/choose)"]
     return "\n".join(lines) + "\n"
 
 

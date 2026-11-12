@@ -17,7 +17,7 @@ from unittest.mock import patch
 
 from stay_safe.cli import main
 from tests.see_every_connection_and_setting.test_report_order import AFTER
-from tests.support import INCOMPLETE
+from tests.support import FEEDBACK, INCOMPLETE
 from tests.support import ConfigCase, REPORT, copy_checkout, run_checkout, tree_state
 
 NO_GAPS = 'approval_policy = "on-request"\nsandbox_mode = "read-only"\nshell_environment_policy = { inherit = "none" }\n'
@@ -157,7 +157,7 @@ class SaveTests(ConfigCase):
         before = tree_state(self.root)
         run = self.run_save("--config", config, "--format", "json", "--save")
         self.assertEqual((run.returncode, run.stdout, run.stderr),
-                         (2, "", "--save can't be combined with --format json. Use --help.\n"))
+                         (2, "", "--save can't be combined with --format json. Use --help.\n" + FEEDBACK))
         help_text = self.run_save("--help").stdout
         self.assertIn("Not with --format json.", " ".join(help_text.split()))
         self.assertEqual(tree_state(self.root), before)

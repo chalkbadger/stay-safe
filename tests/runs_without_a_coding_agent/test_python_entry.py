@@ -5,7 +5,7 @@ import sys
 import tempfile
 import unittest
 
-from tests.support import ROOT
+from tests.support import FEEDBACK, ROOT
 
 SAMPLE = ROOT / "tests" / "runs_without_a_coding_agent" / "sample.toml"
 # Runs stay-safe the way `python3 -m stay_safe` (module) or `python3 stay_safe` (folder) does, after making the
@@ -80,15 +80,15 @@ class PythonEntryTests(unittest.TestCase):
                 with self.subTest(way=way):
                     result = old_python(way, path)
                     self.assertEqual((result.returncode, result.stderr, result.stdout),
-                                     (2, TOO_OLD + "Run: python3.12 -m stay_safe\n", "[]\n"))
+                                     (2, TOO_OLD + "Run: python3.12 -m stay_safe\n" + FEEDBACK, "[]\n"))
             commands(second, ["python3.13"])
             result = old_python("module", path)
-            self.assertEqual((result.returncode, result.stderr), (2, TOO_OLD + "Run: python3.13 -m stay_safe\n"))
+            self.assertEqual((result.returncode, result.stderr), (2, TOO_OLD + "Run: python3.13 -m stay_safe\n" + FEEDBACK))
             self.assertEqual(sorted(p.name for p in [*Path(first).iterdir(), *Path(second).iterdir()]
                                     if p.name.startswith("started-")), [])
 
     def test_too_old_python_without_a_newer_one_says_to_install_it_and_exits_2(self):
-        install = "Install Python 3.11 or newer, then run: python3.11 -m stay_safe\n"
+        install = "Install Python 3.11 or newer, then run: python3.11 -m stay_safe\n" + FEEDBACK
         with tempfile.TemporaryDirectory() as folder:
             # A PATH entry too long to look up is skipped rather than ending in a traceback.
             path = commands(folder, ["python3", "python3.9", "python3.10", "python3.14"]) + ":/" + "a" * 5000

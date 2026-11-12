@@ -9,6 +9,9 @@ import stat
 import sys
 
 
+FEEDBACK = "Report a problem or suggest an idea: https://github.com/chalkbadger/stay-safe/issues/new/choose\n"
+
+
 def command(path):
     """Whether `path` is a file with an execute bit set, read from its metadata only; stay-safe never starts it."""
     try:
@@ -28,4 +31,5 @@ if sys.version_info < (3, 11):
         NEXT = "Install Python 3.11 or newer, then run: python3.11 -m stay_safe"
     # Like the "Invalid arguments" message, this goes to stderr with exit status 2.
     sys.stderr.write("stay-safe needs Python 3.11 or newer; this is Python %s. %s\n" % (THIS, NEXT))
+    sys.stderr.write(FEEDBACK)
     sys.exit(2)
