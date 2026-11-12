@@ -105,8 +105,8 @@ FINDINGS = {
         "headline": "With these settings, Codex runs commands without asking you.",
         "why": "It won't ask before any command it's allowed to run, so injected or mistaken instructions could make "
                "it run code you didn't want.",
-        "how": "Agents running commands without approval have run a delete command aimed at a home directory, "
-               "wiped a drive and updated drivers when asked only to diagnose."},
+        "how": "Agents running commands without approval have run a delete command aimed at a home directory "
+               "and wiped a drive. Another user reported an automatic driver update while getting help with GPU performance."},
     "unrestricted_filesystem": {
         "headline": "Your config turns off Codex's sandbox.",
         "why": "Commands Codex runs aren't limited to your project, so a mistaken command could damage files "
