@@ -1,4 +1,5 @@
 import json
+import re
 
 from stay_safe.report import inspect, render
 from tests.support import ConfigCase, INCOMPLETE, ReportRuns, gap_items
@@ -34,18 +35,19 @@ class InheritedGapTests(ConfigCase, ReportRuns):
         report = inspect([path])
         expected = ['config-1: ' + gap for gap in gaps]
         self.assertEqual(report['inspection_gaps'], sorted(expected))
-        self.assertCountEqual([(r['rule'], r['entry']) for r in report['risks']],
-                              [('configured_program', 'config-1:notify')] +
-                              [(rule, 'config-1:' + entry) for rule, entry in risks])
+        expected_risks = [('configured_program', 'config-1:notify')] + [
+            (rule, 'config-1:' + entry) for rule, entry in risks]
         markdown = render(report)
+        self.assertCountEqual(re.findall(r'\*Rule `([^`]+)` · setting `([^`]+)`', markdown), expected_risks)
         self.assertCountEqual(gap_items(markdown), [gap_text(gap) for gap in expected])
         count = '1 thing not checked.' if len(gaps) == 1 else f'{len(gaps)} things not checked.'
         self.assertIn(count, markdown)
         encoded = render(report, 'json')
-        self.assertEqual(json.loads(encoded)['inspection_gaps'], sorted(expected))
+        decoded = json.loads(encoded)
+        self.assertEqual(decoded['inspection_gaps'], sorted(expected))
+        self.assertCountEqual([(r['rule'], r['entry']) for r in decoded['risks']], expected_risks)
         for private in ('private-invalid', 'private-override', 'private-program', 'private-endpoint'):
             self.assertNotIn(private, markdown + encoded)
-        return path
 
     def test_inherited_invalid_values_report_only_the_parent_in_both_formats(self):
         for parent, fields, key, gap, own_gap, valid, risks in PARENTS:
