@@ -1,6 +1,6 @@
 # Reading the report
 
-The [default terminal view](../contracts/claims.md#reads_plain_terminal_report) uses plain text.
+The [default terminal view](../contracts/claims.md#reads_plain_terminal_report-i-can-read-the-default-terminal-report-without-markdown-formatting-and-see-how-to-save-a-formatted-page) uses plain text.
 Use `--format markdown` for Markdown or `--save` for a formatted HTML page.
 
 ## The parts of a report

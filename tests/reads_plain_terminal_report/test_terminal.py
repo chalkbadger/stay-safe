@@ -9,17 +9,17 @@ from unittest.mock import patch
 
 from stay_safe import cli
 from stay_safe.report import inspect, render
-from tests.support import ConfigCase, ROOT, SEEDED, SEEDS, INCOMPLETE
+from tests.support import ConfigCase, ROOT, SEEDED, SEEDS, INCOMPLETE, copy_checkout, COPY_REVISION
 
 HINT = "Use --save to save a formatted HTML report.\n"
 
 
 class TerminalTests(ConfigCase):
-    def terminal(self, *args):
+    def terminal(self, *args, cwd=ROOT):
         master, slave = pty.openpty()
         try:
             # Capture stderr separately: only stdout determines the display.
-            child = subprocess.Popen([sys.executable, '-B', '-m', 'stay_safe', *args], cwd=ROOT,
+            child = subprocess.Popen([sys.executable, '-B', '-m', 'stay_safe', *args], cwd=cwd,
                                      stdout=slave, stderr=subprocess.PIPE)
             os.close(slave)
             slave = None
@@ -55,7 +55,8 @@ class TerminalTests(ConfigCase):
 
     def test_terminal_default_is_plain_with_links_and_private_values_withheld(self):
         path = self.config(SEEDED)
-        status, output, errors = self.terminal('--config', str(path))
+        checkout = copy_checkout(self.root / 'checkout')
+        status, output, errors = self.terminal('--config', str(path), cwd=checkout)
         self.assertEqual(status, 0)
         self.assertEqual(errors, HINT)
         self.assertTrue(output.startswith('Codex configuration diagnostic\n\n'))
@@ -65,7 +66,12 @@ class TerminalTests(ConfigCase):
         self.assertIn('What to do:', output)
         self.assertIn('Approval: never', output)
         self.assertIn('MCP server local: on', output)
-        self.assertIn('https://github.com/chalkbadger/stay-safe/', output)
+        source = 'https://github.com/chalkbadger/stay-safe/blob/' + COPY_REVISION + '/'
+        for link in ('incidents.md#i2-home-directory-added-to-a-delete-command',
+                     'incidents.md#i3-windows-drive-wiped',
+                     'incidents.md#i24-driver-update-followed-by-boot-and-network-failures',
+                     'stay_safe/rules.py', 'harnesses/codex.md', 'docs/report.md#full-scope'):
+            self.assertIn('(' + source + link + ')', output)
         for marker in ('## ', '**', '`', ']('):
             self.assertNotIn(marker, output)
         for secret in SEEDS.values():
