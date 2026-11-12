@@ -237,3 +237,13 @@ Tests: [tests/explains_save_path/](../tests/explains_save_path/)
 - My supplied destination appears in neither output stream. `test_arguments.py::test_save_path_explains_the_supported_form_without_echoing_the_path`
 - The mistaken invocation stops before discovery, inspection or saving. `test_arguments.py::test_save_path_stops_before_discovery_inspection_or_save`
 - Other invalid invocations retain the generic error. `test_arguments.py::test_other_invalid_arguments_keep_the_generic_message`
+
+## [reads_plain_terminal_report] I can read the default terminal report without Markdown formatting and see how to save a formatted page.
+Issue: https://github.com/chalkbadger/stay-safe/issues/52
+Tests: [tests/reads_plain_terminal_report/](../tests/reads_plain_terminal_report/)
+
+- My terminal report keeps its sections, source links and privacy protections. `test_terminal.py::test_terminal_default_is_plain_with_links_and_private_values_withheld`
+- Redirecting output or choosing a format keeps the existing report. `test_terminal.py::test_explicit_formats_and_redirected_output_stay_unchanged`
+- The punctuation in my reported names survives throughout the report. `test_terminal.py::test_literal_names_survive_in_findings_advice_setup_and_evidence`
+- Saving keeps the formatted page and suppresses the hint even if saving fails. `test_terminal.py::test_save_keeps_html_and_suppresses_hint_even_when_save_fails`
+- An incomplete check retains its status and prints its notices after the report. `test_terminal.py::test_incomplete_exit_and_hint_follow_the_flushed_report`
