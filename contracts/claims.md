@@ -243,7 +243,8 @@ Issue: https://github.com/chalkbadger/stay-safe/issues/49
 Tests: [tests/runs_as_an_installed_package/](../tests/runs_as_an_installed_package/)
 
 - A wheel built through its source distribution gives me the checkout's JSON report with its exact commit and working incident references. `test_package.py::test_wheel_and_sdist_keep_report_resources_revision_and_safe_current_directory_save`
-- My installed Markdown matches the checkout, and a missing selected file gives an incomplete report and exit 2. `test_package.py::test_wheel_and_sdist_keep_report_resources_revision_and_safe_current_directory_save`
+- My installed Markdown matches the checkout. `test_package.py::test_wheel_and_sdist_keep_report_resources_revision_and_safe_current_directory_save`
+- A missing selected file gives an incomplete report and exit 2. `test_package.py::test_wheel_and_sdist_keep_report_resources_revision_and_safe_current_directory_save`
 - A corrupt packaged revision withholds source links and gives an incomplete report while preserving my findings. `test_package.py::test_wheel_and_sdist_keep_report_resources_revision_and_safe_current_directory_save`
 - The package declares Python 3.11 or newer and the stay-safe command. `test_package.py::test_wheel_and_sdist_keep_report_resources_revision_and_safe_current_directory_save`
 - My saved page replaces a symlink without changing its target and the command prints its current-directory location. `test_package.py::test_wheel_and_sdist_keep_report_resources_revision_and_safe_current_directory_save`
