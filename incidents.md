@@ -70,7 +70,7 @@ Real-world reports of coding agents doing destructive or risky things. Risk rule
 
 ## I12. Shell safety gaps across ten tested agents
 - Harness: 10 of 11 open-source agents surveyed by GuardFall
-- What happened: researchers reported shell safety gaps in ten tested configurations. These included bypassed command guards, absent guards and sandbox opt-outs, not ten successful bypasses of command filters.
+- What happened: researchers reported shell safety gaps in ten tested configurations. Three had string-matching guards that were defeated outright. Others had different gaps, including incomplete or absent guards and sandbox opt-outs, not ten successful bypasses of command filters.
 - Enabling condition: varied by agent and configuration; the report says container defaults defended until their local-mode opt-out was selected.
 - Source: [Adversa research](https://adversa.ai/blog/opensource-ai-coding-agents-shell-injection-vulnerability/)
 
@@ -110,11 +110,11 @@ Real-world reports of coding agents doing destructive or risky things. Risk rule
 - Enabling condition: malware already executing locally could start available agent CLIs in modes that skip tool approvals.
 - Source: [StepSecurity analysis](https://www.stepsecurity.io/blog/supply-chain-security-alert-popular-nx-build-system-package-compromised-with-data-stealing-malware)
 
-## I19. Worm persisted through project startup hooks
+## I19. Worm persisted through agent startup hooks
 - Harness: Claude Code (Mini Shai-Hulud)
-- What happened: the reported worm added a `SessionStart` hook to project `.claude/settings.json` files, running `node .claude/setup.mjs` to restart its credential harvester when an infected project was opened.
-- Enabling condition: malware could modify project startup hooks that executed on later agent sessions.
-- Source: [Sonar analysis](https://www.sonarsource.com/blog/mini-shai-hulud-targets-ai-coding-agents/)
+- What happened: sources describe the worm persisting through Claude Code hooks but disagree about the settings location. Sonar describes project `.claude/settings.json` files with a `SessionStart` hook running `node .claude/setup.mjs`; the Cloud Security Alliance note names user-level `~/.claude/settings.json`.
+- Enabling condition: malware could modify startup hooks that executed on later agent sessions; the settings scope is disputed.
+- Sources: [Sonar analysis](https://www.sonarsource.com/blog/mini-shai-hulud-targets-ai-coding-agents/), [Cloud Security Alliance research note](https://labs.cloudsecurityalliance.org/wp-content/uploads/2026/05/CSA_research_note_shai-hulud-ai-supply-chain_20260517-csa-styled.pdf)
 
 ## I20. Injected text turned off approvals
 - Harness: GitHub Copilot (VS Code), CVE-2025-53773
