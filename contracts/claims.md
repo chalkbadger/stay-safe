@@ -237,3 +237,12 @@ Tests: [tests/explains_save_path/](../tests/explains_save_path/)
 - My supplied destination appears in neither output stream. `test_arguments.py::test_save_path_explains_the_supported_form_without_echoing_the_path`
 - The mistaken invocation stops before discovery, inspection or saving. `test_arguments.py::test_save_path_stops_before_discovery_inspection_or_save`
 - Other invalid invocations retain the generic error. `test_arguments.py::test_other_invalid_arguments_keep_the_generic_message`
+
+## [runs_as_an_installed_package] I run the installed package outside a checkout and get the same report; saving puts the page in my current directory.
+Issue: https://github.com/chalkbadger/stay-safe/issues/49
+Tests: [tests/runs_as_an_installed_package/](../tests/runs_as_an_installed_package/)
+
+- A wheel built through its source distribution gives me the checkout's JSON report with its exact commit and working incident references. `test_package.py::test_wheel_and_sdist_keep_report_resources_revision_and_safe_current_directory_save`
+- The package declares Python 3.11 or newer and the stay-safe command. `test_package.py::test_wheel_and_sdist_keep_report_resources_revision_and_safe_current_directory_save`
+- My saved page replaces a symlink without changing its target and the command prints its current-directory location. `test_package.py::test_wheel_and_sdist_keep_report_resources_revision_and_safe_current_directory_save`
+- A failed installed save leaves the full report visible and never claims it saved a page. `test_package.py::test_wheel_and_sdist_keep_report_resources_revision_and_safe_current_directory_save`
