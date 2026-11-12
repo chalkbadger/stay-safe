@@ -8,7 +8,7 @@ Here is a finding from a run on a [test configuration](tests/runs_without_a_codi
 
 > **Your config turns off Codex's sandbox.** Commands Codex runs aren't limited to your project, so a mistaken command could damage files elsewhere on your computer.
 >
-> *How it has gone wrong:* Agents have deleted a home directory and wiped a whole drive with one mistaken delete command. [I1](https://github.com/chalkbadger/stay-safe/blob/v0.2.1/incidents.md#i1-home-directory-deleted-by-rm--rf), [I3](https://github.com/chalkbadger/stay-safe/blob/v0.2.1/incidents.md#i3-windows-drive-wiped) (reported, not verified).
+> *How it has gone wrong:* Agents have deleted a home directory and wiped a whole drive with one mistaken delete command. [I1](https://github.com/chalkbadger/stay-safe/blob/v0.2.2/incidents.md#i1-home-directory-deleted-by-rm--rf), [I3](https://github.com/chalkbadger/stay-safe/blob/v0.2.2/incidents.md#i3-windows-drive-wiped) (reported, not verified).
 >
 > *What to do:* Set `sandbox_mode = "workspace-write"` (commands can write only in your workspace). Stricter: `sandbox_mode = "read-only"` (commands can't write files).
 >
@@ -19,15 +19,15 @@ Here is a finding from a run on a [test configuration](tests/runs_without_a_codi
 It runs on Unix with Python 3.11 or newer. No agent is needed:
 
 ```sh
-git clone --branch v0.2.1 https://github.com/chalkbadger/stay-safe.git
+git clone --branch v0.2.2 https://github.com/chalkbadger/stay-safe.git
 cd stay-safe
 python3 -m stay_safe
 ```
 
-Without Git, [download the v0.2.1 ZIP](https://github.com/chalkbadger/stay-safe/archive/refs/tags/v0.2.1.zip) and extract it. Open a terminal in the folder containing the extracted `stay-safe-0.2.1` folder, then run:
+Without Git, [download the v0.2.2 ZIP](https://github.com/chalkbadger/stay-safe/archive/refs/tags/v0.2.2.zip) and extract it. Open a terminal in the folder containing the extracted `stay-safe-0.2.2` folder, then run:
 
 ```sh
-cd stay-safe-0.2.1
+cd stay-safe-0.2.2
 python3 -m stay_safe
 ```
 
@@ -38,7 +38,7 @@ By default it reads `~/.codex/config.toml` (`$CODEX_HOME/config.toml` when `CODE
 Paste this into Codex in the ChatGPT app or the CLI:
 
 ```text
-Download stay-safe at tag v0.2.1 from https://github.com/chalkbadger/stay-safe into
+Download stay-safe at tag v0.2.2 from https://github.com/chalkbadger/stay-safe into
 a new temporary folder and run `python3 -m stay_safe` there. Show the report exactly
 as printed, with its exit status, then your notes under "Agent's own report". Don't
 open auth files or change files outside that folder. If the download fails, stop and
