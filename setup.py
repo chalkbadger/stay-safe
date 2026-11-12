@@ -36,11 +36,12 @@ class Package(build_py):
 
 class Source(sdist):
     def make_release_tree(self, base_dir, files):
+        commit = revision()
         super().make_release_tree(base_dir, files)
         # Replace the copy rather than writing through setuptools' possible hard link.
         stamp = Path(base_dir) / 'stay_safe/release.txt'
         stamp.unlink(missing_ok=True)
-        stamp.write_text(revision() + '\n')
+        stamp.write_text(commit + '\n')
 
 
 setup(cmdclass={'build_py': Package, 'sdist': Source})
