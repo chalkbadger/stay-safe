@@ -237,3 +237,11 @@ Tests: [tests/explains_save_path/](../tests/explains_save_path/)
 - My supplied destination appears in neither output stream. `test_arguments.py::test_save_path_explains_the_supported_form_without_echoing_the_path`
 - The mistaken invocation stops before discovery, inspection or saving. `test_arguments.py::test_save_path_stops_before_discovery_inspection_or_save`
 - Other invalid invocations retain the generic error. `test_arguments.py::test_other_invalid_arguments_keep_the_generic_message`
+
+## [find_feedback] After reading a report or encountering a command error, I can find a form to report a problem or suggest an idea without sharing private files.
+Issue: https://github.com/chalkbadger/stay-safe/issues/53
+Tests: [tests/find_feedback/](../tests/find_feedback/)
+
+- Readable reports link to feedback once; JSON remains a report document and inspection gaps do not add another link. `test_feedback.py::test_reports_link_once_and_json_stays_a_document`
+- Argument errors show the feedback destination without echoing private arguments; help exits normally. `test_feedback.py::test_argument_errors_link_once_without_echoing_private_arguments`
+- Error and idea forms request relevant details, make reports optional and give sharing guidance. `test_feedback.py::test_error_and_idea_forms_collect_relevant_details_without_requiring_reports`
