@@ -148,7 +148,7 @@ class Reader:
         self.add([label], "permission", observations,
                  {"environment_inheritance": inherit == "all"})
 
-    def tool_approval(self, mode, applies, label):
+    def tool_approval(self, mode, applies, label, report_invalid=True):
         """Observations and facts of an approval mode that tools take when applies is true."""
         default = mode is None
         mode = "auto" if default else mode
@@ -156,7 +156,7 @@ class Reader:
             return ([f"tool approval: {mode}" + (" (default)" if default else "")],
                     {"automatic_tools": applies and mode == "approve",
                      "self_described_tools": applies and mode in {"auto", "writes"}})
-        if mode is not UNKNOWN:
+        if mode is not UNKNOWN and report_invalid:
             self.gap(f"A {label} approval mode is unsupported or invalid; its value was withheld.")
         return [], {}
 
@@ -166,7 +166,7 @@ class Reader:
         obs = ["configured enabled" if available else "disabled or enablement unknown"]
         if destructive:
             obs.append("enabled even if destructive")
-        approval, facts = self.tool_approval(config.get("approval_mode", "auto" if mode is None else mode), own and available, "per-tool")
+        approval, facts = self.tool_approval(config.get("approval_mode", "auto" if mode is None else mode), own and available, "per-tool", report_invalid=own)
         self.add(parts + ["tools", name], "tool policy", obs + approval, facts | {"destructive_tools": destructive})
 
     def mcp_tools(self, server, parts, enabled):
@@ -235,7 +235,8 @@ class Reader:
         if "tools" in app and name != "_default":
             for tool, config in self.named(self.table(app["tools"], "tools"), "tools"):
                 self.unknown(config, {"approval_mode", "enabled"}, "tools")
-                available = self.boolean(config, "enabled", tools_enabled, "tools") is True and enabled is True
+                tool_enabled = self.boolean(config, "enabled", tools_enabled, "tools") if "enabled" in config else tools_enabled
+                available = tool_enabled is True and enabled is True
                 self.tool(["apps", name], tool, config, mode, available, available and config.get("enabled") is True)
         return observations, facts
 
