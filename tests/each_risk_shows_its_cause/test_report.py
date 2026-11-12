@@ -17,7 +17,7 @@ CITATION_GAP = "Committed incident citations are incomplete; source links are un
 RISK = ("**With these settings, Codex runs commands without asking you.** It won't ask before any command it's allowed to "
         "run, so injected or mistaken instructions could make it run code you didn't want.\n\n"
         "*How it has gone wrong:* Agents running commands without approval have run a delete command aimed at a home "
-        "directory, wiped a drive and updated drivers when asked only to diagnose. {} (reported, not verified).\n\n"
+        "directory and wiped a drive. Another user reported an automatic driver update while getting help with GPU performance. {} (reported, not verified).\n\n"
         + commands("read-only").replace("{", "{{").replace("}", "}}") + "\n\n"
         "*Rule `commands_without_prompts` · setting `config-1:approval_policy` = `never`*")
 # The catalog of that configuration in Markdown's "Your setup" (archived issue #105, reading check).

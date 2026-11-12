@@ -58,7 +58,7 @@ class RuleTests(ConfigCase):
         self.assertEqual({identifier: links[identifier] for identifier in ("I1", "I23", "I24")}, {
             "I1": prefix + "i1-home-directory-deleted-by-rm--rf",
             "I23": prefix + "i23-production-tables-dropped-by-a-dev-only-migration-command",
-            "I24": prefix + "i24-diagnose-became-a-driver-update",
+            "I24": prefix + "i24-driver-update-followed-by-boot-and-network-failures",
         })
 
     def test_links_follow_changed_incident_titles_without_a_code_mapping(self):
