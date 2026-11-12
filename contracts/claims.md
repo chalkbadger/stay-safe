@@ -242,6 +242,6 @@ Tests: [tests/explains_save_path/](../tests/explains_save_path/)
 Issue: https://github.com/chalkbadger/stay-safe/issues/53
 Tests: [tests/find_feedback/](../tests/find_feedback/)
 
-- Readable reports link to feedback once; JSON remains a report document and inspection gaps do not add another link. `test_feedback.py::test_reports_link_once_and_json_stays_a_document`
-- Argument errors show the feedback destination without echoing private arguments; help exits normally. `test_feedback.py::test_argument_errors_link_once_without_echoing_private_arguments`
-- Error and idea forms request relevant details, make reports optional and give sharing guidance. `test_feedback.py::test_error_and_idea_forms_collect_relevant_details_without_requiring_reports`
+- I see one feedback link in a readable report, even with inspection gaps; my JSON output remains a report document. `test_feedback.py::test_reports_link_once_and_json_stays_a_document`
+- I see the feedback destination after an argument error without my private arguments; help exits normally. `test_feedback.py::test_argument_errors_link_once_without_echoing_private_arguments`
+- I can describe an error or idea in the matching form, with sharing guidance and an optional report. `test_feedback.py::test_error_and_idea_forms_collect_relevant_details_without_requiring_reports`

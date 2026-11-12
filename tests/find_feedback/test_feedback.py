@@ -19,6 +19,8 @@ class FeedbackTests(unittest.TestCase):
                     output = render(inspect([path]), fmt)
                     self.assertEqual(output.count(URL), 1)
                     self.assertEqual(output.count(LABEL), 1)
+                    link = f"[{LABEL}]({URL})" if fmt == "markdown" else f'<a href="{URL}">{LABEL}</a>'
+                    self.assertIn(link, output)
             for args in ([], ["--format", "json"]):
                 result = subprocess.run([sys.executable, "-B", "-m", "stay_safe", "--config", str(path), *args],
                                         cwd=ROOT, capture_output=True, text=True, timeout=20)
