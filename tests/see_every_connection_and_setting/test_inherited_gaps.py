@@ -16,7 +16,7 @@ MODE_GAP = 'A tool approval mode is unsupported or invalid; its value was withhe
 OWN_MODE_GAP = 'A per-tool approval mode is unsupported or invalid; its value was withheld.'
 APP_GAP = 'apps has an invalid boolean; its behavior is unknown.'
 OWN_APP_GAP = 'tools has an invalid boolean; its behavior is unknown.'
-# Expected inheritance follows harnesses/codex.md [mcp-tool-approval] and [app-tool-policy];
+# Expected inheritance follows harnesses/codex.md [tool-approval] and [app-tool-policy];
 # issue #63 specifies that an inherited invalid value is reported only at its source.
 PARENTS = (
     ('mcp_servers.example', 'url="https://private-endpoint.invalid"\ndefault_tools_approval_mode="private-invalid"\n',
