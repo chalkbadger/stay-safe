@@ -4,6 +4,24 @@ Check your Codex files for risky settings. See what each warning means and what 
 
 stay-safe reads settings and saved approvals from files. Only some settings are covered. The report names the defaults it uses and the checks it could not complete. It does not test live connections or what Codex will actually allow. See the [full scope](docs/report.md#full-scope).
 
+## Start here
+
+Paste this into your coding agent:
+
+```text
+Run Stay Safe using https://github.com/chalkbadger/stay-safe/blob/main/docs/usage.md#first-run.
+If you cannot read the guide, stop and tell me. Otherwise choose the setup route
+for me. First say whether you will inspect this computer or a cloud environment. If my configuration isn't accessible there, stop and
+explain. Ask before downloading missing tools. Show the report unchanged and
+its exit status, then your notes under "Agent's own report".
+```
+
+The [first-run guide](docs/usage.md#first-run) tells the agent how to choose a
+setup route without changing your Codex settings. It includes instructions for
+macOS, Linux and cloud environments, and explains the Windows limits.
+
+## Example finding
+
 Here is a finding from a run on a [test configuration](tests/runs_without_a_coding_agent/sample.toml):
 
 > **Your config turns off Codex's sandbox.** Commands Codex runs aren't limited to your project, so a mistaken command could damage files elsewhere on your computer.
@@ -15,6 +33,8 @@ Here is a finding from a run on a [test configuration](tests/runs_without_a_codi
 > *Change it:* near the top of the file, before any `[section]`, or ask Codex: "Edit `<config-1>` to set `sandbox_mode = "workspace-write"`; show only what you change."
 >
 > *Rule `unrestricted_filesystem` · setting `config-1:sandbox_mode` = `danger-full-access`*
+
+## Run it yourself
 
 It runs on Unix with Python 3.11 or newer. No agent is needed:
 
@@ -33,7 +53,7 @@ python3 -m stay_safe
 
 By default it reads `~/.codex/config.toml` (`$CODEX_HOME/config.toml` when `CODEX_HOME` is set). [Usage](docs/usage.md) covers the inspected files, options, `--save` and exit status.
 
-## Run with uv
+### With uv
 
 If you already use [uv](https://docs.astral.sh/uv/), run the
 [published 0.2.3 package](https://pypi.org/project/stay-safe/0.2.3/):
@@ -45,21 +65,6 @@ uvx --python 3.11 stay-safe@0.2.3
 The command asks uv for Python 3.11, downloading it if needed; your system Python
 stays unchanged. Add `--save` to save the HTML report in your current directory.
 The clone and ZIP routes above do not require uv.
-
-## Ask Codex
-
-Paste this into Codex in the ChatGPT app or the CLI:
-
-```text
-Download stay-safe at tag v0.2.2 from https://github.com/chalkbadger/stay-safe into
-a new temporary folder and run `python3 -m stay_safe` there. Show the report exactly
-as printed, with its exit status, then your notes under "Agent's own report". Don't
-open auth files or change files outside that folder. If the download fails, stop and
-tell me.
-```
-
-In "Ask for approval" mode, approve the one internet request; never choose "don't ask
-again". If Codex can't download, see [Usage](docs/usage.md#if-codex-cant-download).
 
 ## What it checks and what it can't see
 

@@ -36,8 +36,18 @@ def first_quote(text):
 
 
 class ReadmeTests(unittest.TestCase):
-    def test_first_commands_clone_a_release_tag_and_run_the_diagnostic_without_an_agent(self):
-        first = commands((ROOT / "README.md").read_text(encoding="utf-8"))[:3]
+    def test_readme_leads_with_agent_prompt_and_keeps_manual_release_commands(self):
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        sections = re.findall(r"^## (.+)$", readme, re.MULTILINE)
+        self.assertEqual(sections[0], "Start here")
+        self.assertIn("Run it yourself", sections)
+        intro, manual = readme.split("## Run it yourself", 1)
+        first_fence = re.search(r"```(\w*)\n(.*?)```", intro, re.DOTALL)
+        self.assertIsNotNone(first_fence)
+        self.assertEqual(first_fence[1], "text")
+        self.assertIn("https://github.com/chalkbadger/stay-safe/blob/main/docs/usage.md#first-run", first_fence[2])
+        manual = manual.split("\n## ", 1)[0]
+        first = commands(manual)[:3]
         self.assertRegex(first[0], r"^git clone --branch v\d+\.\d+\.\d+ https://github\.com/chalkbadger/stay-safe\.git$")
         self.assertEqual(first[1:], ["cd stay-safe", "python3 -m stay_safe"])
 
