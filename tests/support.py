@@ -1,6 +1,7 @@
 import json
 import os
 from pathlib import Path
+import re
 import shutil
 import subprocess
 import sys
@@ -112,12 +113,21 @@ def items(body):
 NOTE_LABEL = "*Before you change anything:*"
 
 
+# Each detailed finding opens with a numbered heading that the findings list links to (issue #82);
+# tests/overview_lists_findings_first/test_overview.py checks the numbers and their order.
+FINDING_HEADING = re.compile(r"### Finding \d+\n\n")
+
+
 def finding_items(report):
-    """The items of a report's Findings section, after its shared note."""
+    """The items of a report's Findings section, after its shared note, each without its numbered heading."""
     body = section(report, "Findings")
     if body.startswith(NOTE_LABEL):
         body = body.split("\n\n", 1)[1]
-    return items(body)
+    found = items(body)
+    for item in found:
+        if not FINDING_HEADING.match(item):
+            raise AssertionError("A finding must open with its numbered heading:\n" + item[:300])
+    return [FINDING_HEADING.sub("", item, count=1) for item in found]
 
 
 # The line under "Not checked" when it lists anything (reading check, 2026-11-09).

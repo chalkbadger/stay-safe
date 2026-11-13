@@ -15,6 +15,7 @@ EMPTY_FINDINGS = ("None of stay-safe's rules matched your settings. That doesn't
                   "see what stay-safe didn't check and what this report can't see, below.")
 EMPTY_GAPS = ("stay-safe checked every setting it supports in the files it read. What this report can't see, below, "
               "still applies.")
+LEAD_IN = "Here are the findings for you to review, with actionable advice."
 HEADINGS = ["## Findings", "## Not checked", "## Your setup", "## Sources", "## What this report can't see"]
 # Each limit says why and what to do (reading check, 2026-11-09).
 CANT_SEE = [
@@ -42,7 +43,14 @@ class ReportOrderTests(ConfigCase):
         self.assertEqual(run.returncode, 2)
         lines = run.stdout.splitlines()
         self.assertEqual(lines[:4], ["# Codex configuration diagnostic", "", "4 findings, 2 things not checked.", ""])
-        self.assertEqual([line for line in lines if line.startswith("#")], ["# Codex configuration diagnostic", *HEADINGS])
+        # Each of the four detailed findings has a numbered heading; before them come the introduction and the
+        # findings list (issue #82), which tests/overview_lists_findings_first/test_overview.py checks.
+        self.assertEqual([line for line in lines if line.startswith("#")],
+                         ["# Codex configuration diagnostic", HEADINGS[0], *[f"### Finding {n}" for n in (1, 2, 3, 4)],
+                          *HEADINGS[1:]])
+        self.assertLess(lines.index(LEAD_IN), lines.index("1. [With these settings, Codex runs commands without "
+                                                          "asking you.](#finding-1)"))
+        self.assertLess(lines.index("2 things not checked: see [Not checked](#not-checked)."), lines.index(HEADINGS[0]))
         revision = report["provenance"]["source_revision"]
         self.assertEqual(section(run.stdout, "What this report can't see"), "\n".join([
             *CANT_SEE, "",
@@ -57,7 +65,8 @@ class ReportOrderTests(ConfigCase):
         report = self.run_cli(AFTER).stdout
         # Each part of a finding is one line: What to do, then Change it, then a Check when the finding has one (archived issue #119,
         # re-review F15). The shared note before the findings is one line too.
-        finding = ["**", "*How it has gone wrong:* ", "*What to do:* ", "*Change it:* "]
+        # Each finding opens with its numbered heading (issue #82).
+        finding = ["### Finding ", "**", "*How it has gone wrong:* ", "*What to do:* ", "*Change it:* "]
         for name, labels, count in (("Findings", finding, 4),
                                     ("Not checked", ["**Not checked: ", "*What to do:* ", "*File `"], 2)):
             with self.subTest(section=name):
