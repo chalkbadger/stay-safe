@@ -189,10 +189,10 @@ Tests: [tests/nothing_in_my_setup_changes/](../tests/nothing_in_my_setup_changes
 - I run the report, with or without `--save`, and each file I select is unchanged, including its permissions and modification time. `test_inspected_setup.py::test_inspection_leaves_inspected_files_unchanged_and_adds_no_files`
 - With the stay-safe checkout outside my home and working folders, I run the report, with or without `--save`, and no files are added to either. `test_inspected_setup.py::test_inspection_leaves_inspected_files_unchanged_and_adds_no_files`
 - My run without `--save` adds or changes no file, in the checkout or elsewhere, apart from Python's own bytecode cache (`stay_safe/__pycache__`), which the check turns off; with `--save` it adds or replaces only `stay-safe-report.html` in the checkout, replacing a symlink there rather than writing through it. `test_save.py::test_without_save_nothing_is_written_and_with_save_only_the_report_is_added_or_replaced`
-- With `--save`, I see the same Markdown report as without it, then one last line with a command that opens the saved page (`open` on macOS, `xdg-open` elsewhere) whose quoted path a shell reads back as the page's path, even with spaces, quotes, `$` or backticks in it, and the run exits as the Markdown report would. `test_save.py::test_save_prints_the_markdown_report_then_a_command_that_opens_the_saved_page`
+- With redirected stdout and `--save`, I see the same Markdown report as without it, then one last line with a command that opens the saved page (`open` on macOS, `xdg-open` elsewhere) whose quoted path a shell reads back as the page's path, even with spaces, quotes, `$` or backticks in it, and the run exits as the Markdown report would. `test_save.py::test_save_prints_the_markdown_report_then_a_command_that_opens_the_saved_page`
 - I open the saved page and see the Markdown report's words, links, bold, italic and code text, in the same order. `test_page.py::test_saved_page_shows_the_markdown_reports_words_links_bold_and_code_text`
 - The saved page contains only document, text and https link elements, so it has no script and nothing that makes my browser load anything from outside the file. `test_page.py::test_saved_page_has_no_script_and_loads_nothing_from_outside_the_file`
-- When the page can't be saved, I see one line saying so on standard error, then the Markdown report, and the run exits `2` exactly when there are gaps. `test_save.py::test_when_the_report_cannot_be_written_one_line_says_so_then_the_markdown_report_follows`
+- With redirected stdout, when the page can't be saved, I see one line saying so on standard error, then the Markdown report, and the run exits `2` exactly when there are gaps. `test_save.py::test_when_the_report_cannot_be_written_one_line_says_so_then_the_markdown_report_follows`
 - `--save` with `--format json` gives me no report, writes nothing, says the two can't be combined, and exits `2`; `--help` says so too. `test_save.py::test_save_with_json_format_is_rejected_without_a_report_or_file`
 
 ## [anyone_can_recheck_a_report] Someone I share the report with sees the exact stay-safe version that made it, and gets the same report when they run that version on the same files.
@@ -237,6 +237,16 @@ Tests: [tests/explains_save_path/](../tests/explains_save_path/)
 - My supplied destination appears in neither output stream. `test_arguments.py::test_save_path_explains_the_supported_form_without_echoing_the_path`
 - The mistaken invocation stops before discovery, inspection or saving. `test_arguments.py::test_save_path_stops_before_discovery_inspection_or_save`
 - Other invalid invocations retain the generic error. `test_arguments.py::test_other_invalid_arguments_keep_the_generic_message`
+
+## [reads_plain_terminal_report] I can read the default terminal report without Markdown formatting and see how to save a formatted page.
+Issue: https://github.com/chalkbadger/stay-safe/issues/52
+Tests: [tests/reads_plain_terminal_report/](../tests/reads_plain_terminal_report/)
+
+- My terminal report keeps its sections, source links and privacy protections. `test_terminal.py::test_terminal_default_is_plain_with_links_and_private_values_withheld`
+- Redirecting output or choosing a format keeps the existing report. `test_terminal.py::test_explicit_formats_and_redirected_output_stay_unchanged`
+- The punctuation in my reported names survives throughout the report. `test_terminal.py::test_literal_names_survive_in_findings_advice_setup_and_evidence`
+- Saving keeps the formatted page and suppresses the hint even if saving fails. `test_terminal.py::test_save_keeps_html_and_suppresses_hint_even_when_save_fails`
+- An incomplete check retains its status and prints its notices after the report. `test_terminal.py::test_incomplete_exit_and_hint_follow_the_flushed_report`
 
 ## [find_feedback] After reading a report or encountering a command error, I can find a form to report a problem or suggest an idea without sharing private files.
 Issue: https://github.com/chalkbadger/stay-safe/issues/53

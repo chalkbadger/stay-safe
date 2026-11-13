@@ -1,5 +1,8 @@
 # Reading the report
 
+The [default terminal view](../contracts/claims.md#reads_plain_terminal_report-i-can-read-the-default-terminal-report-without-markdown-formatting-and-see-how-to-save-a-formatted-page) uses plain text.
+Use `--format markdown` for Markdown or `--save` for a formatted HTML page.
+
 ## The parts of a report
 
 The report opens with a count of findings and of things stay-safe could not check.
@@ -17,7 +20,7 @@ and fingerprints in their original form.
 
 Entry IDs are configuration keys, such as `mcp_servers.github`, prefixed with
 `config-1`, `config-2`, and so on in the order of `--config` arguments.
-In the Markdown report, files found automatically are named by where Codex keeps them,
+In the text and Markdown reports, files found automatically are named by where Codex keeps them,
 such as `~/.codex/config.toml` or `$CODEX_HOME/config.toml`, never by your own folder.
 Saved approvals use `rules-1:prefix_rule.N`, where N is the physical line number
 in the selected rules file.
