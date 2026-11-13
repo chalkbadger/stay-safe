@@ -26,7 +26,10 @@ class SavedPageNameTests(ConfigCase):
         parsed = Page(page)
         self.assertEqual(parsed.view(), markdown_view(markdown))
         self.assertEqual([tag for tag, _ in parsed.tags if tag in {"script", "img", "b"}], [])
-        self.assertEqual([href for href in parsed.links if not href.startswith("https://")], [])
+        # The only other links are the findings list's links to the page's own findings and Not checked section
+        # (issue #82).
+        self.assertEqual([href for href in parsed.links if not href.startswith("https://")],
+                         ["#finding-1", "#finding-2", "#finding-3", "#finding-4", "#not-checked"])
         text = " ".join(parsed.view()["words"])
         for name in names:
             self.assertIn(" ".join(name.split()), text)

@@ -136,4 +136,6 @@ class RiskOutputTests(ConfigCase):
                         self.assertEqual("Based on Codex's source code, not yet seen in a live run." in lines[0],
                                          rule == "self_described_tools")
                         actual.append((rule, entry, re.findall(r"\[(I\d+)\]\(https://github.com/chalkbadger/stay-safe/blob/[0-9a-f]{40}/incidents.md#[^)]+\)", citations)))
-                self.assertEqual(actual, expected)
+                # Markdown lists the same findings in the findings list's order (issue #82): the commands finding,
+                # the environment finding, the two programs, then the finding that is not ranked.
+                self.assertEqual(actual, expected if format_name == "json" else [expected[i] for i in (0, 4, 2, 3, 1)])

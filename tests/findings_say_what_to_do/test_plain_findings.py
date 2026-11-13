@@ -133,7 +133,9 @@ class PlainFindingTests(ConfigCase):
             ])
         found = [item.split("\n\n") for item in finding_items(markdown)]
         # What to do sits between the incidents and the trace line; its content is risk_trace evidence (archived issue #119).
-        self.assertEqual([paragraphs[:2] + paragraphs[-1:] for paragraphs in found], expected)
+        # The findings follow the findings list's order, not the JSON report's (issue #82);
+        # tests/overview_lists_findings_first/test_overview.py checks that order.
+        self.assertCountEqual([paragraphs[:2] + paragraphs[-1:] for paragraphs in found], expected)
         for paragraphs in found:
             self.assertTrue(paragraphs[2].startswith("*What to do:*"), paragraphs[2])
         rules, meanings = {(r["rule_source"], r["interpretation_source"]) for r in report["risks"]}.pop()

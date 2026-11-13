@@ -15,10 +15,12 @@ from tests.see_every_connection_and_setting.test_plain_gaps import PLAIN
 
 # What the page may contain: document structure, text elements and links (HTML Living Standard element index,
 # https://html.spec.whatwg.org/multipage/indices.html#elements-3). None of these runs code or loads a resource;
-# an `a` element navigates only when clicked, and its target must be https.
+# an `a` element navigates only when clicked, and its target must be https or, for the findings list (issue #82),
+# one of the page's own findings or its Not checked section, which headings name with an `id`.
 ALLOWED = {"html": {"lang"}, "head": set(), "meta": {"charset", "http-equiv", "content", "name"}, "title": set(),
-           "style": set(), "body": set(), "h1": set(), "h2": set(), "hr": set(), "p": set(), "br": set(),
-           "strong": set(), "em": set(), "code": set(), "a": {"href"}, "ul": set(), "li": set()}
+           "style": set(), "body": set(), "h1": set(), "h2": {"id"}, "h3": {"id"}, "hr": set(), "p": set(), "br": set(),
+           "strong": set(), "em": set(), "code": set(), "a": {"href"}, "ul": set(), "ol": {"start"}, "li": set()}
+OWN = r"#finding-\d+|#not-checked"
 # A second layer: the page tells the browser to load nothing and allow only its own inline style.
 POLICY = "default-src 'none'; style-src 'unsafe-inline'"
 # Elements with no end tag (https://html.spec.whatwg.org/multipage/syntax.html#void-elements).
@@ -28,7 +30,7 @@ INLINE = {"a", "abbr", "b", "code", "em", "i", "kbd", "mark", "q", "s", "samp", 
           "sup", "u", "var"}
 # A word that stands for a horizontal rule in both readings; text can't produce it.
 RULE = "\x00rule"
-LINK = re.compile(r"\[([^\]\n]*)\]\((https://[^)\s]*)\)")
+LINK = re.compile(r"\[([^\]\n]*)\]\((https://[^)\s]*|" + OWN + r")\)")
 
 
 class Page(HTMLParser):
@@ -87,7 +89,8 @@ class Page(HTMLParser):
 def markdown_view(text):
     """The words, link targets, bold, italic and code text a Markdown previewer shows for the report.
 
-    Headings (`#`) and list items (`- `) are block markers, not words; a horizontal rule (`---`) is the word RULE.
+    Headings (`#`) and list items (`- `, or a number as in `1. `) are block markers, not words; a horizontal rule
+    (`---`) is the word RULE.
     Code spans come first, as in Markdown: their text is kept as written, and `**` (bold), `*` (italic), links and
     entities such as &#124; are read only outside them.
     """
@@ -96,7 +99,7 @@ def markdown_view(text):
         if line == "---":
             words.append(RULE)
             continue
-        line = re.sub(r"^(#+|-) ", "", line)
+        line = re.sub(r"^(#+|-|\d+\.) ", "", line)
         spans = []
 
         def hold(found):
@@ -190,7 +193,7 @@ class SavedPageTests(ConfigCase):
                 self.assertLessEqual({name for name, _ in attrs}, ALLOWED[tag])
                 for name, value in attrs:
                     if name == "href":
-                        self.assertRegex(value, r"^https://")
+                        self.assertRegex(value, r"^(https://|(" + OWN + r")$)")
                     if tag == "meta" and name == "http-equiv":
                         # HTML matches http-equiv values case-insensitively; attribute order doesn't matter.
                         self.assertEqual((value.lower(), dict(attrs).get("content")), ("content-security-policy", POLICY))

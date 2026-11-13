@@ -6,7 +6,14 @@ Use `--format markdown` for Markdown or `--save` for a formatted HTML page.
 ## The parts of a report
 
 The report opens with a count of findings and of things stay-safe could not check.
-Each finding says what it means for you, how it has gone wrong in reported incidents
+An introduction follows: the files stay-safe read, the number of findings in each
+group, and the number of parts it could not verify. Then a numbered list gives every
+finding's title under its group's heading, in [the order of findings](#the-order-of-findings),
+and one line gives the count of things not checked. When stay-safe read more than
+one file, each list line ends with its file label, such as `config-2`. In Markdown and on
+the saved page, a list line links to its detailed finding; in the terminal, look for
+the same number, such as `Finding 3`.
+The detailed findings come next, in the list's order. Each finding says what it means for you, how it has gone wrong in reported incidents
 and what to do, then ends with one line giving its rule ID, entry ID and configured
 values. What to do gives a lower-friction option where the
 [meanings table](../harnesses/codex.md) backs one, a stricter one, and how to change it; some
@@ -15,6 +22,26 @@ its source label, such as `config-1`, when it has one. Then come your setup in p
 words, links to the rules and meanings sources, and what the report can't see, with a
 link to the [full scope](#full-scope). The JSON report (`--format json`) keeps the catalog, full scope
 and fingerprints in their original form.
+
+## The order of findings
+
+Each rule belongs to one group, fixed by what the rule's condition removes, as its
+cited incidents show. The list and the detailed findings follow the rows below from
+top to bottom; inside a rule, findings follow the order of the files, then the
+setting name. A group with no findings is left out. The order is not a score, and
+the JSON report keeps its own order.
+
+| Group | Heading in the report | Rule | Reported incidents |
+| --- | --- | --- | --- |
+| 1 | Nothing stands between a mistaken or injected instruction and your computer | `unrestricted_filesystem` | [I1](../incidents.md#i1-home-directory-deleted-by-rm--rf), [I3](../incidents.md#i3-windows-drive-wiped) |
+| 1 | Nothing stands between a mistaken or injected instruction and your computer | `commands_without_prompts` | [I2](../incidents.md#i2-home-directory-added-to-a-delete-command), [I3](../incidents.md#i3-windows-drive-wiped), [I24](../incidents.md#i24-driver-update-followed-by-boot-and-network-failures) |
+| 1 | Nothing stands between a mistaken or injected instruction and your computer | `saved_approval` | [I26](../incidents.md#i26-saved-command-approval-persisted-across-sessions-and-workspaces) |
+| 2 | Harm is limited to one channel or service | `destructive_tools` | [I7](../incidents.md#i7-production-volumes-deleted-with-a-found-token), [I8](../incidents.md#i8-database-changes-after-an-order-to-stop) |
+| 2 | Harm is limited to one channel or service | `network_access` | [I15](../incidents.md#i15-prompt-injection-through-github-issues), [I21](../incidents.md#i21-issue-content-steered-an-agent-toward-workflow-secrets) |
+| 2 | Harm is limited to one channel or service | `environment_inheritance` | [I23](../incidents.md#i23-production-tables-dropped-by-a-dev-only-migration-command) |
+| 2 | Harm is limited to one channel or service | `automatic_tools` | [I15](../incidents.md#i15-prompt-injection-through-github-issues), [I20](../incidents.md#i20-injected-text-turned-off-approvals) |
+| 3 | Something else has to be tampered with first | `configured_program` | [I13](../incidents.md#i13-repository-settings-run-commands-on-collaborators-machines), [I14](../incidents.md#i14-readme-injection-bypassed-a-command-allowlist), [I19](../incidents.md#i19-worm-persisted-through-agent-startup-hooks) |
+| Not ranked | Based on Codex's source code and not yet seen in a live run, so stay-safe has no basis to rank these. That does not make them minor. | `self_described_tools` | [I15](../incidents.md#i15-prompt-injection-through-github-issues), [I21](../incidents.md#i21-issue-content-steered-an-agent-toward-workflow-secrets) |
 
 ## Entry IDs
 

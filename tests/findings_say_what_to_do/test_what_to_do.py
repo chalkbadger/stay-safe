@@ -333,7 +333,16 @@ class WhatToDoTests(ConfigCase):
     def findings(self, *args, env=None):
         risks = json.loads(self.run_cli(*args, "--format", "json", env=env).stdout)["risks"]
         markdown = self.run_cli(*args, env=env).stdout
-        return {(risk["rule"], risk["entry"]): what_to_do(item) for risk, item in zip(risks, finding_items(markdown))}
+        # The detailed findings follow the findings list's order, not the JSON report's (issue #82), so each is
+        # matched to its risk by its own trace line.
+        found = {}
+        for item in finding_items(markdown):
+            trace = re.fullmatch(r"\*Rule `(\w+)` · (?:setting|rules entry) `(.+?)` = `.*`\*", item.split("\n\n")[-1])
+            self.assertIsNotNone(trace, item)
+            found[trace.groups()] = what_to_do(item)
+        self.assertCountEqual(found, [(risk["rule"], risk["entry"]) for risk in risks])
+        self.assertEqual(len(found), len(risks))
+        return found
 
     def files(self, *texts):
         return [arg for index, text in enumerate(texts, 1)

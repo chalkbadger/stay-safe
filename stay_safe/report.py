@@ -699,6 +699,14 @@ def parts(name):
     return [json.loads(p) if p.startswith('"') else p for p in re.findall(r'"(?:[^"\\]|\\.)*"|[^."]+', name)]
 
 
+def name_text(value):
+    """A configuration name as code text. A backtick or line break would end code text early, so a name with one
+    is written with character references instead, which Markdown shows as written."""
+    if "`" in value or "\n" in value:
+        return re.sub(r"[^A-Za-z0-9 ]", lambda found: f"&#{ord(found[0])};", value)
+    return f"`{value}`"
+
+
 SUBJECTS = {("mcp_servers", 2): "your {0} MCP server", ("mcp_servers", 4): "the {1} tool of your {0} MCP server",
             ("apps", 2): "your {0} app", ("apps", 4): "the {1} tool of your {0} app",
             ("hooks", 2): "your {0} hooks", ("notify", 1): "your `notify` setting"}
@@ -708,7 +716,7 @@ def finding(risk, files=None, contexts=None):
     """The plain lead, incident summary and What to do of a finding; None where its rule or entry has no wording."""
     keys = parts(risk["entry"].split(":", 1)[1])
     shape = (keys[0], len(keys))
-    subject = SUBJECTS.get(shape, "").format(*[f"`{key}`" for key in keys[1::2]])
+    subject = SUBJECTS.get(shape, "").format(*[name_text(key) for key in keys[1::2]])
     plain = FINDINGS.get(risk["rule"])
     if plain is None:
         return None
@@ -877,25 +885,136 @@ def made_by(provenance):
     return label + " (release archive)" if provenance["source_status"] == "release archive commit" else label
 
 
+# The overview before the detailed findings (issue #82). A rule's group is fixed and says what the rule's condition
+# removes; docs/report.md, "The order of findings", gives the table with each rule's incidents. Each group: its
+# heading in the list, its sentence in the introduction for one finding and for several, and its rules in order.
+GROUPS = (
+    ("Nothing stands between a mistaken or injected instruction and your computer",
+     ("lets commands reach your whole computer unchecked", "let commands reach your whole computer unchecked"),
+     ("unrestricted_filesystem", "commands_without_prompts", "saved_approval")),
+    ("Harm is limited to one channel or service",
+     ("exposes one channel or service", "expose one channel or service"),
+     ("destructive_tools", "network_access", "environment_inheritance", "automatic_tools")),
+    ("Something else has to be tampered with first",
+     ("matters only if something else is tampered with first", "matter only if something else is tampered with first"),
+     ("configured_program",)),
+    ("Based on Codex's source code and not yet seen in a live run, so stay-safe has no basis to rank these. "
+     "That does not make them minor.",
+     ("rests on Codex's source code alone", "rest on Codex's source code alone"),
+     ("self_described_tools",)),
+)
+PLACE = {rule: (group, position) for group, (_, _, rules) in enumerate(GROUPS) for position, rule in enumerate(rules)}
+NUMBERS = ("one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten")
+READ = {"config": "your Codex settings", "rules": "your saved approvals"}
+LEAD_IN = "Here are the findings for you to review, with actionable advice."
+# A finding's detailed part opens with this heading; GitHub and the saved page give it the anchor `finding-N`.
+TARGET = "Finding {}"
+
+
+def source_order(source):
+    """Config files in the order they were passed, then the rules file."""
+    kind, _, number = source.partition("-")
+    return ({"config": 0, "rules": 1}.get(kind, 2), int(number) if number.isdigit() else 0, source)
+
+
+def ordered(risks):
+    """Findings by group, then rule, then file, then setting name; a number in a name, such as a rules line, sorts
+    as a number. A rule without a group is an error here, never a finding left out or ranked by guess."""
+    def key(risk):
+        source, _, name = risk["entry"].partition(":")
+        return (*PLACE[risk["rule"]], source_order(source),
+                [(0, int(part), "") if part.isdigit() else (1, 0, part) for part in parts(name)])
+    return sorted(risks, key=key)
+
+
+def files_read(report, files):
+    """The selected files stay-safe read, in order. A file is left out when it was not found (its catalog entry says
+    so), when a config file gave no entry (it was refused), or when a rules file's gap says its input was refused.
+    A rules file passed with `--rules` that holds nothing to list or flag leaves no trace in the report and is not
+    named."""
+    absent = {entry["source"] for entry in report["catalog"] if entry["kind"] in ("configuration file", "rules file")}
+    listed = {entry["source"] for entry in report["catalog"]}
+    refused = {text.partition(": ")[0] for text in report["inspection_gaps"]
+               if text.partition(": ")[2].startswith(("Rules input ", "Selected rules input "))}
+    sources = {source for source in listed | set(files) | {text.partition(": ")[0] for text in report["inspection_gaps"]}
+               if re.fullmatch(r"(config|rules)-\d+", source)}
+    return sorted((source for source in sources - absent - refused
+                   if source.startswith("rules-") or source in listed), key=source_order)
+
+
+def introduction(report, files, read):
+    """The paragraphs after the count line: what stay-safe read, the results by group, what could not be verified,
+    and the line that leads into the list. A paragraph with nothing to count is left out."""
+    risks, gaps = report["risks"], report["inspection_gaps"]
+    paragraphs = []
+    if read:
+        names = [f"{READ[source.split('-')[0]]} (`{files.get(source, source)}`)" for source in read]
+        number = NUMBERS[len(read) - 1] if len(read) <= len(NUMBERS) else str(len(read))
+        paragraphs.append(
+            f"stay-safe read {number} {'file' if len(read) == 1 else 'files'}: "
+            f"{', '.join(names[:-1])}{' and ' if names[:-1] else ''}{names[-1]}. This report describes what "
+            f"{'that file says' if len(read) == 1 else 'those files say'}, without running any tests in Codex.")
+    if risks:
+        sentences = [f"stay-safe found {count(len(risks), 'risky setting', 'risky settings')}."]
+        for group, (_, (one, several), _) in enumerate(GROUPS):
+            number = sum(PLACE[risk["rule"]][0] == group for risk in risks)
+            if number:
+                sentences.append(f"{number} {one if number == 1 else several}.")
+        paragraphs.append(" ".join(sentences))
+    if gaps:
+        one, those = len(gaps) == 1, "that file" if len(read) == 1 else "those files"
+        paragraphs.append(
+            f"{count(len(gaps), 'part', 'parts')} of your setup could not be verified because "
+            f"{'it is' if one else 'they are'} missing from {those} or outside what stay-safe covers. "
+            f"stay-safe flagged {'it' if one else 'them'} for you to review.")
+    if risks:
+        paragraphs.append(LEAD_IN)
+    return paragraphs
+
+
+def findings_list(report, risks, titles, labelled):
+    """One numbered line per finding under its group's heading, each linking to its detailed finding, then the
+    count of things not checked, linking to that section."""
+    paragraphs, group = [], None
+    for number, (risk, title) in enumerate(zip(risks, titles), 1):
+        if PLACE[risk["rule"]][0] != group:
+            group = PLACE[risk["rule"]][0]
+            paragraphs += [f"**{GROUPS[group][0]}**", ""]
+        label = f" (`{risk['entry'].partition(':')[0]}`)" if labelled else ""
+        paragraphs[-1] += ("\n" if paragraphs[-1] else "") + f"{number}. [{title}](#{anchor(TARGET.format(number))}){label}"
+    return paragraphs + [f"{count(len(report['inspection_gaps']), 'thing', 'things')} not checked: "
+                         "see [Not checked](#not-checked)."]
+
+
 def markdown(report, files=None):
     files = files or {}
-    risks, gaps = report["risks"], report["inspection_gaps"]
+    risks, gaps = ordered(report["risks"]), report["inspection_gaps"]
+    read = files_read(report, files)
     lines = ["# Codex configuration diagnostic", "",
-             f"{count(len(risks), 'finding', 'findings')}, {count(len(gaps), 'thing', 'things')} not checked.",
-             "", "## Findings", ""]
-    blocks = []
+             f"{count(len(risks), 'finding', 'findings')}, {count(len(gaps), 'thing', 'things')} not checked.", ""]
+    for paragraph in introduction(report, files, read):
+        lines += [paragraph, ""]
+    blocks, titles = [], []
     # The sandboxes the files set, so the advice never suggests a looser one (reviews of archived PR #129, F2 and F13).
     contexts = sandbox_context(report)
-    for risk in risks:
+    for number, risk in enumerate(risks, 1):
         citations = ", ".join(f"[{i}]({report['incident_links'][i]})" if i in report["incident_links"] else i for i in risk["incidents"])
         lead, how, step = finding(risk, files, contexts) or (risk["explanation"], "See the cited incidents.",
                                                    "*What to do:* Review this setting yourself.")
         kind = "rules entry" if risk["entry"].startswith("rules-") else "setting"
+        # The title is the bold headline; a finding without plain wording has none, so its whole lead stands in.
+        headline = re.search(r"^\*\*(.+?)\*\* ", lead)
+        titles.append(headline[1] if headline else lead)
         blocks.append("\n\n".join([
+            f"### {TARGET.format(number)}",
             lead,
             f"*How it has gone wrong:* {how} {citations} ({report['incident_status']}).",
             step,
             f"*Rule `{risk['rule']}` · {kind} `{risk['entry']}` = `{'; '.join(risk['configured_evidence'])}`*"]))
+    if risks:
+        for paragraph in findings_list(report, risks, titles, len(read) > 1):
+            lines += [paragraph, ""]
+    lines += ["## Findings", ""]
     if risks:
         lines += [note(report, files), "", "\n\n---\n\n".join(blocks), ""]
     else:
@@ -954,12 +1073,20 @@ def markdown(report, files=None):
 
 
 # The saved page is the Markdown report as a Markdown previewer shows it (archived issue #106): the same lines, read with
-# the few Markdown forms markdown() writes. All text is escaped; links are kept only for https targets.
-INLINE = re.compile(r"`([^`\n]*)`|\[([^\]\n]*)\]\((https://[^)\s]*)\)|\*\*|\*")
+# the few Markdown forms markdown() writes. All text is escaped; links are kept only for https targets and for the
+# report's own findings and Not checked section (issue #82). A link's text may hold code spans.
+INLINE = re.compile(r"`([^`\n]*)`|\[((?:`[^`\n]*`|[^\]`\n])*)\]\((https://[^)\s]*|#finding-\d+|#not-checked)\)|\*\*|\*")
+NUMBERED = re.compile(r"(\d+)\. (.*)")
 STYLE = """body { font-family: system-ui, sans-serif; line-height: 1.5; max-width: 52rem; margin: 2rem auto; padding: 0 1rem; }
 p, li { overflow-wrap: anywhere; }
 code { font-family: ui-monospace, monospace; font-size: 0.95em; }
 hr { border: 0; border-top: 1px solid; margin: 1.5rem 0; }"""
+
+
+def anchor(heading):
+    """The anchor GitHub gives a heading, which the saved page gives it too: lower case, punctuation removed, spaces
+    as hyphens (docs.github.com, "Basic writing and formatting syntax", Section links)."""
+    return re.sub(r"[^\w\- ]", "", heading.lower()).replace(" ", "-")
 
 
 def text(value):
@@ -968,7 +1095,7 @@ def text(value):
 
 
 def inline(line):
-    """One line's text, code spans, https links, bold (`**`) and italic (`*`); emphasis left open closes at its end."""
+    """One line's text, code spans, links, bold (`**`) and italic (`*`); emphasis left open closes at its end."""
     out, open_tags, position = [], [], 0
 
     def toggle(tag):
@@ -992,7 +1119,7 @@ def inline(line):
         elif found[0].startswith("`"):
             out.append(f"<code>{escape(found[1], quote=False)}</code>")
         else:
-            out.append(f'<a href="{escape(found[3], quote=True)}">{text(found[2])}</a>')
+            out.append(f'<a href="{escape(found[3], quote=True)}">{inline(found[2])}</a>')
         position = found.end()
     out.append(text(line[position:]))
     out.extend(f"</{t}>" for t in reversed(open_tags))
@@ -1000,26 +1127,34 @@ def inline(line):
 
 
 def page(report, files=None):
-    """Headings, horizontal rules, then paragraphs and lists: a run of `- ` lines is a list, other lines a paragraph."""
+    """Headings, horizontal rules, then paragraphs and lists: a run of `- ` lines is a list, a run of numbered lines
+    a numbered list that starts at its first number, other lines a paragraph. Section and finding headings carry
+    the anchor GitHub gives them, so the report's own links work on the page."""
     body = []
     for block in markdown(report, files).rstrip("\n").split("\n\n"):
         if block.startswith("# "):
             body.append(f"<h1>{inline(block[2:])}</h1>")
         elif block.startswith("## "):
-            body.append(f"<h2>{inline(block[3:])}</h2>")
+            body.append(f'<h2 id="{escape(anchor(block[3:]), quote=True)}">{inline(block[3:])}</h2>')
+        elif block.startswith("### "):
+            body.append(f'<h3 id="{escape(anchor(block[4:]), quote=True)}">{inline(block[4:])}</h3>')
         elif block == "---":
             body.append("<hr>")
         else:
             runs = []
             for line in block.split("\n"):
-                listed = line.startswith("- ")
+                listed = "ul" if line.startswith("- ") else "ol" if NUMBERED.fullmatch(line) else None
                 if runs and runs[-1][0] == listed:
                     runs[-1][1].append(line)
                 else:
                     runs.append((listed, [line]))
             for listed, lines in runs:
-                if listed:
+                if listed == "ul":
                     body.append("<ul>\n" + "\n".join(f"<li>{inline(line[2:])}</li>" for line in lines) + "\n</ul>")
+                elif listed == "ol":
+                    body.append(f'<ol start="{NUMBERED.fullmatch(lines[0])[1]}">\n'
+                                + "\n".join(f"<li>{inline(NUMBERED.fullmatch(line)[2])}</li>" for line in lines)
+                                + "\n</ol>")
                 else:
                     body.append("<p>" + "<br>\n".join(inline(line) for line in lines) + "</p>")
     return ("<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n"
@@ -1035,23 +1170,27 @@ def plain(report, files=None):
     Names come from the reader's public-name allowlist. Unlike stripping punctuation,
     tokenizing code spans leaves literal underscores, dots and hyphens untouched.
     """
-    lines = []
-    for line in markdown(report, files).splitlines():
-        if line == "---":
-            continue
-        line = line.removeprefix("## ").removeprefix("# ")
-        if line.startswith("- "):
-            line = "• " + line[2:]
+    def words(line):
         pieces, position = [], 0
         for found in INLINE.finditer(line):
             pieces.append(unescape(line[position:found.start()]))
             if found[1] is not None:
                 pieces.append(found[1])
             elif found[2] is not None:
-                pieces.append(f"{unescape(found[2])} ({found[3]})")
+                # A link to the report's own finding or section has no address to show: its number or name is the route.
+                pieces.append(words(found[2]) + ("" if found[3].startswith("#") else f" ({found[3]})"))
             position = found.end()
         pieces.append(unescape(line[position:]))
-        lines.append("".join(pieces))
+        return "".join(pieces)
+
+    lines = []
+    for line in markdown(report, files).splitlines():
+        if line == "---":
+            continue
+        line = line.removeprefix("### ").removeprefix("## ").removeprefix("# ")
+        if line.startswith("- "):
+            line = "• " + line[2:]
+        lines.append(words(line))
     return "\n".join(lines) + "\n"
 
 
