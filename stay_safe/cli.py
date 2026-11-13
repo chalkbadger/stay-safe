@@ -7,6 +7,7 @@ import sys
 from .report import inspect, render
 from .save import NAME, save
 
+FEEDBACK = "Report a problem or suggest an idea: https://github.com/chalkbadger/stay-safe/issues/new/choose\n"
 NOT_SAVED = f"Could not save {NAME} in the stay-safe folder; the full report follows.\n"
 
 
@@ -27,6 +28,11 @@ PROG = (sys.executable.rsplit("/", 1)[-1] or "python3") + " -m stay_safe"
 
 
 class Parser(argparse.ArgumentParser):
+    def exit(self, status=0, message=None):
+        if status:
+            message = (message or "") + FEEDBACK
+        super().exit(status, message)
+
     def error(self, message):
         self.exit(2, "Invalid arguments. Use --help.\n")
 

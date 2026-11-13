@@ -7,7 +7,7 @@ import sys
 from stay_safe.report import inspect
 from tests.see_every_connection_and_setting.test_config import FIXTURE
 from tests.nothing_in_my_setup_changes.test_page import Page
-from tests.support import INCOMPLETE
+from tests.support import FEEDBACK, INCOMPLETE
 from tests.support import REPORT, SEEDED, SEEDS, ConfigCase, ReportRuns, ROOT, copy_checkout, gap_items, run_checkout, section
 from tests.see_every_connection_and_setting.test_plain_gaps import gap_text
 
@@ -152,7 +152,7 @@ class ShareableTests(ReportRuns, ConfigCase):
         for args in [("--unknown=fake-secret-do-not-share",),
                      ("--rules", "private-first.rules", "--rules", "private-second.rules")]:
             invalid = self.run_cli(*args)
-            self.assertEqual((invalid.returncode, invalid.stdout, invalid.stderr), (2, "", "Invalid arguments. Use --help.\n"))
+            self.assertEqual((invalid.returncode, invalid.stdout, invalid.stderr), (2, "", "Invalid arguments. Use --help.\n" + FEEDBACK))
 
     def test_default_path_uses_codex_home_without_disclosing_it(self):
         self.require_no_system_folder()

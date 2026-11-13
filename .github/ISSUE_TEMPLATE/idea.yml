@@ -1,0 +1,46 @@
+{
+  "name": "Suggest an idea",
+  "description": "Describe something stay-safe could help you do.",
+  "title": "Idea: ",
+  "body": [
+    {
+      "type": "markdown",
+      "attributes": {
+        "value": "Reports are optional. Before sharing, review names in any report or example. Do not include credentials, raw private configuration, account identifiers or private file contents. Use a minimal, synthetic example when possible."
+      }
+    },
+    {
+      "type": "textarea",
+      "id": "goal",
+      "attributes": {
+        "label": "What would you like to do?",
+        "description": "Describe the problem or task you want help with."
+      },
+      "validations": {
+        "required": true
+      }
+    },
+    {
+      "type": "textarea",
+      "id": "change",
+      "attributes": {
+        "label": "What would help?",
+        "description": "Describe the improvement and how you would know it helped."
+      },
+      "validations": {
+        "required": true
+      }
+    },
+    {
+      "type": "textarea",
+      "id": "report",
+      "attributes": {
+        "label": "Report (optional)",
+        "description": "Share only if useful, after reviewing names. No private files are needed."
+      },
+      "validations": {
+        "required": false
+      }
+    }
+  ]
+}

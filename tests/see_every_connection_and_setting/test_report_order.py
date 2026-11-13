@@ -26,7 +26,7 @@ CANT_SEE = [
     "- Private values such as commands, addresses and tokens are left out, but names like `github` are shown as "
     "written: names can identify a project or a person, so check them before sharing.",
 ]
-CHALLENGE = "[challenge a finding](https://github.com/chalkbadger/stay-safe/issues/new?template=challenge.yml)"
+CHALLENGE = "[Report a problem or suggest an idea](https://github.com/chalkbadger/stay-safe/issues/new/choose)"
 
 
 class ReportOrderTests(ConfigCase):

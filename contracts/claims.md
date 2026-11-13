@@ -15,8 +15,8 @@ Tests: [tests/runs_without_a_coding_agent/](../tests/runs_without_a_coding_agent
 - I open the README and find its first three fenced commands are a clone of a `vX.Y.Z` tag, `cd stay-safe` and `python3 -m stay_safe`. `test_readme.py::test_first_commands_clone_a_release_tag_and_run_the_diagnostic_without_an_agent`
 - I run stay-safe on the test configuration the README's sample finding links, and it prints that finding as the README shows it, apart from the commit in its links. `test_readme.py::test_sample_finding_is_what_stay_safe_prints_for_its_test_configuration`
 - I run `python3 stay_safe` from the checkout, and I get the same report and exit status as with `-m`. `test_python_entry.py::test_running_the_folder_without_m_gives_the_same_report_and_exit_status`
-- On a Python older than 3.11 with a newer Python on my `PATH`, I see one line naming that Python's command, and the exit status is 2. `test_python_entry.py::test_too_old_python_names_the_newest_python_on_the_path_and_exits_2`
-- On a Python older than 3.11 with no newer Python found, I see one line telling me to install 3.11 or newer, and the exit status is 2. `test_python_entry.py::test_too_old_python_without_a_newer_one_says_to_install_it_and_exits_2`
+- On a Python older than 3.11 with a newer Python on my `PATH`, I see that Python's command and a feedback link, and the exit status is 2. `test_python_entry.py::test_too_old_python_names_the_newest_python_on_the_path_and_exits_2`
+- On a Python older than 3.11 with no newer Python found, I see instructions to install 3.11 or newer and a feedback link, and the exit status is 2. `test_python_entry.py::test_too_old_python_without_a_newer_one_says_to_install_it_and_exits_2`
 - The version check runs before anything that needs 3.11 is imported, and stays parseable by Python 3.9. `test_python_entry.py::test_version_check_runs_before_any_module_needing_3_11_and_parses_as_python_3_9`
 
 ## [see_every_connection_and_setting] I can see what stay-safe found in my Codex files. The report tells me when it used a default or could not complete a check.
@@ -247,3 +247,11 @@ Tests: [tests/reads_plain_terminal_report/](../tests/reads_plain_terminal_report
 - The punctuation in my reported names survives throughout the report. `test_terminal.py::test_literal_names_survive_in_findings_advice_setup_and_evidence`
 - Saving keeps the formatted page and suppresses the hint even if saving fails. `test_terminal.py::test_save_keeps_html_and_suppresses_hint_even_when_save_fails`
 - An incomplete check retains its status and prints its notices after the report. `test_terminal.py::test_incomplete_exit_and_hint_follow_the_flushed_report`
+
+## [find_feedback] After reading a report or encountering a command error, I can find a form to report a problem or suggest an idea without sharing private files.
+Issue: https://github.com/chalkbadger/stay-safe/issues/53
+Tests: [tests/find_feedback/](../tests/find_feedback/)
+
+- I see one feedback link in a readable report, even with inspection gaps; my JSON output remains a report document. `test_feedback.py::test_reports_link_once_and_json_stays_a_document`
+- I see the feedback destination after an argument error without my private arguments; help exits normally. `test_feedback.py::test_argument_errors_link_once_without_echoing_private_arguments`
+- I can describe an error or idea in the matching form, with sharing guidance and an optional report. `test_feedback.py::test_error_and_idea_forms_collect_relevant_details_without_requiring_reports`

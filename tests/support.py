@@ -8,6 +8,8 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
+FEEDBACK = "Report a problem or suggest an idea: https://github.com/chalkbadger/stay-safe/issues/new/choose\n"
+
 ROOT = Path(__file__).resolve().parents[1]
 # The file name archived issue #106 fixes for the saved report.
 REPORT = "stay-safe-report.html"

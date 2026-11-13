@@ -1,0 +1,57 @@
+{
+  "name": "Report a run error",
+  "description": "Tell us what went wrong while running stay-safe.",
+  "title": "Error: ",
+  "body": [
+    {
+      "type": "markdown",
+      "attributes": {
+        "value": "Reports are optional. Before sharing, review names in any report or example. Do not include credentials, raw private configuration, account identifiers or private file contents. Use a minimal, synthetic example when possible."
+      }
+    },
+    {
+      "type": "textarea",
+      "id": "attempt",
+      "attributes": {
+        "label": "What were you trying to do?",
+        "description": "Describe the action or command using placeholders for private paths and arguments."
+      },
+      "validations": {
+        "required": true
+      }
+    },
+    {
+      "type": "textarea",
+      "id": "error",
+      "attributes": {
+        "label": "What error did you see?",
+        "description": "Include the error message and what you expected. Remove private values."
+      },
+      "validations": {
+        "required": true
+      }
+    },
+    {
+      "type": "textarea",
+      "id": "setup",
+      "attributes": {
+        "label": "Version and setup",
+        "description": "If known: stay-safe version or commit, Python version and operating system."
+      },
+      "validations": {
+        "required": false
+      }
+    },
+    {
+      "type": "textarea",
+      "id": "report",
+      "attributes": {
+        "label": "Report (optional)",
+        "description": "Share only if useful, after reviewing names. No private files are needed."
+      },
+      "validations": {
+        "required": false
+      }
+    }
+  ]
+}
