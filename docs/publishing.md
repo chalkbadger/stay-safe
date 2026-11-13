@@ -1,8 +1,9 @@
 # Publish the package
 
-The next package version is 0.2.3. Publication is pending: the owner must establish
-PyPI ownership of `stay-safe` and supply a scoped publishing credential. Do not
-remove the README's pending notice until the public command below has run.
+Version 0.2.3 is published on [PyPI](https://pypi.org/project/stay-safe/0.2.3/).
+Its public installation and report were verified in [PR #77](https://github.com/chalkbadger/stay-safe/pull/77).
+For the next release, choose a new version and update the version in `pyproject.toml`
+and the commands below before building. Version 0.2.3 cannot be uploaded again.
 
 From a clean checkout of the accepted release commit, in a development environment:
 
@@ -32,5 +33,5 @@ uvx --python 3.11 stay-safe@0.2.3 --save
 Record the version, source commit, platform, selected Python, output and exit
 status. Review the saved page and source links. For a reproducible diagnostic,
 select a non-private fixture using `--config FILE`; incomplete inspection exits 2.
-Once that succeeds, replace the README's pending paragraph with the verified
-pinned command. Keep the clone and ZIP routes.
+Once that succeeds, update the README with the verified pinned command. Keep the
+clone and ZIP routes.

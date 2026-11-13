@@ -33,14 +33,18 @@ python3 -m stay_safe
 
 By default it reads `~/.codex/config.toml` (`$CODEX_HOME/config.toml` when `CODEX_HOME` is set). [Usage](docs/usage.md) covers the inspected files, options, `--save` and exit status.
 
-## Packaged release (publication pending)
+## Run with uv
 
-Version 0.2.3 is prepared for PyPI but is not published yet. Once it is published,
-users with [uv](https://docs.astral.sh/uv/) can run `uvx --python 3.11 stay-safe@0.2.3`.
+If you already use [uv](https://docs.astral.sh/uv/), run the
+[published 0.2.3 package](https://pypi.org/project/stay-safe/0.2.3/):
+
+```sh
+uvx --python 3.11 stay-safe@0.2.3
+```
+
 The command asks uv for Python 3.11, downloading it if needed; your system Python
-stays unchanged.
-The clone and ZIP commands above are available now. See the
-[publication steps](docs/publishing.md) for the remaining release check.
+stays unchanged. Add `--save` to save the HTML report in your current directory.
+The clone and ZIP routes above do not require uv.
 
 ## Ask Codex
 
