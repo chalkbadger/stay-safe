@@ -4,7 +4,7 @@ import json
 from unittest.mock import patch
 
 from stay_safe.cli import main
-from tests.support import ConfigCase, copy_checkout, run_checkout
+from tests.support import FEEDBACK, ConfigCase, copy_checkout, run_checkout
 
 
 EXPLANATION = "Inspection incomplete (exit 2). See the report for what wasn't checked.\n"
@@ -34,8 +34,8 @@ class StatusTests(ConfigCase):
             with self.subTest(format=format_name):
                 run = run_checkout(checkout, "--config", str(config), "--format", format_name, cwd=self.root)
                 self.assertEqual((run.returncode, run.stderr), (0, ""))
-        for args, expected in ((["--unknown"], "Invalid arguments. Use --help.\n"),
-                               (["--format", "json", "--save"], "--save can't be combined with --format json. Use --help.\n")):
+        for args, expected in ((["--unknown"], "Invalid arguments. Use --help.\n" + FEEDBACK),
+                               (["--format", "json", "--save"], "--save can't be combined with --format json. Use --help.\n" + FEEDBACK)):
             with self.subTest(args=args):
                 run = run_checkout(checkout, *args, cwd=self.root)
                 self.assertEqual((run.returncode, run.stdout, run.stderr), (2, "", expected))
