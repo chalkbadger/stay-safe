@@ -10,16 +10,15 @@ Paste this into your coding agent:
 
 ```text
 Run Stay Safe using https://github.com/chalkbadger/stay-safe/blob/main/docs/usage.md#first-run.
-Choose the setup route for me. First say whether you will inspect this computer
-or a cloud environment. If my configuration isn't accessible there, stop and
+If you cannot read the guide, stop and tell me. Otherwise choose the setup route
+for me. First say whether you will inspect this computer or a cloud environment. If my configuration isn't accessible there, stop and
 explain. Ask before downloading missing tools. Show the report unchanged and
 its exit status, then your notes under "Agent's own report".
 ```
 
-The agent checks which tools are available and handles the setup. It does not
-change your Codex settings. The [first-run guide](docs/usage.md#first-run) covers
-macOS and Linux, including cloud environments; it explains the Windows limits.
-If the agent cannot read the guide, ask it to stop and tell you.
+The [first-run guide](docs/usage.md#first-run) tells the agent how to choose a
+setup route without changing your Codex settings. It includes instructions for
+macOS, Linux and cloud environments, and explains the Windows limits.
 
 ## Example finding
 
