@@ -8,9 +8,9 @@ import re
 from .codex import read_file
 from .codex_rules import other_files, read_file as read_rules
 from .rules import evaluate
-from .provenance import GAP, REPOSITORY, fingerprints, identify, source_link
+from .provenance import GAP, REPOSITORY, fingerprints, identify, source_link, resource
 
-INCIDENTS = Path(__file__).resolve().parents[1] / "incidents.md"
+INCIDENTS = resource("incidents.md")
 INCIDENT_STATUS = "reported, not verified"
 
 

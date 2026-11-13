@@ -181,7 +181,7 @@ Tests: [tests/share_without_exposing_secrets/](../tests/share_without_exposing_s
 - When my input has a gap, the report shows neither its private text nor raw error messages. `test_report.py::test_malformed_and_private_identifiers_never_echo_raw_input`
 - A rules line of mine with an invalid escape, such as `\q`, is reported as a gap without its text or the raw error. `test_rules_file.py::test_invalid_json_escape_does_not_disclose_private_source`
 
-## [nothing_in_my_setup_changes] Running stay-safe changes nothing in my setup. With `--save`, it writes one report file in its own folder and nothing else.
+## [nothing_in_my_setup_changes] Running stay-safe changes nothing in my setup. With `--save`, it writes one report file: in the current directory when installed, or its own folder for a clone or ZIP.
 Issue: https://github.com/chalkbadger/stay-safe/issues/1
 Tests: [tests/nothing_in_my_setup_changes/](../tests/nothing_in_my_setup_changes/)
 
@@ -237,6 +237,18 @@ Tests: [tests/explains_save_path/](../tests/explains_save_path/)
 - My supplied destination appears in neither output stream. `test_arguments.py::test_save_path_explains_the_supported_form_without_echoing_the_path`
 - The mistaken invocation stops before discovery, inspection or saving. `test_arguments.py::test_save_path_stops_before_discovery_inspection_or_save`
 - Other invalid invocations retain the generic error. `test_arguments.py::test_other_invalid_arguments_keep_the_generic_message`
+
+## [runs_as_an_installed_package] I run the installed package outside a checkout and get the same report; saving puts the page in my current directory.
+Issue: https://github.com/chalkbadger/stay-safe/issues/49
+Tests: [tests/runs_as_an_installed_package/](../tests/runs_as_an_installed_package/)
+
+- A wheel built through its source distribution gives me the checkout's JSON report with its exact commit and working incident references. `test_package.py::test_wheel_and_sdist_keep_report_resources_revision_and_safe_current_directory_save`
+- My installed Markdown matches the checkout. `test_package.py::test_wheel_and_sdist_keep_report_resources_revision_and_safe_current_directory_save`
+- A missing selected file gives an incomplete report and exit 2. `test_package.py::test_wheel_and_sdist_keep_report_resources_revision_and_safe_current_directory_save`
+- A corrupt packaged revision withholds source links and gives an incomplete report while preserving my findings. `test_package.py::test_wheel_and_sdist_keep_report_resources_revision_and_safe_current_directory_save`
+- The package declares Python 3.11 or newer and the stay-safe command. `test_package.py::test_wheel_and_sdist_keep_report_resources_revision_and_safe_current_directory_save`
+- My saved page replaces a symlink without changing its target and the command prints its current-directory location. `test_package.py::test_wheel_and_sdist_keep_report_resources_revision_and_safe_current_directory_save`
+- A failed installed save leaves the full report visible and never claims it saved a page. `test_package.py::test_wheel_and_sdist_keep_report_resources_revision_and_safe_current_directory_save`
 
 ## [reads_plain_terminal_report] I can read the default terminal report without Markdown formatting and see how to save a formatted page.
 Issue: https://github.com/chalkbadger/stay-safe/issues/52

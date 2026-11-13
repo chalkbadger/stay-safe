@@ -33,6 +33,19 @@ python3 -m stay_safe
 
 By default it reads `~/.codex/config.toml` (`$CODEX_HOME/config.toml` when `CODEX_HOME` is set). [Usage](docs/usage.md) covers the inspected files, options, `--save` and exit status.
 
+## Run with uv
+
+If you already use [uv](https://docs.astral.sh/uv/), run the
+[published 0.2.3 package](https://pypi.org/project/stay-safe/0.2.3/):
+
+```sh
+uvx --python 3.11 stay-safe@0.2.3
+```
+
+The command asks uv for Python 3.11, downloading it if needed; your system Python
+stays unchanged. Add `--save` to save the HTML report in your current directory.
+The clone and ZIP routes above do not require uv.
+
 ## Ask Codex
 
 Paste this into Codex in the ChatGPT app or the CLI:
@@ -66,7 +79,9 @@ stay-safe is part of [chalkbadger](https://github.com/chalkbadger), which works 
 
 ## Develop
 
-Git is required for the development tests. Run `python3 check_tests.py`.
+Git is required for the development tests. Run `python3 check_tests.py` in a
+development virtual environment. Before the first run, install the build tools
+with `python3 -m pip install build "setuptools>=77" wheel`.
 This checks test-folder package markers before running unittest discovery.
 
 ## Contribute

@@ -6,9 +6,11 @@ import sys
 
 from .report import inspect, render
 from .save import NAME, save
+from .provenance import INSTALLED
 
 FEEDBACK = "Report a problem or suggest an idea: https://github.com/chalkbadger/stay-safe/issues/new/choose\n"
-NOT_SAVED = f"Could not save {NAME} in the stay-safe folder; the full report follows.\n"
+SAVE_FOLDER = "the current directory" if INSTALLED else "the stay-safe folder"
+NOT_SAVED = f"Could not save {NAME} in {SAVE_FOLDER}; the full report follows.\n"
 
 
 def open_command(path, platform=None):
@@ -101,11 +103,11 @@ def main(argv=None):
     parser.add_argument("--rules", action="append", metavar="FILE", help="Inspect one saved-rules file independently.")
     parser.add_argument("--format", choices=("markdown", "json"))
     parser.add_argument("--save", action="store_true",
-                        help=f"Also save the report as a formatted page, {NAME}, in this checkout, and end with a command "
+                        help=f"Also save the report as a formatted page, {NAME}, in {SAVE_FOLDER}, and end with a command "
                              "that opens it. Not with --format json.")
     args, extra = parser.parse_known_args(argv)
     if args.save and len(extra) == 1 and not extra[0].startswith("-"):
-        parser.exit(2, f"--save takes no path. It saves {NAME} in the stay-safe folder.\n")
+        parser.exit(2, f"--save takes no path. It saves {NAME} in {SAVE_FOLDER}.\n")
     if extra:
         parser.error("Unexpected arguments.")
     if args.rules and len(args.rules) != 1:
