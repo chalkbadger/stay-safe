@@ -139,7 +139,7 @@ class SavedPageTests(ConfigCase):
         profiles = PLAIN["Profiles are outside reader coverage; a selected profile can override the reported settings."]
         self.assertIn(re.match(r"\*\*(.+?)\*\*", profiles)[1], expected["strong"])
         self.assertIn("How it has gone wrong:", expected["em"])
-        self.assertIn("https://github.com/chalkbadger/stay-safe/issues/new?template=challenge.yml", expected["links"])
+        self.assertIn("https://github.com/chalkbadger/stay-safe/issues/new/choose", expected["links"])
         self.assertEqual(Page(page).view(), expected)
 
     def test_found_file_labels_and_name_placeholders_show_as_text(self):

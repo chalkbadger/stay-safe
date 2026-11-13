@@ -15,8 +15,8 @@ Tests: [tests/runs_without_a_coding_agent/](../tests/runs_without_a_coding_agent
 - I open the README and find its first three fenced commands are a clone of a `vX.Y.Z` tag, `cd stay-safe` and `python3 -m stay_safe`. `test_readme.py::test_first_commands_clone_a_release_tag_and_run_the_diagnostic_without_an_agent`
 - I run stay-safe on the test configuration the README's sample finding links, and it prints that finding as the README shows it, apart from the commit in its links. `test_readme.py::test_sample_finding_is_what_stay_safe_prints_for_its_test_configuration`
 - I run `python3 stay_safe` from the checkout, and I get the same report and exit status as with `-m`. `test_python_entry.py::test_running_the_folder_without_m_gives_the_same_report_and_exit_status`
-- On a Python older than 3.11 with a newer Python on my `PATH`, I see one line naming that Python's command, and the exit status is 2. `test_python_entry.py::test_too_old_python_names_the_newest_python_on_the_path_and_exits_2`
-- On a Python older than 3.11 with no newer Python found, I see one line telling me to install 3.11 or newer, and the exit status is 2. `test_python_entry.py::test_too_old_python_without_a_newer_one_says_to_install_it_and_exits_2`
+- On a Python older than 3.11 with a newer Python on my `PATH`, I see that Python's command and a feedback link, and the exit status is 2. `test_python_entry.py::test_too_old_python_names_the_newest_python_on_the_path_and_exits_2`
+- On a Python older than 3.11 with no newer Python found, I see instructions to install 3.11 or newer and a feedback link, and the exit status is 2. `test_python_entry.py::test_too_old_python_without_a_newer_one_says_to_install_it_and_exits_2`
 - The version check runs before anything that needs 3.11 is imported, and stays parseable by Python 3.9. `test_python_entry.py::test_version_check_runs_before_any_module_needing_3_11_and_parses_as_python_3_9`
 
 ## [see_every_connection_and_setting] I can see what stay-safe found in my Codex files. The report tells me when it used a default or could not complete a check.
@@ -189,10 +189,10 @@ Tests: [tests/nothing_in_my_setup_changes/](../tests/nothing_in_my_setup_changes
 - I run the report, with or without `--save`, and each file I select is unchanged, including its permissions and modification time. `test_inspected_setup.py::test_inspection_leaves_inspected_files_unchanged_and_adds_no_files`
 - With the stay-safe checkout outside my home and working folders, I run the report, with or without `--save`, and no files are added to either. `test_inspected_setup.py::test_inspection_leaves_inspected_files_unchanged_and_adds_no_files`
 - My run without `--save` adds or changes no file, in the checkout or elsewhere, apart from Python's own bytecode cache (`stay_safe/__pycache__`), which the check turns off; with `--save` it adds or replaces only `stay-safe-report.html` in the checkout, replacing a symlink there rather than writing through it. `test_save.py::test_without_save_nothing_is_written_and_with_save_only_the_report_is_added_or_replaced`
-- With `--save`, I see the same Markdown report as without it, then one last line with a command that opens the saved page (`open` on macOS, `xdg-open` elsewhere) whose quoted path a shell reads back as the page's path, even with spaces, quotes, `$` or backticks in it, and the run exits as the Markdown report would. `test_save.py::test_save_prints_the_markdown_report_then_a_command_that_opens_the_saved_page`
+- With redirected stdout and `--save`, I see the same Markdown report as without it, then one last line with a command that opens the saved page (`open` on macOS, `xdg-open` elsewhere) whose quoted path a shell reads back as the page's path, even with spaces, quotes, `$` or backticks in it, and the run exits as the Markdown report would. `test_save.py::test_save_prints_the_markdown_report_then_a_command_that_opens_the_saved_page`
 - I open the saved page and see the Markdown report's words, links, bold, italic and code text, in the same order. `test_page.py::test_saved_page_shows_the_markdown_reports_words_links_bold_and_code_text`
 - The saved page contains only document, text and https link elements, so it has no script and nothing that makes my browser load anything from outside the file. `test_page.py::test_saved_page_has_no_script_and_loads_nothing_from_outside_the_file`
-- When the page can't be saved, I see one line saying so on standard error, then the Markdown report, and the run exits `2` exactly when there are gaps. `test_save.py::test_when_the_report_cannot_be_written_one_line_says_so_then_the_markdown_report_follows`
+- With redirected stdout, when the page can't be saved, I see one line saying so on standard error, then the Markdown report, and the run exits `2` exactly when there are gaps. `test_save.py::test_when_the_report_cannot_be_written_one_line_says_so_then_the_markdown_report_follows`
 - `--save` with `--format json` gives me no report, writes nothing, says the two can't be combined, and exits `2`; `--help` says so too. `test_save.py::test_save_with_json_format_is_rejected_without_a_report_or_file`
 
 ## [anyone_can_recheck_a_report] Someone I share the report with sees the exact stay-safe version that made it, and gets the same report when they run that version on the same files.
@@ -249,3 +249,21 @@ Tests: [tests/runs_as_an_installed_package/](../tests/runs_as_an_installed_packa
 - The package declares Python 3.11 or newer and the stay-safe command. `test_package.py::test_wheel_and_sdist_keep_report_resources_revision_and_safe_current_directory_save`
 - My saved page replaces a symlink without changing its target and the command prints its current-directory location. `test_package.py::test_wheel_and_sdist_keep_report_resources_revision_and_safe_current_directory_save`
 - A failed installed save leaves the full report visible and never claims it saved a page. `test_package.py::test_wheel_and_sdist_keep_report_resources_revision_and_safe_current_directory_save`
+
+## [reads_plain_terminal_report] I can read the default terminal report without Markdown formatting and see how to save a formatted page.
+Issue: https://github.com/chalkbadger/stay-safe/issues/52
+Tests: [tests/reads_plain_terminal_report/](../tests/reads_plain_terminal_report/)
+
+- My terminal report keeps its sections, source links and privacy protections. `test_terminal.py::test_terminal_default_is_plain_with_links_and_private_values_withheld`
+- Redirecting output or choosing a format keeps the existing report. `test_terminal.py::test_explicit_formats_and_redirected_output_stay_unchanged`
+- The punctuation in my reported names survives throughout the report. `test_terminal.py::test_literal_names_survive_in_findings_advice_setup_and_evidence`
+- Saving keeps the formatted page and suppresses the hint even if saving fails. `test_terminal.py::test_save_keeps_html_and_suppresses_hint_even_when_save_fails`
+- An incomplete check retains its status and prints its notices after the report. `test_terminal.py::test_incomplete_exit_and_hint_follow_the_flushed_report`
+
+## [find_feedback] After reading a report or encountering a command error, I can find a form to report a problem or suggest an idea without sharing private files.
+Issue: https://github.com/chalkbadger/stay-safe/issues/53
+Tests: [tests/find_feedback/](../tests/find_feedback/)
+
+- I see one feedback link in a readable report, even with inspection gaps; my JSON output remains a report document. `test_feedback.py::test_reports_link_once_and_json_stays_a_document`
+- I see the feedback destination after an argument error without my private arguments; help exits normally. `test_feedback.py::test_argument_errors_link_once_without_echoing_private_arguments`
+- I can describe an error or idea in the matching form, with sharing guidance and an optional report. `test_feedback.py::test_error_and_idea_forms_collect_relevant_details_without_requiring_reports`

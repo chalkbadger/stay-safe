@@ -8,6 +8,7 @@ from .report import inspect, render
 from .save import NAME, save
 from .provenance import INSTALLED
 
+FEEDBACK = "Report a problem or suggest an idea: https://github.com/chalkbadger/stay-safe/issues/new/choose\n"
 SAVE_FOLDER = "the current directory" if INSTALLED else "the stay-safe folder"
 NOT_SAVED = f"Could not save {NAME} in {SAVE_FOLDER}; the full report follows.\n"
 
@@ -29,6 +30,11 @@ PROG = (sys.executable.rsplit("/", 1)[-1] or "python3") + " -m stay_safe"
 
 
 class Parser(argparse.ArgumentParser):
+    def exit(self, status=0, message=None):
+        if status:
+            message = (message or "") + FEEDBACK
+        super().exit(status, message)
+
     def error(self, message):
         self.exit(2, "Invalid arguments. Use --help.\n")
 
@@ -136,9 +142,13 @@ def main(argv=None):
     if args.save and path is None:
         sys.stderr.write(NOT_SAVED)
         sys.stderr.flush()
-    sys.stdout.write(render(result, args.format or "markdown", files))
+    terminal = args.format is None and sys.stdout.isatty()
+    sys.stdout.write(render(result, args.format or ("plain" if terminal else "markdown"), files))
     if path is not None:
         sys.stdout.write(open_command(path))
+    if terminal and not args.save:
+        sys.stdout.flush()
+        sys.stderr.write("Use --save to save a formatted HTML report.\n")
     if status == 2:
         sys.stdout.flush()
         sys.stderr.write("Inspection incomplete (exit 2). See the report for what wasn't checked.\n")

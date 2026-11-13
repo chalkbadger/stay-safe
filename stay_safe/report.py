@@ -949,7 +949,7 @@ def markdown(report, files=None):
               else "Full scope of this report: see the Full scope section of stay-safe's docs/report.md.",
               "", "---", "",
               f"Made by stay-safe {made_by(report['provenance']) if guide else '(commit unknown)'} · report format "
-              f"{report['format_version']} · [challenge a finding]({REPOSITORY}/issues/new?template=challenge.yml)"]
+              f"{report['format_version']} · [Report a problem or suggest an idea]({REPOSITORY}/issues/new/choose)"]
     return "\n".join(lines) + "\n"
 
 
@@ -1029,10 +1029,38 @@ def page(report, files=None):
             + "\n".join(body) + "\n</body>\n</html>\n")
 
 
+def plain(report, files=None):
+    """Read only the Markdown forms the report writes; keep code contents and link destinations.
+
+    Names come from the reader's public-name allowlist. Unlike stripping punctuation,
+    tokenizing code spans leaves literal underscores, dots and hyphens untouched.
+    """
+    lines = []
+    for line in markdown(report, files).splitlines():
+        if line == "---":
+            continue
+        line = line.removeprefix("## ").removeprefix("# ")
+        if line.startswith("- "):
+            line = "• " + line[2:]
+        pieces, position = [], 0
+        for found in INLINE.finditer(line):
+            pieces.append(unescape(line[position:found.start()]))
+            if found[1] is not None:
+                pieces.append(found[1])
+            elif found[2] is not None:
+                pieces.append(f"{unescape(found[2])} ({found[3]})")
+            position = found.end()
+        pieces.append(unescape(line[position:]))
+        lines.append("".join(pieces))
+    return "\n".join(lines) + "\n"
+
+
 def render(report, format_name="markdown", files=None):
     """files maps an automatically found source, such as config-1, to where Codex keeps it; JSON doesn't use it."""
     if format_name == "json":
         return json.dumps(report, ensure_ascii=True, indent=2) + "\n"
+    if format_name == "plain":
+        return plain(report, files)
     if format_name == "html":
         return page(report, files)
     return markdown(report, files)

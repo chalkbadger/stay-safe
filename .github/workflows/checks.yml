@@ -23,7 +23,7 @@ jobs:
       - run: python -m pip install git+https://github.com/chalkbadger/wirth@df613c93fdff0f51c1e36a9549cbc607965fe7f1
       - run: wirth validate
   old-python:
-    # A Python older than 3.11 prints one line naming the command to run and exits 2 (issue #48).
+    # A Python older than 3.11 names the command to run and where to share feedback and exits 2 (issue #48).
     strategy:
       fail-fast: false
       matrix:
