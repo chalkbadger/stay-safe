@@ -13,6 +13,7 @@ import sys
 from unittest.mock import patch
 
 from stay_safe.report import inspect, render
+from tests.support import without_rule_links
 from tests.support import INCOMPLETE
 from tests.support import ConfigCase, ROOT
 
@@ -144,7 +145,7 @@ class EnvironmentInheritanceTests(ConfigCase):
                     else:
                         self.assertIn(MARKDOWN_LEAD + '\n\n*How it has gone wrong:* ', run.stdout)
                         self.assertIn('\n\n*Rule `environment_inheritance` · setting `config-1:shell_environment_policy` = '
-                                      + '`' + '; '.join(DEFAULTS) + '`*\n', run.stdout)
+                                      + '`' + '; '.join(DEFAULTS) + '`*\n', without_rule_links(run.stdout))
                         self.assertIn('(reported, not verified)', run.stdout)
                         self.assertRegex(run.stdout, r'\[I23\]\(https://github.com/chalkbadger/stay-safe/blob/[0-9a-f]{40}/incidents.md#i23-')
                         self.assertIn('/harnesses/codex.md)', run.stdout)

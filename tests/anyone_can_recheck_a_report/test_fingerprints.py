@@ -1,3 +1,4 @@
+from tests.support import without_rule_links
 import json
 
 from tests.support import INCOMPLETE
@@ -28,4 +29,4 @@ class FingerprintTests(GitCase):
                 run = self.run_cli(checkout, config, "markdown")
                 self.assertEqual((run.returncode, run.stderr), (2, INCOMPLETE))
                 self.assertIn(gap_text(gap), gap_items(run.stdout))
-                self.assertIn("Rule `commands_without_prompts` · setting `config-1:approval_policy` = `never`", run.stdout)
+                self.assertIn("Rule `commands_without_prompts` · setting `config-1:approval_policy` = `never`", without_rule_links(run.stdout))

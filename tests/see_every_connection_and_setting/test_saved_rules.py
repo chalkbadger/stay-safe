@@ -1,3 +1,4 @@
+from tests.support import without_rule_links
 """Independent expectations for the saved prefix_rule format and its declared meaning.
 
 Writer: openai/codex@086ccc833bc9cf01024ad2dd6af7dbd421b6bf9a,
@@ -265,7 +266,7 @@ prefix_rule(pattern=["curl"], decision="allow")
             one = self.run_report(['--rules', str(path)], format_name=format_name)
             self.assertEqual(one, self.run_report(['--rules', str(path)], format_name=format_name))
             if format_name == 'markdown':
-                self.assertIn('Rule `saved_approval` · rules entry `rules-1:prefix_rule.1` = ', one)
+                self.assertIn('Rule `saved_approval` · rules entry `rules-1:prefix_rule.1` = ', without_rule_links(one))
                 self.assertIn('Saved approval, line 1: starts with `curl`, 1 word, covers every use of that program', one)
                 self.assertIn(report['incident_links']['I26'], one)
         path.write_text('# removed\n')

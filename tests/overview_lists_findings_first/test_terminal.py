@@ -1,3 +1,4 @@
+from tests.support import without_rule_links
 import errno
 import io
 import json
@@ -105,7 +106,7 @@ class TerminalTests(ConfigCase):
         self.assertIn('Your ' + name + ' MCP server', output)
         self.assertIn('MCP server ' + name + ':', output)
         self.assertIn('Change it: under [mcp_servers.' + json.dumps(name) + ']', output)
-        self.assertIn('Rule configured_program · setting config-1:mcp_servers.' + json.dumps(name) + ' = configured enabled;', output)
+        self.assertIn('Rule configured_program · setting config-1:mcp_servers.' + json.dumps(name) + ' = configured enabled;', without_rule_links(output))
         self.assertIn('Sandbox: read-only', output)
         self.assertNotIn('private-command', output)
 

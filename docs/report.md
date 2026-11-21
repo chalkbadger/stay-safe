@@ -71,6 +71,7 @@ Review them before sharing the report.
 ## Where the claims come from
 
 Each claim links to tests of Stay Safe's behavior.
+The [rule index](rules.md) links each warning to its evidence and challenges.
 For evidence behind a warning, the [Codex meanings table](../harnesses/codex.md) gives sources and evidence status;
 [incident reports](../incidents.md) describe the cases behind risk rules.
 Passing software tests does not prove your live setup safe. See [Full scope](#full-scope) for the inspection limits.

@@ -118,9 +118,16 @@ NOTE_LABEL = "*Before you change anything:*"
 FINDING_HEADING = re.compile(r"### Finding \d+\n\n")
 
 
+def without_rule_links(text):
+    """Let existing finding checks compare their text; rule navigation has its own tests (issue #100)."""
+    url = r'https://github\.com/chalkbadger/stay-safe/blob/[0-9a-f]{40}/docs/rules\.md#[a-z_]+'
+    text = re.sub(r'(?<=Rule )\[(`[^`]+`)\]\(' + url + r'\)', r'\1', text)
+    return re.sub(r'(?<=Rule )([a-z_]+) \(' + url + r'\)', r'\1', text)
+
+
 def finding_items(report):
     """The items of a report's Findings section, after its shared note, each without its numbered heading."""
-    body = section(report, "Findings")
+    body = section(without_rule_links(report), "Findings")
     if body.startswith(NOTE_LABEL):
         body = body.split("\n\n", 1)[1]
     found = items(body)

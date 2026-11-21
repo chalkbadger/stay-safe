@@ -1,3 +1,4 @@
+from tests.support import without_rule_links
 """Default values are independently expected from the pinned Codex conversion:
 https://github.com/openai/codex/blob/086ccc833bc9cf01024ad2dd6af7dbd421b6bf9a/codex-rs/config/src/shell_environment_policy.rs#L133-L169
 Selection and absence behavior are specified in stay-safe issue #7; notice wording in issue #42.
@@ -82,7 +83,7 @@ class DefaultConfigTests(ConfigCase):
                 else:
                     self.assertEqual(run.stdout.splitlines()[2], '1 finding, 2 things not checked.')
                     self.assertIn('*Rule `environment_inheritance` · setting `config-1:shell_environment_policy` = '
-                                  + '`' + '; '.join(DEFAULTS) + '`*\n', run.stdout)
+                                  + '`' + '; '.join(DEFAULTS) + '`*\n', without_rule_links(run.stdout))
                     self.assertIn('(reported, not verified)', run.stdout)
                     self.assertCountEqual(gap_items(run.stdout), [gap_text(gap, absent=True, file='$CODEX_HOME/config.toml') for gap in GAPS])
                     self.assertIn('\n- Config file: none found, so stay-safe assessed Codex\'s documented defaults (the '

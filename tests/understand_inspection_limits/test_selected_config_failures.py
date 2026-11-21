@@ -1,3 +1,4 @@
+from tests.support import without_rule_links
 """Issue #16: selected-file failures say which fix to try without exposing private input."""
 from contextlib import redirect_stderr, redirect_stdout
 import io
@@ -57,8 +58,8 @@ class SelectedConfigFailureTests(ConfigCase):
                         self.assertIn(expected.split('. ', 1)[1], text.replace('`', ''))
                         self.assertIn('**With these settings, Codex runs commands without asking you.**', text)
                         self.assertIn('**With these settings, commands Codex runs get your environment variables.**', text)
-                        self.assertIn('Rule `commands_without_prompts` · setting `config-2:approval_policy`', text)
-                        self.assertIn('Rule `environment_inheritance` · setting `config-2:shell_environment_policy`', text)
+                        self.assertIn('Rule `commands_without_prompts` · setting `config-2:approval_policy`', without_rule_links(text))
+                        self.assertIn('Rule `environment_inheritance` · setting `config-2:shell_environment_policy`', without_rule_links(text))
                     for private in (str(self.root), 'alice@example.com', 'private-content-marker', 'private-error-marker'):
                         self.assertNotIn(private, text)
                     self.assertNotIn('readlink', text)

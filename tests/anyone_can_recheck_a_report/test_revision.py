@@ -1,3 +1,4 @@
+from tests.support import without_rule_links
 import hashlib
 import json
 import shutil
@@ -49,7 +50,7 @@ class RevisionTests(GitCase):
                       risk["rule_source"], risk["interpretation_source"],
                       "Rule `self_described_tools` · setting `config-1:mcp_servers.docs` = "
                       "`configured enabled; HTTP; endpoint withheld; tool approval: auto (default)`"):
-            self.assertIn(value, markdown)
+            self.assertIn(value, without_rule_links(markdown))
         # The local-edit and published-commit limits are in the JSON report and the full scope in docs/report.md, which the
         # Markdown report links at its commit.
         self.assertIn(LINK_SCOPE, encoded["scope"])

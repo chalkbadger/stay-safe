@@ -11,6 +11,7 @@ import subprocess
 import sys
 
 from stay_safe.report import inspect, render
+from tests.support import without_rule_links
 from tests.support import INCOMPLETE, ROOT, ConfigCase, section
 
 GROUP_1 = "**Nothing stands between a mistaken or injected instruction and your computer**"
@@ -79,7 +80,7 @@ def listed(report):
 
 def details(report):
     """The detailed findings in order: (number, headline, rule, entry), read from each finding's own lines."""
-    body = section(report, "Findings")
+    body = section(without_rule_links(report), "Findings")
     found = []
     for item in body.split("\n\n---\n\n"):
         number = re.search(r"^### Finding (\d+)\n\n\*\*(.+?)\*\* ", item, re.MULTILINE)
@@ -169,7 +170,7 @@ class OverviewTests(ConfigCase):
             self.assertEqual(body.count(f"### {heading}\n"), 1)
             finding = body.split(f"### {heading}\n\n", 1)[1].split("\n\n---\n\n", 1)[0]
             self.assertTrue(finding.startswith(f"**{SANDBOX_OFF}** "), finding)
-            self.assertIn(f"*Rule `unrestricted_filesystem` · setting `config-{number}:sandbox_mode` = ", finding)
+            self.assertIn(f"*Rule `unrestricted_filesystem` · setting `config-{number}:sandbox_mode` = ", without_rule_links(finding))
         self.assertEqual(markdown.count("\n## Not checked\n"), 1)
         # Saved page: each link's target is one element's id, and the finding that follows it is that file's.
         page = Targets(render(report, "html"))

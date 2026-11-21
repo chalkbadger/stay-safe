@@ -1018,12 +1018,16 @@ def markdown(report, files=None):
         # The title is the bold headline; a finding without plain wording has none, so its whole lead stands in.
         headline = re.search(r"^\*\*(.+?)\*\* ", lead)
         titles.append(headline[1] if headline else lead)
+        rule = f"`{risk['rule']}`"
+        rule_url = source_link(report["provenance"]["source_revision"], f"docs/rules.md#{risk['rule']}")
+        if rule_url:
+            rule = f"[{rule}]({rule_url})"
         blocks.append("\n\n".join([
             f"### {TARGET.format(number)}",
             lead,
             f"*How it has gone wrong:* {how} {citations} ({report['incident_status']}).",
             step,
-            f"*Rule `{risk['rule']}` · {kind} `{risk['entry']}` = `{'; '.join(risk['configured_evidence'])}`*"]))
+            f"*Rule {rule} · {kind} `{risk['entry']}` = `{'; '.join(risk['configured_evidence'])}`*"]))
     if risks:
         for paragraph in findings_list(report, risks, titles, len(read) > 1):
             lines += [paragraph, ""]

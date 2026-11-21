@@ -1,3 +1,4 @@
+from tests.support import without_rule_links
 import json
 import re
 
@@ -36,7 +37,7 @@ class InheritedGapTests(ConfigCase, ReportRuns):
         expected_risks = [('configured_program', 'config-1:notify')] + [
             (rule, 'config-1:' + entry) for rule, entry in risks]
         markdown = render(report)
-        self.assertCountEqual(re.findall(r'\*Rule `([^`]+)` · setting `([^`]+)`', markdown), expected_risks)
+        self.assertCountEqual(re.findall(r'\*Rule `([^`]+)` · setting `([^`]+)`', without_rule_links(markdown)), expected_risks)
         self.assertCountEqual(gap_items(markdown), [gap_text(gap) for gap in expected])
         count = '1 thing not checked.' if len(gaps) == 1 else f'{len(gaps)} things not checked.'
         self.assertIn(count, markdown)

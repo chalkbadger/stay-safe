@@ -2,6 +2,7 @@
   "name": "Challenge a configuration finding",
   "description": "Dispute a finding or show a risk the diagnostic missed.",
   "title": "Challenge: ",
+  "labels": ["challenge"],
   "body": [
     {"type": "markdown",
      "attributes": {
