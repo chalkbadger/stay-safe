@@ -139,9 +139,10 @@ class PlainFindingTests(ConfigCase):
     def test_startup_check_needs_both_an_approval_and_unchecked_lines_in_its_file(self):
         (self.root / "rules").mkdir()
         rules = self.config(RULES, "rules/default.rules")
-        for settings, status in (('', 0), ('unknown_option=true\n', 2)):
-            with self.subTest(settings=settings):
-                config = self.config('approval_policy="on-request"\nsandbox_mode="read-only"\n' + settings)
+        settings = 'approval_policy="on-request"\nsandbox_mode="read-only"\n'
+        for config, status in ((self.config(settings), 0),
+                               (self.config(settings + 'unknown_option=true\n', "extra.toml"), 2)):
+            with self.subTest(config=config.name):
                 run = self.run_cli("--config", str(config), "--rules", str(rules))
                 self.assertEqual(run.returncode, status)
                 self.assertIn(EXPECTED["saved_approval", "rules-1:prefix_rule.1"], run.stdout)
