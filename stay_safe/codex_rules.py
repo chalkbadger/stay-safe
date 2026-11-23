@@ -9,6 +9,7 @@ from .codex import MAX_BYTES, Reader, open_input
 
 
 RECORD = re.compile(r'prefix_rule\(pattern=(\[.*\]), decision="allow"\)')
+UNCHECKED_RULE_LINES = 'Rules contain lines that are not inspected.'
 # The only words of a saved approval the report may show, as its first word: the program list in
 # harnesses/codex.md, under "Saved approval records". Change it only by pull request, together
 # with that documented list.
@@ -57,7 +58,7 @@ def read_file(path, source, *, discovered=False):
             continue
         pattern = declaration(line)
         if pattern is None:
-            reader.gap('Rules contain lines that are not inspected.')
+            reader.gap(UNCHECKED_RULE_LINES)
             continue
         observations = [f'program: {name}' for name in PROGRAMS if name == pattern[0]] + [f'tokens: {len(pattern)}']
         if len(pattern) == 1:
