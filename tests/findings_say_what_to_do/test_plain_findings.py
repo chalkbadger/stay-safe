@@ -111,8 +111,8 @@ ALL_RULES = {"saved_approval", "commands_without_prompts", "unrestricted_filesys
 
 
 class PlainFindingTests(ConfigCase):
-    def run_cli(self, *args):
-        run = subprocess.run([sys.executable, "-B", "-m", "stay_safe", *args], cwd=ROOT, env={},
+    def run_cli(self, *args, env=None):
+        run = subprocess.run([sys.executable, "-B", "-m", "stay_safe", *args], cwd=ROOT, env=env or {},
                              text=True, capture_output=True, timeout=10)
         self.assertEqual(run.stderr, INCOMPLETE if run.returncode == 2 else "")
         return run
@@ -137,7 +137,8 @@ class PlainFindingTests(ConfigCase):
                     self.assertNotIn(private, run.stdout)
 
     def test_startup_check_needs_both_an_approval_and_unchecked_lines_in_its_file(self):
-        rules = self.config(RULES, "selected.rules")
+        (self.root / "rules").mkdir()
+        rules = self.config(RULES, "rules/default.rules")
         for settings, status in (('', 0), ('unknown_option=true\n', 2)):
             with self.subTest(settings=settings):
                 config = self.config('approval_policy="on-request"\nsandbox_mode="read-only"\n' + settings)
@@ -145,6 +146,12 @@ class PlainFindingTests(ConfigCase):
                 self.assertEqual(run.returncode, status)
                 self.assertIn(EXPECTED["saved_approval", "rules-1:prefix_rule.1"], run.stdout)
                 self.assertNotIn("Look for a rules error", run.stdout)
+        self.config("# another file\n", "rules/other.rules")
+        discovered = self.run_cli("--format", "markdown", env={"CODEX_HOME": str(self.root)})
+        self.assertEqual(discovered.returncode, 2)
+        self.assertIn("other rules files", section(discovered.stdout, "Not checked"))
+        self.assertIn(EXPECTED["saved_approval", "rules-1:prefix_rule.1"], discovered.stdout)
+        self.assertNotIn("Look for a rules error", discovered.stdout)
         rules.write_text("prefix_rule(\n")
         run = self.run_cli("--rules", str(rules))
         self.assertEqual(run.returncode, 2)
