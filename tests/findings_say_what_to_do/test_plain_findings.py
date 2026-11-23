@@ -117,6 +117,41 @@ class PlainFindingTests(ConfigCase):
         self.assertEqual(run.stderr, INCOMPLETE if run.returncode == 2 else "")
         return run
 
+    def test_unchecked_rules_put_the_startup_check_beside_each_saved_approval(self):
+        # #159: the pinned Codex app reports a rule parse error; codex exec prints it and stops.
+        for unchecked in ('prefix_rule(', 'prefix_rule(pattern=["demo"], decision="prompt")'):
+            with self.subTest(unchecked=unchecked):
+                rules = self.config(RULES + unchecked + '\n' +
+                                    'prefix_rule(pattern=["private-program"], decision="allow")\n')
+                run = self.run_cli("--rules", str(rules), "--format", "markdown")
+                self.assertEqual(run.returncode, 2)
+                first, third = finding_items(run.stdout)
+                for item, line, description in ((first, 1, " for a `git` command"), (third, 3, "")):
+                    self.assertTrue(item.startswith(f"**The approval on line {line} may not apply.** "
+                                                    f"Stay-safe found a saved approval{description}, but couldn't "
+                                                    "check every rule in this file."), item)
+                    self.assertIn("*What to check:* Look for a rules error when you start Codex. "
+                                  "If you see one, Codex didn't use any of your saved approvals.", item)
+                self.assertIn("rules that ask first or forbid a command", section(run.stdout, "Not checked"))
+                for private in ("private-program", "seed-rule-word"):
+                    self.assertNotIn(private, run.stdout)
+
+    def test_startup_check_needs_both_an_approval_and_unchecked_lines_in_its_file(self):
+        rules = self.config(RULES, "selected.rules")
+        for settings, status in (('', 0), ('unknown_option=true\n', 2)):
+            with self.subTest(settings=settings):
+                config = self.config('approval_policy="on-request"\nsandbox_mode="read-only"\n' + settings)
+                run = self.run_cli("--config", str(config), "--rules", str(rules))
+                self.assertEqual(run.returncode, status)
+                self.assertIn(EXPECTED["saved_approval", "rules-1:prefix_rule.1"], run.stdout)
+                self.assertNotIn("Look for a rules error", run.stdout)
+        rules.write_text("prefix_rule(\n")
+        run = self.run_cli("--rules", str(rules))
+        self.assertEqual(run.returncode, 2)
+        self.assertIn("some lines in your rules file", section(run.stdout, "Not checked"))
+        self.assertNotIn("### Finding ", run.stdout)
+        self.assertNotIn("Look for a rules error", run.stdout)
+
     def test_each_finding_leads_with_its_meaning_then_incidents_next_step_and_trace_and_sources_close_the_report(self):
         args = ["--config", str(self.config(FIRST, "first.toml")), "--config", str(self.config(SECOND, "second.toml")),
                 "--rules", str(self.config(RULES, "selected.rules"))]
