@@ -49,7 +49,7 @@ jobs:
         run: |
           set -euo pipefail
           cd "$GITHUB_WORKSPACE"
-          for tool in audr betterleaks agentscrub; do
+          for tool in agentscrub; do
             case "$tool" in
               audr) command=(audr scan --no-deps -f json -o - /tmp/companion-home) ;;
               betterleaks) command=(betterleaks dir /tmp/companion-home/.codex --redact=100 -f json -r -) ;;
@@ -59,7 +59,7 @@ jobs:
             printf '%q ' "${command[@]}"
             printf '\n'
             code=0
-            docker run --rm --network none --read-only --cap-drop=ALL --security-opt no-new-privileges               --user 65534:65534 --cpus 2 --memory 2g --pids-limit 256               --mount "type=bind,source=$PWD/tests/companion_runs/home,target=/input,readonly"               --tmpfs /tmp:rw,nosuid,nodev --workdir /tmp               --env HOME=/tmp/companion-home --env NO_COLOR=1 --env TERM=dumb               companion-observation sh -ec 'mkdir /tmp/companion-home; cp -R /input/. /tmp/companion-home/; exec "$@" </dev/null' sh               "${command[@]}" >"$RUNNER_TEMP/$tool.out" 2>"$RUNNER_TEMP/$tool.err" || code=$?
+            docker run --rm --network none --read-only --cap-drop=ALL --security-opt no-new-privileges               --user 65534:65534 --cpus 2 --memory 2g --pids-limit 256               --mount "type=bind,source=$PWD/tests/companion_runs/home,target=/input,readonly"               --tmpfs /tmp:rw,nosuid,nodev --workdir /tmp               --env HOME=/tmp/companion-home --env NO_COLOR=1 --env TERM=dumb               companion-observation sh -ec 'mkdir /tmp/companion-home; cp -R /input/. /tmp/companion-home/; mkdir -p /tmp/companion-home/.agentscrub/bin; ln -s /usr/local/bin/gitleaks /tmp/companion-home/.agentscrub/bin/gitleaks; exec "$@" </dev/null' sh               "${command[@]}" >"$RUNNER_TEMP/$tool.out" 2>"$RUNNER_TEMP/$tool.err" || code=$?
             python - "$tool" "$code" <<'PY'
           import json, os, pathlib, re, sys
           tool, code = sys.argv[1:]
