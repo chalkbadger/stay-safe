@@ -1,5 +1,7 @@
 # Stay safe
 
+[![Checks on main](https://github.com/chalkbadger/stay-safe/actions/workflows/checks.yml/badge.svg?branch=main&event=push)](https://github.com/chalkbadger/stay-safe/actions/workflows/checks.yml?query=branch%3Amain+event%3Apush)
+
 Check your Codex settings and saved approvals with three questions in mind.
 
 - **What have I allowed Codex to do?**
