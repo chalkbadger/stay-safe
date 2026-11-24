@@ -116,7 +116,7 @@ or [Using and trusting the tool](docs/report.md#using-and-trusting-the-tool).
 
 Git is required for the development tests. Run `python3 check_tests.py` in a
 development virtual environment. Before the first run, install the build tools
-with `python3 -m pip install build "setuptools>=77" wheel`.
+with `python3 -m pip install build "setuptools>=77" wheel fastjsonschema==2.21.2`.
 This checks test-folder package markers before running unittest discovery.
 
 ## Contribute
