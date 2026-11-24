@@ -31,6 +31,7 @@ class PackageTests(unittest.TestCase):
             wheel = next((source / 'dist').glob('*.whl'))
             install = base / 'installed'
             with zipfile.ZipFile(wheel) as archive:
+                self.assertFalse(any(name.endswith("sarif-schema-2.1.0.json") for name in archive.namelist()))
                 self.assertEqual(archive.read("stay_safe/data/harnesses/claude-code.md"),
                                  (source / "harnesses/claude-code.md").read_bytes())
                 archive.extractall(install)

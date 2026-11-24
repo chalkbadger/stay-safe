@@ -3,6 +3,7 @@ import json
 from pathlib import Path
 
 import fastjsonschema
+from fastjsonschema.draft06 import CodeGeneratorDraft06
 
 from tests.support import COPY_REVISION, SEEDED, SEEDS, ConfigCase, copy_checkout, run_checkout
 
@@ -22,7 +23,8 @@ class SarifTests(ConfigCase):
     def setUpClass(cls):
         if hashlib.sha256(SCHEMA.read_bytes()).hexdigest() != "c3b4bb2d6093897483348925aaa73af03b3e3f4bd4ca38cef26dcb4212a2682e":
             raise AssertionError("The test schema differs from the pinned OASIS SARIF 2.1.0 schema.")
-        cls.validate = staticmethod(fastjsonschema.compile(json.loads(SCHEMA.read_text()), use_default=False, use_formats=False))
+        formats = {"uri-reference": CodeGeneratorDraft06.FORMAT_REGEXS["uri-reference"]}
+        cls.validate = staticmethod(fastjsonschema.compile(json.loads(SCHEMA.read_text()), formats=formats, use_default=False))
 
     def setUp(self):
         super().setUp()

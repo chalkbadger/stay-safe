@@ -162,3 +162,13 @@ Tests: [tests/check_every_installed_agent/](../tests/check_every_installed_agent
 - I set `CLAUDE_CONFIG_DIR` and see the settings in that folder. `test_agents.py::test_claude_config_dir_selects_the_claude_folder`
 - I choose `--agent claude` without a Claude Code folder and see that nothing was inspected. `test_agents.py::test_agent_claude_without_its_folder_says_nothing_was_inspected`
 - I pass a file with both agents chosen, or a rules file for Claude Code, and am told what to choose. `test_agents.py::test_selected_files_need_exactly_one_agent_and_rules_need_codex`
+
+## [export_private_sarif] I can send findings and unchecked items to a SARIF consumer while keeping my input files private.
+Issue: https://github.com/chalkbadger/stay-safe/issues/204
+Tests: [tests/export_private_sarif/](../tests/export_private_sarif/)
+
+- An empty complete inspection and an incomplete one with only a gap produce distinguishable SARIF 2.1.0 reports and exit statuses. `test_sarif.py::test_complete_and_gaps_only_reports_distinguish_an_empty_result_from_incomplete_inspection`
+- The report preserves findings, rule explanations, logical entry IDs and available pinned rule links, including when the revision is unknown. `test_sarif.py::test_each_risk_keeps_its_rule_explanation_and_logical_entry_and_each_gap_is_a_warning`
+- Each agent's run contains only its own findings and unchecked items. `test_sarif.py::test_two_agents_keep_their_own_results_and_notifications`
+- The export withholds private input paths, commands, arguments, addresses and environment and header values. `test_sarif.py::test_private_inputs_stay_withheld_throughout_the_document`
+- Combining SARIF with saving exits 2 before emitting a report or creating a file. `test_sarif.py::test_save_rejects_sarif_before_writing_any_report`
