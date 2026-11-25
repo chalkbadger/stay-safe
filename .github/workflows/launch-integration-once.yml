@@ -1,0 +1,41 @@
+name: One-time launch integration check
+on:
+  push:
+    branches: [launch/212-evidence-once]
+    paths: [.github/workflows/launch-integration-once.yml]
+permissions:
+  contents: read
+jobs:
+  review:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: 5807d1579c11eac3f2b2f064adbe862fa7f396d2
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Combine the ten reviewed heads in this disposable checkout
+        run: |
+          set -eu
+          git config --local user.name "Local integration check"
+          git config --local user.email "noreply@example.invalid"
+          git merge --no-edit --no-ff 15f17258b1e5fb7c3a918011a839080e0e8b506a # PR 216
+          git merge --no-edit --no-ff 49255daa44753a62c54f403bd046311595e81c40 # PR 217
+          git merge --no-edit --no-ff 9874a8b5c7b3542850589eda9fd97eb55493f3df # PR 218
+          git merge --no-edit --no-ff b60b10f7d44de7c5d5e48df8d4cde2fb7e1a32a6 # PR 219
+          git merge --no-edit --no-ff deb45b6691f27477aa78aafda1cbdebbada1374b # PR 220
+          git merge --no-edit --no-ff 6844512df87507423e9d8a5fa8897f32f77da5ff # PR 221
+          git merge --no-edit --no-ff d60a78b6989dd5f7884482694d57e0593c53af30 # PR 222
+          git merge --no-edit --no-ff 752a0efa808db6c27a3e02e568086c480ab81acc # PR 223
+          git merge --no-edit --no-ff 91f48301125d90f3ded6d5319c2f536d204c0f4d # PR 224
+          git merge --no-edit --no-ff 7296864bf1d39fb9dab6fa5270a73ca9ee69133e # PR 225
+          git diff --numstat 5807d1579c11eac3f2b2f064adbe862fa7f396d2 HEAD -- README.md
+      - name: Run the combined suite and its pinned contract validator
+        run: |
+          set -eu
+          python3 -m venv "$RUNNER_TEMP/validation"
+          . "$RUNNER_TEMP/validation/bin/activate"
+          python -m pip install build "setuptools>=77" wheel fastjsonschema==2.21.2 git+https://github.com/chalkbadger/wirth@df613c93fdff0f51c1e36a9549cbc607965fe7f1
+          python check_tests.py
+          wirth validate
