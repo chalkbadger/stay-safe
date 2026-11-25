@@ -1,0 +1,47 @@
+name: One-time release candidate installation
+on:
+  push:
+    branches: [launch/212-evidence-once]
+    paths: [.github/workflows/launch-install-evidence-once.yml]
+permissions:
+  contents: read
+jobs:
+  installed-release-candidate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: 752a0efa808db6c27a3e02e568086c480ab81acc
+          persist-credentials: false
+      - name: Build wheels and install into an empty environment
+        run: |
+          set -eu
+          python3 -m venv "$RUNNER_TEMP/builder"
+          "$RUNNER_TEMP/builder/bin/pip" install build "setuptools>=77" wheel
+          "$RUNNER_TEMP/builder/bin/python" -m build --wheel --no-isolation --outdir "$RUNNER_TEMP/wheel"
+          python3 -m venv "$RUNNER_TEMP/consumer"
+          "$RUNNER_TEMP/consumer/bin/pip" install --no-index "$RUNNER_TEMP"/wheel/*.whl
+      - name: Observe the installed report away from the checkout
+        run: |
+          set -eu
+          work="$RUNNER_TEMP/fresh-directory"
+          mkdir "$work"
+          cp tests/understand_inspection_limits/inline-env.toml "$work/input.toml"
+          cd "$work"
+          status=0
+          "$RUNNER_TEMP/consumer/bin/stay-safe" --config input.toml --format json > observed.json 2> observed.stderr || status=$?
+          test "$status" = 2
+          "$RUNNER_TEMP/consumer/bin/python" - <<'PY'
+          import json
+          from importlib.metadata import version
+          from pathlib import Path
+          report = json.loads(Path("observed.json").read_text())
+          assert version("stay-safe") == "0.3.0"
+          assert report["provenance"]["source_revision"] == "752a0efa808db6c27a3e02e568086c480ab81acc"
+          assert report["provenance"]["source_status"] == "installed package commit"
+          assert [(r["rule"], r["entry"]) for r in report["risks"]] == [("configured_program", "config-1:mcp_servers.example")]
+          assert report["inspection_gaps"] == ["config-1: mcp_servers.example.env contains inline values. Check the entries for credentials."]
+          assert Path("observed.stderr").read_text() == "Inspection incomplete (exit 2). See the report for what wasn't checked.\n"
+          print("Verified candidate wheel 0.3.0, source commit 752a0efa808db6c27a3e02e568086c480ab81acc, one configured-program finding, one named inline-value gap and exit 2.")
+          PY
