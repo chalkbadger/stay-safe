@@ -1,0 +1,56 @@
+name: One-time public launch link checks
+on:
+  push:
+    branches: [launch/212-evidence-once]
+    paths: [.github/workflows/launch-links-evidence-once.yml]
+permissions: {}
+jobs:
+  public-links:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 6
+    steps:
+      - name: Prepare an anonymous browser
+        run: npm install --no-save --ignore-scripts playwright-core@1.56.1
+      - name: Open the published sample and verify the linked rule
+        env:
+          README: https://github.com/chalkbadger/stay-safe/blob/91f48301125d90f3ded6d5319c2f536d204c0f4d/README.md
+          GUIDE: https://github.com/chalkbadger/stay-safe/blob/d60a78b6989dd5f7884482694d57e0593c53af30/docs/report.md
+        run: |
+          node <<'JS'
+          const {chromium} = require('playwright-core');
+          const {execFileSync} = require('node:child_process');
+          const assert = require('node:assert/strict');
+          (async () => {
+            const browser = await chromium.launch({executablePath:execFileSync('which',['google-chrome'],{encoding:'utf8'}).trim()});
+            const page = await browser.newPage();
+            page.setDefaultTimeout(30000);
+            try {
+              await page.goto(process.env.README, {waitUntil:'domcontentloaded'});
+              const sample = page.getByRole('link', {name:'See a sample report.',exact:true});
+              await sample.waitFor();
+              assert.equal(new URL(await sample.getAttribute('href'),page.url()).href,'https://github.com/chalkbadger/stay-safe/issues/208#issuecomment-7147713051');
+              await sample.click();
+              await page.getByText('1 finding, 1 thing not checked.',{exact:true}).first().waitFor();
+              await page.getByRole('heading',{name:'Codex configuration diagnostic',exact:true}).first().waitFor();
+              const rule=page.locator('a[href*="/docs/rules.md#configured_program"]').first();
+              await rule.waitFor();
+              await rule.click();
+              await page.getByRole('heading',{name:'configured_program',exact:true}).first().waitFor();
+              const form=page.locator('a[href*="template=challenge.yml"]').first();
+              await form.waitFor();
+              console.log('PASS signed-out README → full sample with finding and gap → cited rule with challenge link.');
+              await page.goto(process.env.GUIDE,{waitUntil:'domcontentloaded'});
+              const link=page.getByRole('link',{name:'Challenge this description',exact:true});
+              await link.waitFor();
+              const url=new URL(await link.getAttribute('href'),page.url());
+              assert.equal(url.pathname,'/chalkbadger/stay-safe/issues/new');
+              assert.equal(url.searchParams.get('template'),'challenge.yml');
+              assert.equal(url.searchParams.get('title'),'Challenge: Snyk Agent Scan v0.7.1');
+              assert.ok(url.searchParams.get('disputed-claim')?.includes('prompt_injection_tool_desc'));
+              console.log('PASS rendered guide contains the versioned title and disputed claim in the existing form link.');
+              await link.click();
+              await page.waitForURL(u=>u.pathname==='/login'||u.pathname.startsWith('/chalkbadger/stay-safe/issues/new'));
+              console.log('Signed-out destination',new URL(page.url()).pathname);
+            } finally { await browser.close() }
+          })().catch(error=>{console.error(error);process.exitCode=1});
+          JS
