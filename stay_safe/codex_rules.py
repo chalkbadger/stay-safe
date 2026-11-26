@@ -7,6 +7,7 @@ from .codex import MAX_BYTES, Reader, exclude_account_files, open_input
 
 
 RECORD = re.compile(r'prefix_rule\(pattern=(\[.*\]), decision="allow"\)')
+UNCHECKED_RULE_LINES = 'Rules contain lines that are not inspected.'
 PROGRAMS = ('git', 'gh', 'npm', 'npx', 'pnpm', 'yarn', 'node', 'python', 'python3', 'pip', 'pip3', 'uv', 'cargo',
             'go', 'make', 'docker', 'kubectl', 'curl', 'wget', 'ssh', 'bash', 'sh', 'rm', 'mv', 'cp', 'chmod')
 
@@ -53,7 +54,7 @@ def read_file(path, source, *, discovered=False):
             continue
         pattern = declaration(line)
         if pattern is None:
-            reader.gap('Rules contain lines that are not inspected.')
+            reader.gap(UNCHECKED_RULE_LINES)
             continue
         observations = [f'program: {name}' for name in PROGRAMS if name == pattern[0]] + [f'tokens: {len(pattern)}']
         if len(pattern) == 1:

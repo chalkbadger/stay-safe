@@ -7,7 +7,7 @@ from .codex import (APP_TOOL_REVIEWER_GAP, APPROVALS, EMPTY_PROFILES, EXCLUDED_A
                     INVALID_APPROVAL, INVALID_BOOLEAN, INVALID_MCP_MAP, INVALID_PROFILE_SELECTOR, LEGACY_PROFILE_SELECTOR,
                     LEGACY_PROFILE_TABLES, PROFILE_LOADER_VERSION, ROOT_HOME_UNKNOWN, ROOTS_NO_WORKSPACE, ROOTS_SCOPE,
                     WORKSPACE_HOME, WORKSPACE_HOME_UNKNOWN, WORKSPACE_UNKNOWN, read_file)
-from .codex_rules import other_files, read_file as read_rules
+from .codex_rules import UNCHECKED_RULE_LINES, other_files, read_file as read_rules
 from .rules import SANDBOX_OFF_EXPLANATION, evaluate
 from .provenance import GAP, REPOSITORY, fingerprints, identify, source_link, resource
 
@@ -341,7 +341,7 @@ KINDS = {"mcp_servers": "MCP server", "apps": "app"}
 STRICTNESS = ("read-only", "workspace-write")
 
 
-def sandbox_context(report, files):
+def finding_context(report, files):
     sources = {entry["source"] for entry in report["catalog"] if entry["source"].startswith("config-")}
     gaps = {}
     for text in report["inspection_gaps"]:
@@ -361,7 +361,8 @@ def sandbox_context(report, files):
                     and "sandbox_mode is unsupported or invalid; its value was withheld." not in messages
                     and source not in own)]
     profile_files = ", ".join(f"`{files.get(source, source)}`" for source in sorted(profiles, key=source_order))
-    context = {}
+    context = {source: {"unchecked_rules": True} for source, messages in gaps.items()
+               if UNCHECKED_RULE_LINES in messages}
     for source in sources:
         others = sorted((int(other.split("-")[1]), other) for other, value in own.items()
                         if other != source and value == "read-only")
@@ -591,7 +592,7 @@ GAPS = {
     "Rules input is unreadable, a symlink or invalid UTF-8; raw errors were withheld.":
         "**Not checked: your rules file.** stay-safe couldn't read it: it's unreadable, a symlink, or not valid "
         "UTF-8. Error details are left out of this report.",
-    "Rules contain lines that are not inspected.":
+    UNCHECKED_RULE_LINES:
         "**Not checked: some lines in your rules file.** stay-safe reads only one-line saved approvals. Other "
         "lines, such as rules that ask first or forbid a command, could change what the listed approvals do.",
     "The rules directory cannot be listed; other rules files may exist and were not inspected.":
@@ -771,7 +772,7 @@ STEPS = {
     "Selected rules input is missing; its path was withheld.": "Check the path you gave with `--rules`.",
     "Rules input is unreadable, a symlink or invalid UTF-8; raw errors were withheld.":
         "Check that the file is readable and valid UTF-8; for a symlink, select the file it points to.",
-    "Rules contain lines that are not inspected.":
+    UNCHECKED_RULE_LINES:
         "Review the other lines in your rules file yourself, especially rules that ask first or forbid a command.",
     "The rules directory cannot be listed; other rules files may exist and were not inspected.":
         "Check that `rules` in your Codex folder is a folder you can read, then run stay-safe again.",
@@ -850,7 +851,17 @@ def finding(risk, files=None, contexts=None):
     if keys == ["apps", "_default"]:
         headline = TEMPLATE_HEADLINES.get(risk["rule"], headline)
     source = risk["entry"].split(":", 1)[0]
-    full_access = (contexts or {}).get(source, {}).get("full_access")
+    context = (contexts or {}).get(source, {})
+    if risk["rule"] == "saved_approval" and context.get("unchecked_rules"):
+        headline = "The approval on line {line} may not apply."
+        program = next((word.removeprefix("program: ") for word in risk["configured_evidence"]
+                        if word.startswith("program: ")), None)
+        command = f" for a `{program}` command" if program else ""
+        why = (f"Stay-safe found a saved approval{command}, but couldn't check every rule in this file. "
+               "If this approval applies, matching commands may run outside the sandbox without asking you."
+               "\n\n*What to check:* Look for a rules error when you start Codex. "
+               "If you see one, Codex didn't use any of your saved approvals.")
+    full_access = context.get("full_access")
     if keys == ["approval_policy"] and (risk["rule"], full_access) in {("commands_without_prompts", "on-request"),
                                                                       ("automatic_tools", "never")}:
         headline, why = FULL_ACCESS_HEADLINES[risk["rule"]]
@@ -1141,7 +1152,7 @@ def markdown(report, files=None):
         lines += [paragraph, ""]
     files = {source: path for source, path in files.items() if path is not None}
     blocks, titles = [], []
-    contexts = sandbox_context(report, files)
+    contexts = finding_context(report, files)
     for number, risk in enumerate(risks, 1):
         citations = ", ".join(f"[{i}]({report['incident_links'][i]})" if i in report["incident_links"] else i for i in risk["incidents"])
         lead, how, step = finding(risk, files, contexts) or (risk["explanation"], "See the cited incidents.",

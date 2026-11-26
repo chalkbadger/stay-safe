@@ -163,6 +163,8 @@ Issue: https://github.com/chalkbadger/stay-safe/issues/12
 Tests: [tests/findings_say_what_to_do/](../tests/findings_say_what_to_do/)
 
 - I get advice for each finding, including the setting to change and stricter options where supported. `test_what_to_do.py::test_each_finding_gives_lower_friction_then_stricter_option_then_how_to_change_it`
+- I see how to check whether Codex used each saved approval when stay-safe skips a line in its file. `test_plain_findings.py::test_unchecked_rules_put_the_startup_check_beside_each_saved_approval`
+- I get this startup check only when the same file contains a saved approval and an unchecked line. `test_plain_findings.py::test_startup_check_needs_both_an_approval_and_unchecked_lines_in_its_file`
 - I inspect different sandbox settings with `never` and the advice never suggests a weaker sandbox, and says what `on-request` adds and that ordinary commands can still run without asking. `test_what_to_do.py::test_commands_advice_never_loosens_the_configured_sandbox`
 - I select a permission profile in one file and can follow the approval finding and sandbox gap advice without replacing it. `test_what_to_do.py::test_profile_in_either_file_preserves_approval_and_gap_advice`
 - I see that configured approvals do not establish what Codex will allow. `test_what_to_do.py::test_shared_note_keeps_approval_outcomes_unassessed_for_each_policy`
