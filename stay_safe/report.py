@@ -493,8 +493,8 @@ GAPS = {
         "Codex from loading. Starting with a name this file doesn’t define does not trigger that conflict. "
         f"{INLINE_PROFILE_OVERRIDE}",
     INVALID_PROFILE_SELECTOR:
-        "**The `profile` setting has the wrong type.** Codex expects a profile name written as a string "
-        "when it validates this file.",
+        "**`profile` isn’t a quoted name.** Codex expects a string here. It ignores this setting in project "
+        "configuration.",
     EMPTY_PROFILES:
         "**Not checked: profile selection.** The `profiles` table is empty. It defines no names that could "
         "conflict with a startup profile.",
@@ -562,10 +562,12 @@ GAPS = {
     "Model-provider command-backed authentication is outside reader coverage.":
         "**Not checked: a model provider's sign-in command.** A model provider gets its credentials by running a "
         "command (`auth`), which stay-safe doesn't assess.",
-    "Model-provider setting {label} was not checked for a credential command.":
-        "**Not checked: `{label}`.** Stay-safe did not check this setting for a credential command.",
-    "otel.headers_helper was not checked for a header command.":
-        "**Not checked: `otel.headers_helper`.** Stay-safe did not check this setting for a header command.",
+    "Model-provider setting {label} names a command Codex can run for credentials; stay-safe did not read it.":
+        "**Not checked: a model provider's `{label}`.** This setting names a command Codex can run to get "
+        "credentials. stay-safe doesn't read it.",
+    "otel.headers_helper names a command Codex can run for telemetry headers; stay-safe did not read it.":
+        "**Not checked: `otel.headers_helper`.** This setting names a command Codex can run to produce telemetry "
+        "headers. stay-safe doesn't read it.",
     "notify is not a command list with a nonempty program.":
         "**Not checked: your `notify` setting.** It isn't a list that starts with a program name, so stay-safe "
         "can't tell whether it starts a program.",
@@ -700,7 +702,7 @@ STEPS = {
     LEGACY_PROFILE_SELECTOR:
         "Remove the `profile` setting. To use a user profile named `work`, move the settings inside "
         "`[profiles.work]` in your main config into `work.config.toml` in your Codex folder. Remove the old table and start Codex "
-        "with `--profile work`.",
+        "with `--profile work`. Then run stay-safe with `--config` and the path to that file to check its settings.",
     LEGACY_PROFILE_TABLES:
         "If you want to use one of these profiles, move its settings into a separate file in your Codex folder "
         "and remove the matching table from the main config. For example, use `work.config.toml` with "
@@ -750,8 +752,10 @@ STEPS = {
         "Set `{label}` to `true` or `false` without quotes.",
     "Model-provider command-backed authentication is outside reader coverage.":
         "Review that command yourself; stay-safe doesn't check it.",
-    "Model-provider setting {label} was not checked for a credential command.": "Review `{label}` in your config file.",
-    "otel.headers_helper was not checked for a header command.": "Review `otel.headers_helper` in your config file.",
+    "Model-provider setting {label} names a command Codex can run for credentials; stay-safe did not read it.":
+        "Find `{label}` under `[model_providers.<name>]` in your config file and check that you trust the command.",
+    "otel.headers_helper names a command Codex can run for telemetry headers; stay-safe did not read it.":
+        "Check that you trust the command in `otel.headers_helper`.",
     "notify is not a command list with a nonempty program.":
         "Write `notify` as a list that starts with the program, or remove it.",
     "hooks contains an invalid event configuration.": "Write each hook event as a list of hook groups, or remove it.",
