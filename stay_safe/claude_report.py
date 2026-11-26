@@ -1,6 +1,6 @@
 import re
 
-from .claude import (AUTO_APPROVAL_UNSET, AUTO_MODE_GAP, HTTP, PROJECT, UNKNOWN_EVENT, UNREAD_ENABLE, decides, read_file,
+from .claude import (AUTO_APPROVAL_UNSET, AUTO_MODE_GAP, HELPER_GAP, HELPER_TIMING, HTTP, PROJECT, UNKNOWN_EVENT, UNREAD_ENABLE, decides, read_file,
                      resolve, runs)
 from .provenance import GAP, REPOSITORY, fingerprints, identify, source_link
 from .rules import evaluate
@@ -46,7 +46,6 @@ HEADLINES = {
         "This wildcard covers every WebFetch domain from Claude Code v2.1.172. From v2.1.186 it also adds every "
         "host to the sandbox network allowlist.",
     ("network_access", None): "This file has a WebFetch allow rule for matching domains.",
-    ("configured_program", None): "This file's `{name}` setting runs a command on your computer.",
     ("network_access", HTTP): "This file has an HTTP hook that sends hook data to a web address.",
 }
 TRUST = (" Claude Code runs {} from a project's settings in a `claude -p` run, or when you trusted a parent folder "
@@ -131,18 +130,9 @@ GAPS = {
     "hooks contains a handler that is not a valid hook; it was not evaluated.": (
         "**Not checked: a hook.** A hook isn't an object with a known `type`, or its command is empty.",
         "Review the `hooks` block yourself."),
-    "awsAuthRefresh is not a nonempty command; it was not evaluated.": (
-        "**Not checked: `awsAuthRefresh`.** It isn't a nonempty command.",
-        "Review `awsAuthRefresh` yourself."),
-    "awsCredentialExport is not a nonempty command; it was not evaluated.": (
-        "**Not checked: `awsCredentialExport`.** It isn't a nonempty command.",
-        "Review `awsCredentialExport` yourself."),
-    "gcpAuthRefresh is not a nonempty command; it was not evaluated.": (
-        "**Not checked: `gcpAuthRefresh`.** It isn't a nonempty command.",
-        "Review `gcpAuthRefresh` yourself."),
-    "otelHeadersHelper is not a nonempty command; it was not evaluated.": (
-        "**Not checked: `otelHeadersHelper`.** It isn't a nonempty command.",
-        "Review `otelHeadersHelper` yourself."),
+    **{HELPER_GAP.format(name): (
+        f"**Not checked: `{name}`.** Its value is empty or isn't text, so stay-safe can't tell what it would run.",
+        f"Set `{name}` to the command you mean, or remove it.") for name in HELPER_TIMING},
     "hooks contains MCP tool hooks, which call a tool on an MCP server without asking you; that server was not "
     "evaluated.": (
         "**Not checked: MCP tool hooks.** They call a tool on an MCP server without asking you, and stay-safe doesn't "
@@ -260,14 +250,19 @@ def hook_headline(rule, facts):
 
 def headline(risk):
     observations = risk["configured_evidence"]
-    lead = HEADLINES[risk["rule"], scope(risk)].format(name=risk["entry"].partition(":")[2])
+    if risk["rule"] == "configured_program":
+        name = risk["entry"].partition(":")[2]
+        lead = f"`{name}` configures a command to run {HELPER_TIMING[name]}."
+        if PROJECT in observations:
+            lead += (" Claude Code can use this helper without a trust prompt in `claude -p` or when a parent "
+                     "folder's trust extends to this folder.")
+        return lead
+    lead = HEADLINES[risk["rule"], scope(risk)]
     overrides = [key for key in ("deny", "ask") if f"{key} rules present" in observations]
     if overrides:
         effect = {"deny": "block this action", "ask": "require approval"}
         effects = " or ".join(effect[key] for key in overrides)
         lead += f" This file also has {' and '.join(overrides)} rules that could {effects}. Their matches were not checked."
-    if risk["rule"] == "configured_program" and PROJECT in observations:
-        lead += TRUST.format("it")
     return lead
 
 
@@ -293,12 +288,10 @@ def sandbox_mode_change(source, entries, gaps):
 def hook_advice(rule, details, path):
     running = [record for record in details["handlers"] if runs(record)]
     places = [where(record) for record in running]
-    ask = (f"ask Claude Code: \"Show me {places[0]} in {path} and remove only that hook; show only what you "
-           "change.\"")
     if len(places) == 1:
-        change = f"*Change it:* in {path}, remove {places[0]}, or {ask}"
+        change = f"*Change it:* in {path}, remove {places[0]} using a text editor."
     else:
-        change = f"*Change it:* in {path}, remove only the hook you don't want: {series(places, ', or ')}. Or {ask}"
+        change = f"*Change it:* in {path}, remove only the hook you don't want: {series(places, ', or ')}. Use a text editor."
     owner = "this hook's" if len(running) == 1 else "each hook's"
     what = WHAT[rule, HTTP if rule == "network_access" else None]
     if rule == "network_access":
@@ -332,10 +325,9 @@ def finding(risk, path, number, details=None):
         what, change, check, why = hook_advice(rule, details, path)
     elif rule == "configured_program":
         name = risk["entry"].partition(":")[2]
-        change = (f"*Change it:* `{name}` in {path}, or ask Claude Code: \"Show me the `{name}` setting in {path} and "
-                  "remove it; show only what you change.\"")
-        check = (f"*Check:* In {path}, `{name}` holds the command it runs. If it runs a script file, check that file "
-                 "too. Find out who wrote it before you trust it.")
+        change = f"*Change it:* remove `{name}` from {path} using a text editor."
+        check = (f"*Check:* Read the command in `{name}` in {path}. If that command runs a script, read the script "
+                 "too. Find out who wrote the command and script before you trust them.")
         if PROJECT in risk["configured_evidence"]:
             check += " In a git repository, `git log -p -- .claude/` shows who changed the settings and scripts there."
     elif rule == "commands_without_prompts":
@@ -402,7 +394,7 @@ def markdown(report, files=None):
         source, _, name = risk["entry"].partition(":")
         path = f"`{files[source]}`" if source in files else f"`<{source}>`"
         lead, how, step = finding(risk, path, name.rsplit(".", 1)[-1], report.get("_hooks", {}).get(risk["entry"]))
-        titles.append(lead[2:].split("**", 1)[0] if lead.startswith("**") else lead)
+        titles.append(f"`{name}`" if name in HELPER_TIMING else lead[2:].split("**", 1)[0])
         citations = ", ".join(f"[{i}]({report['incident_links'][i]})" if i in report["incident_links"] else i
                               for i in risk["incidents"])
         rule = f"`{risk['rule']}`"

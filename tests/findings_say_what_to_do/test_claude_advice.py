@@ -172,13 +172,11 @@ class ClaudeAdviceTests(ConfigCase):
         project = "hook 1 of matcher group 1 under `hooks.Stop`"
         self.assertEqual(steps, [
             [keep,
-             f"*Change it:* in `~/.claude/settings.json`, remove {user}, or ask Claude Code: \"Show me {user} in "
-             "`~/.claude/settings.json` and remove only that hook; show only what you change.\"",
+             f"*Change it:* in `~/.claude/settings.json`, remove {user} using a text editor.",
              "*Check:* In `~/.claude/settings.json`, this hook's `command` is what it runs. "
              + script.format("`~/.claude/settings.json`")],
             [keep,
-             f"*Change it:* in `.claude/settings.json`, remove {project}, or ask Claude Code: \"Show me {project} in "
-             "`.claude/settings.json` and remove only that hook; show only what you change.\"",
+             f"*Change it:* in `.claude/settings.json`, remove {project} using a text editor.",
              "*Check:* In `.claude/settings.json`, this hook's `command` is what it runs. "
              + script.format("`.claude/settings.json`")
              + " In a git repository, `git log -p -- .claude/` shows who changed the settings and scripts there."],

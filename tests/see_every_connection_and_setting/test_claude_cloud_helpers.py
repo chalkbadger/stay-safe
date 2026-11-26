@@ -1,19 +1,9 @@
 import json
 
-from tests.support import ConfigCase
+from tests.support import ConfigCase, agent_home, run_home
 
 VALID = {"awsAuthRefresh": "seed-aws-sso", "awsCredentialExport": "seed-aws-export", "gcpAuthRefresh": "seed-gcloud", "otelHeadersHelper": "/seed/otel-headers"}
-EXPECTED = [
-    (None, {"awsAuthRefresh": [["command withheld"], True], "awsCredentialExport": [["command withheld"], True], "gcpAuthRefresh": [["command withheld"], True], "otelHeadersHelper": [["command withheld"], True]}),
-    ("user", {"awsAuthRefresh": [["command withheld"], True], "awsCredentialExport": [["command withheld"], True], "gcpAuthRefresh": [["command withheld"], True], "otelHeadersHelper": [["command withheld"], True]}),
-    ("project", {"awsAuthRefresh": [["command withheld", "project settings"], True], "awsCredentialExport": [["command withheld", "project settings"], True], "gcpAuthRefresh": [["command withheld", "project settings"], True], "otelHeadersHelper": [["command withheld", "project settings"], True]}),
-]
-INVALID = [
-    ("awsAuthRefresh", "", "awsAuthRefresh is not a nonempty command; it was not evaluated."),
-    ("awsCredentialExport", 1, "awsCredentialExport is not a nonempty command; it was not evaluated."),
-    ("gcpAuthRefresh", None, "gcpAuthRefresh is not a nonempty command; it was not evaluated."),
-    ("otelHeadersHelper", {"cmd": "seed"}, "otelHeadersHelper is not a nonempty command; it was not evaluated."),
-]
+INVALID = {"awsAuthRefresh": "  ", "awsCredentialExport": 1, "gcpAuthRefresh": None, "otelHeadersHelper": {"cmd": "seed"}}
 
 
 def read_file(*args, **kwargs):
@@ -30,18 +20,25 @@ class ClaudeCloudHelpersTests(ConfigCase):
         return {entry["name"]: [entry["observations"], entry["facts"].get("configured_program")]
                 for entry in entries if entry["kind"] == "program"}
 
-    def test_cloud_helpers_is_listed_with_its_command_withheld(self):
-        for scope, expected in EXPECTED:
+    def test_each_helper_is_listed_with_its_command_withheld(self):
+        for scope in (None, "user", "project"):
+            observations = ["command withheld", "project settings"] if scope == "project" else ["command withheld"]
+            expected = {name: [observations, True] for name in VALID}
             with self.subTest(scope=scope):
                 entries, gaps = self.read(VALID, scope)
                 self.assertEqual(self.programs(entries), expected)
                 self.assertEqual(gaps, [])
                 self.assertNotIn("seed", json.dumps([entries, gaps]))
 
-    def test_malformed_cloud_helpers_names_the_setting(self):
-        for name, value, message in INVALID:
-            with self.subTest(name=name, value=value):
+    def test_invalid_helper_value_names_the_setting(self):
+        home = agent_home(self.root, claude=json.dumps(INVALID))
+        run = run_home(home, "--agent", "claude")
+        for name, value in INVALID.items():
+            with self.subTest(name=name):
                 entries, gaps = self.read({name: value})
+                message = f"{name} has an empty or non-text value; its command could not be determined."
                 self.assertEqual(gaps, [f"settings-1: {message}"])
                 self.assertEqual(self.programs(entries), {})
-                self.assertNotIn("seed", json.dumps([entries, gaps]))
+                self.assertIn(f"**Not checked: `{name}`.** Its value is empty or isn't text", run.stdout)
+                self.assertIn(f"Set `{name}` to the command you mean, or remove it.", run.stdout)
+                self.assertNotIn("seed", json.dumps([entries, gaps]) + run.stdout)

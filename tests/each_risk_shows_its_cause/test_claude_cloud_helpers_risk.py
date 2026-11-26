@@ -2,32 +2,55 @@ import json
 
 from tests.support import ConfigCase, agent_home, run_home
 
-USER = {"permissions": {"defaultMode": "default"}}
-PROJECT = {"awsAuthRefresh": "seed-aws-sso", "awsCredentialExport": "seed-aws-export", "gcpAuthRefresh": "seed-gcloud", "otelHeadersHelper": "/seed/otel-headers"}
-RISKS = [
-    ["settings-2:awsAuthRefresh", "This file's `awsAuthRefresh` setting runs a command on your computer. Claude Code runs it from a project's settings in a `claude -p` run, or when you trusted a parent folder whose trust extends to this folder, without asking you to trust this folder."],
-    ["settings-2:awsCredentialExport", "This file's `awsCredentialExport` setting runs a command on your computer. Claude Code runs it from a project's settings in a `claude -p` run, or when you trusted a parent folder whose trust extends to this folder, without asking you to trust this folder."],
-    ["settings-2:gcpAuthRefresh", "This file's `gcpAuthRefresh` setting runs a command on your computer. Claude Code runs it from a project's settings in a `claude -p` run, or when you trusted a parent folder whose trust extends to this folder, without asking you to trust this folder."],
-    ["settings-2:otelHeadersHelper", "This file's `otelHeadersHelper` setting runs a command on your computer. Claude Code runs it from a project's settings in a `claude -p` run, or when you trusted a parent folder whose trust extends to this folder, without asking you to trust this folder."],
-]
-MARKDOWN = [
-    "*Change it:* `awsAuthRefresh` in `.claude/settings.json`",
-    "*Check:* In `.claude/settings.json`, `awsAuthRefresh` holds the command it runs. If it runs a script file, check that file too. Find out who wrote it before you trust it. In a git repository, `git log -p -- .claude/` shows who changed the settings and scripts there.",
-]
+TIMING = {
+    "awsAuthRefresh": "when the AWS credential check fails",
+    "awsCredentialExport": "at session start and on each AWS credential reload",
+    "gcpAuthRefresh": "when Google Cloud credentials expire or cannot be loaded",
+    "otelHeadersHelper": "at startup and periodically to generate telemetry headers",
+}
 
 
-class ClaudeCloudHelpersRiskTests(ConfigCase):
-    def test_cloud_helpers_finding_names_its_file_and_withholds_the_command(self):
-        home = agent_home(self.root, claude=json.dumps(USER))
+class ClaudeHelperRiskTests(ConfigCase):
+    def test_each_project_helper_names_its_file_and_withholds_the_command(self):
+        home = agent_home(self.root, claude='{"permissions": {"defaultMode": "default"}}')
         project = self.root / "repo"
         (project / ".claude").mkdir(parents=True)
-        (project / ".claude" / "settings.json").write_text(json.dumps(PROJECT), encoding="utf-8")
+        (project / ".claude/settings.json").write_text(json.dumps(dict.fromkeys(TIMING, "seed-project")))
         run = run_home(home, "--agent", "claude", "--format", "json", cwd=project)
-        report = json.loads(run.stdout)
         self.assertEqual(run.returncode, 0, run.stderr)
-        self.assertCountEqual([[risk["entry"], risk["explanation"]] for risk in report["risks"]], RISKS)
-        self.assertEqual({risk["rule"] for risk in report["risks"]}, {"configured_program"})
+        risks = {risk["entry"]: risk for risk in json.loads(run.stdout)["risks"]}
+        self.assertEqual(set(risks), {f"settings-2:{name}" for name in TIMING})
         markdown = run_home(home, "--agent", "claude", cwd=project).stdout
-        for line in MARKDOWN:
-            self.assertIn(line, markdown)
-        self.assertNotIn("seed", (run.stdout + markdown).lower())
+        for name, timing in TIMING.items():
+            risk = risks[f"settings-2:{name}"]
+            self.assertEqual(risk["rule"], "configured_program")
+            self.assertIn(timing, risk["explanation"])
+            self.assertIn("without a trust prompt", risk["explanation"])
+            self.assertIn("`claude -p`", risk["explanation"])
+            self.assertIn("parent folder", risk["explanation"])
+            self.assertIn(f"[`{name}`](#claude-code-finding-", markdown)
+            self.assertIn(f"remove `{name}` from `.claude/settings.json`", markdown)
+        self.assertIn("read the script", markdown)
+        self.assertIn("git log -p -- .claude/", markdown)
+        self.assertNotIn("ask Claude Code", markdown)
+        self.assertNotIn("seed", run.stdout + markdown)
+
+    def test_project_helper_overrides_user_helper_only_during_discovery(self):
+        user = {"awsAuthRefresh": "seed-user", "otelHeadersHelper": "seed-otel"}
+        home = agent_home(self.root, claude=json.dumps(user))
+        project = self.root / "repo"
+        path = project / ".claude/settings.json"
+        path.parent.mkdir(parents=True)
+        path.write_text('{"awsAuthRefresh": "seed-project"}')
+        user_file = home / ".claude/settings.json"
+        for args, overridden in [((), True), (("--config", str(user_file), "--config", str(path)), False)]:
+            with self.subTest(args=args):
+                run = run_home(home, "--agent", "claude", "--format", "json", *args, cwd=project)
+                report = json.loads(run.stdout)
+                entries = {entry["id"]: entry["observations"] for entry in report["catalog"]}
+                key = "settings-1:awsAuthRefresh"
+                self.assertEqual("overridden by settings-2" in entries[key], overridden)
+                risks = {risk["entry"] for risk in report["risks"]}
+                self.assertEqual(risks, {"settings-2:awsAuthRefresh", "settings-1:otelHeadersHelper"}
+                                 | (set() if overridden else {key}))
+                self.assertNotIn("seed", run.stdout)

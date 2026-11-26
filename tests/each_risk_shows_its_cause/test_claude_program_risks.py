@@ -62,7 +62,7 @@ class ClaudeProgramRiskTests(ConfigCase):
         markdown = run_home(home, "--format", "markdown", cwd=folder).stdout
         self.assertIn("**Programs Claude Code starts**\n\n1. [" + START, markdown)
         self.assertIn("*Change it:* in `.claude/settings.json`, remove hook 1 of matcher group 1 under "
-                      "`hooks.SessionStart`, or ask Claude Code:", markdown)
+                      "`hooks.SessionStart` using a text editor.", markdown)
         self.assertIn("**Settings file `.claude/settings.json` (`settings-2`)**\n- `hooks`: command withheld, "
                       f"{LINE}, project settings", markdown)
         self.assertNotIn("seed", (run.stdout + markdown).lower())
@@ -229,8 +229,7 @@ class ClaudeProgramRiskTests(ConfigCase):
         first = "hook 1 of matcher group 1 under `hooks.Stop`"
         second = "hook 1 of matcher group 1 under `hooks.PreToolUse`"
         self.assertIn(f"*Change it:* in `.claude/settings.json`, remove only the hook you don't want: {first}, or "
-                      f"{second}. Or ask Claude Code: \"Show me {first} in `.claude/settings.json` and remove only that "
-                      "hook; show only what you change.\"", markdown)
+                      f"{second}. Use a text editor.", markdown)
         self.assertIn("*Check:* In `.claude/settings.json`, each hook's `command` is what it runs.", markdown)
 
         (folder / ".claude" / "settings.json").write_text(json.dumps({"hooks": {"Stop": stop}}), encoding="utf-8")
@@ -243,7 +242,7 @@ class ClaudeProgramRiskTests(ConfigCase):
                          "This file's `hooks` setting runs a command hook on your computer: on `Stop` (matcher group "
                          "1, hook 1)." + TRUST.format("it"))
         markdown = run_home(home, cwd=folder).stdout
-        self.assertIn(f"*Change it:* in `.claude/settings.json`, remove {first}, or ask Claude Code:", markdown)
+        self.assertIn(f"*Change it:* in `.claude/settings.json`, remove {first} using a text editor.", markdown)
         self.assertNotIn("seed", markdown + run.stdout)
 
     def test_turning_hooks_off_in_user_settings_does_not_override_the_project(self):

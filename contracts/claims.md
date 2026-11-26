@@ -43,8 +43,8 @@ Tests: [tests/see_every_connection_and_setting/](../tests/see_every_connection_a
 - I set `disableAllHooks` and see my hooks listed as turned off in that file. `test_claude_programs.py::test_disable_all_hooks_turns_off_hooks_in_the_same_file`
 - I supply a malformed Claude Code hook and see it named as a gap. `test_claude_programs.py::test_malformed_hooks_name_the_field`
 - I run stay-safe in a project folder and see its `.claude/settings.json` read once beside my user settings. `test_claude_programs.py::test_discovery_reads_the_project_file_in_the_current_folder_once`
-- I set AWS, GCP or telemetry helper commands and see each listed without its command, or named as a gap when it isn't a command. `test_claude_cloud_helpers.py::test_cloud_helpers_is_listed_with_its_command_withheld`
-- I give AWS, GCP and telemetry helper commands a malformed value and see it named as a gap. `test_claude_cloud_helpers.py::test_malformed_cloud_helpers_names_the_setting`
+- I set an AWS, GCP or telemetry helper command and see the setting listed with its command left out. `test_claude_cloud_helpers.py::test_each_helper_is_listed_with_its_command_withheld`
+- I set an AWS, GCP or telemetry helper to something that isn't a command and see that setting named as a gap. `test_claude_cloud_helpers.py::test_invalid_helper_value_names_the_setting`
 - I run in a project whose `.claude` folder can't be checked and see it named as a gap. `test_claude_programs.py::test_unreadable_project_folder_is_a_named_gap`
 
 ## [explain_profile_settings] I can tell when a profile setting in my file would stop Codex from loading it and when that depends on how I start Codex.
@@ -129,7 +129,8 @@ Tests: [tests/each_risk_shows_its_cause/](../tests/each_risk_shows_its_cause/)
 - With two command hooks in one file, I follow the advice to remove one and rerun stay-safe. The other hook is still reported, and the removed one is gone from the catalog and the finding. `test_claude_program_risks.py::test_removing_one_of_two_command_hooks_keeps_the_other`
 - My user settings turn hooks off and the project turns them back on. Setting `disableAllHooks` to `true` again in my user file leaves the finding in place, because the project file still wins. Changing the project file removes it. `test_claude_program_risks.py::test_turning_hooks_off_in_user_settings_does_not_override_the_project`
 - An exec-form hook's Check tells me to look at its `args` as well as its `command`. `test_claude_program_risks.py::test_an_exec_form_hook_points_to_its_args`
-- A project's AWS, GCP or telemetry helpers each give a finding tied to that file, with the command withheld. `test_claude_cloud_helpers_risk.py::test_cloud_helpers_finding_names_its_file_and_withholds_the_command`
+- Each AWS, GCP or telemetry helper in a project's settings gets its own finding, which names the file and leaves the command out. `test_claude_cloud_helpers_risk.py::test_each_project_helper_names_its_file_and_withholds_the_command`
+- When both discovered files set the same helper, I see the user setting marked as overridden and a finding for the project setting. Files selected with `--config` keep separate findings. `test_claude_cloud_helpers_risk.py::test_project_helper_overrides_user_helper_only_during_discovery`
 
 ## [findings_say_what_to_do] Each finding explains what is wrong and what I can do.
 Issue: https://github.com/chalkbadger/stay-safe/issues/12

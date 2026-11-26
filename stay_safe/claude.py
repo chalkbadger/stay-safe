@@ -15,10 +15,10 @@ PREFERENCES = {"$schema", "model", "theme", "language", "verbose", "outputStyle"
                "spinnerTipsEnabled", "autoCompactEnabled", "fastMode", "feedbackSurveyRate", "spellcheck",
                "syntaxHighlightingDisabled", "vimInsertModeRemaps", "keybindingFlavor", "maxProseWidth",
                "showThinkingSummaries", "autoScrollEnabled", "copyOnSelect", "emojiCompletionEnabled"}
-NAMED = {"additionalDirectories", "agent", "allowedMcpServers", "apiKeyHelper", "awsAuthRefresh",
-         "awsCredentialExport", "deniedMcpServers", "disableAllHooks", "disableAutoMode", "disabledMcpjsonServers",
+NAMED = {"additionalDirectories", "agent", "allowedMcpServers", "apiKeyHelper",
+         "deniedMcpServers", "disableAllHooks", "disableAutoMode", "disabledMcpjsonServers",
          "enableAllProjectMcpServers", "enabledMcpjsonServers", "enabledPlugins", "env", "extraKnownMarketplaces",
-         "gcpAuthRefresh", "hooks", "otelHeadersHelper", "pluginConfigs", "processWrapper", "skipAutoPermissionPrompt",
+         "hooks", "pluginConfigs", "processWrapper", "skipAutoPermissionPrompt",
          "skipDangerousModePermissionPrompt", "sshConfigs", "sshHostCommands", "statusLine", "worktree"}
 HOOK_FIELDS = {"command": ("command",), "http": ("url",), "mcp_tool": ("server", "tool"), "prompt": ("prompt",),
                "agent": ("prompt",)}
@@ -30,8 +30,14 @@ HOOK_EVENTS = {"SessionStart", "Setup", "UserPromptSubmit", "UserPromptExpansion
                "TeammateIdle", "InstructionsLoaded", "ConfigChange", "CwdChanged", "DirectoryAdded", "FileChanged",
                "WorktreeCreate", "WorktreeRemove", "PreCompact", "PostCompact", "PreModelSwitch", "PostModelSwitch",
                "Elicitation", "ElicitationResult", "SessionEnd"}
-CLOUD_HELPERS = ("awsAuthRefresh", "awsCredentialExport", "gcpAuthRefresh", "otelHeadersHelper")
-PROGRAM_SETTINGS = {"hooks", "disableAllHooks", "allowedHttpHookUrls", *CLOUD_HELPERS}
+HELPER_TIMING = {
+    "awsAuthRefresh": "when the AWS credential check fails",
+    "awsCredentialExport": "at session start and on each AWS credential reload",
+    "gcpAuthRefresh": "when Google Cloud credentials expire or cannot be loaded",
+    "otelHeadersHelper": "at startup and periodically to generate telemetry headers",
+}
+HELPER_GAP = "{} has an empty or non-text value; its command could not be determined."
+PROGRAM_SETTINGS = {"hooks", "disableAllHooks", "allowedHttpHookUrls", *HELPER_TIMING}
 COMMAND = "command withheld"
 DISABLED = "turned off by disableAllHooks in this file"
 UNREAD_ENABLE = ("disableAllHooks turns off the hooks found, but .claude/settings.local.json, managed settings and "
@@ -169,11 +175,11 @@ class SettingsReader(Reader):
                 self.add(name, "hook", [], facts)
 
     def commands(self, data):
-        for name in CLOUD_HELPERS:
+        for name in HELPER_TIMING:
             if name not in data:
                 continue
             if not nonempty(data[name]):
-                self.gap(f"{name} is not a nonempty command; it was not evaluated.")
+                self.gap(HELPER_GAP.format(name))
                 continue
             observations = [COMMAND] + ([PROJECT] if self.scope == "project" else [])
             self.add([name], "program", observations, {"configured_program": True})
@@ -279,6 +285,14 @@ def handler_note(record):
 
 
 def resolve(entries, discovered):
+    if discovered:
+        programs = [entry for entry in entries if entry["kind"] == "program" and entry["name"] in HELPER_TIMING]
+        winners = {entry["name"]: entry["source"] for entry in programs}
+        for entry in programs:
+            winner = winners[entry["name"]]
+            if entry["source"] != winner:
+                entry["observations"].append(f"overridden by {winner}")
+                entry["facts"]["configured_program"] = False
     flags = [entry for entry in entries if "disable_all_hooks" in entry["facts"]]
     lists = {entry["source"] for entry in entries if entry["facts"].get("http_allowlist")}
     for flag in flags:
