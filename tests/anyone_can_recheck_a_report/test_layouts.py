@@ -15,14 +15,12 @@ class LayoutTests(GitCase):
         return self.git(root, "rev-parse", "HEAD")
 
     def assert_reports_git_head(self, root, seen):
-        """The reported commit is what `git rev-parse HEAD` reports, and differs from every earlier layout's."""
         expected = self.git(root, "rev-parse", "HEAD")
         self.assertNotIn(expected, seen)
         seen.append(expected)
         self.assertEqual(identify(root)["source_revision"], expected)
 
     def test_each_layout_reports_its_own_commit_as_git_does(self):
-        """Packed-only, loose, detached and worktree heads, each on a distinct commit, match `git rev-parse HEAD`."""
         repo, seen = self.repository(), []
         packed_main = self.git(repo, "rev-parse", "HEAD")
 

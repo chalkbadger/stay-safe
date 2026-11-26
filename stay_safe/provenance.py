@@ -1,5 +1,3 @@
-"""Identify the diagnostic without invoking Git or contacting a service."""
-
 import hashlib
 import json
 import os
@@ -10,30 +8,24 @@ ROOT = Path(__file__).resolve().parents[1]
 INSTALLED = (ROOT / "stay_safe/package.txt").is_file()
 REPOSITORY = "https://github.com/chalkbadger/stay-safe"
 SOURCE_FILES = (
-    "stay_safe/__init__.py", "stay_safe/__main__.py", "stay_safe/cli.py", "stay_safe/codex.py",
+    "stay_safe/__init__.py", "stay_safe/__main__.py", "stay_safe/claude.py", "stay_safe/claude_report.py",
+    "stay_safe/cli.py", "stay_safe/codex.py",
     "stay_safe/codex_rules.py", "stay_safe/provenance.py", "stay_safe/report.py", "stay_safe/rules.py",
     "stay_safe/save.py",
-    "harnesses/codex.md", "incidents.md",
+    "harnesses/codex.md", "harnesses/claude-code.md", "incidents.md",
 )
-# Holds the commit in release archives (.gitattributes export-subst). It names the commit rather than running code,
-# so it is not fingerprinted: a clone and a zip of one commit keep the same tool_revision.
 RELEASE_FILE = "stay_safe/release.txt"
 GAP = "Revision unknown; checkout source links are withheld."
 COMMIT = re.compile(r"(?!0{40})[0-9a-f]{40}")
 
 
 def valid_ref(ref):
-    """Accept a full ref name only as git check-ref-format does (https://git-scm.com/docs/git-check-ref-format).
-
-    No component may be empty or start with ".", so the name stays inside the Git directory.
-    """
     return (ref.startswith("refs/") and not ref.endswith(".") and ".." not in ref and "@{" not in ref
             and not any(ord(c) < 0x20 or ord(c) == 0x7f or c in " ~^:?*[\\" for c in ref)
             and not any(part == "" or part.startswith(".") or part.endswith(".lock") for part in ref.split("/")))
 
 
 def checkout_revision(root=ROOT):
-    """Read detached or symbolic HEAD, including packed refs and worktrees."""
     try:
         gitdir = root / ".git"
         if gitdir.is_file():
@@ -64,10 +56,6 @@ def checkout_revision(root=ROOT):
 
 
 def archive_revision(root=ROOT):
-    """Read the commit `git archive` wrote into the revision file through its export-subst attribute.
-
-    A file still holding the `$Format:%H$` placeholder, or anything but one full commit hash, gives None.
-    """
     try:
         value = (root / RELEASE_FILE).read_text(encoding="utf-8").strip()
     except (OSError, ValueError):
@@ -76,9 +64,6 @@ def archive_revision(root=ROOT):
 
 
 def source_revision(root=ROOT):
-    """Where a .git entry exists (a folder, a worktree's file, or anything else), use only Git; otherwise read the
-    revision file. If the folder can't be listed, the revision is unknown rather than taken from the revision file.
-    """
     if (root / "stay_safe/package.txt").is_file():
         try:
             value = (root / "stay_safe/package.txt").read_text(encoding="utf-8").strip()
@@ -95,7 +80,6 @@ def source_revision(root=ROOT):
 
 
 def resource(name, root=ROOT):
-    """Resolve bundled references while preserving their repository paths in reports."""
     if (root / "stay_safe/package.txt").is_file() and not name.startswith("stay_safe/"):
         return root / "stay_safe/data" / name
     return root / name

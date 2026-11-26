@@ -26,6 +26,23 @@ words, links to the rules and meanings sources, and what the report can't see, w
 link to the [full scope](#full-scope). The JSON report (`--format json`) keeps the catalog, full scope
 and fingerprints in their original form.
 
+## Example finding
+
+This is the full finding from the [README example](../README.md), including the
+change suggested for that configuration.
+
+> **With these settings, Codex runs commands without asking you.** It won't ask before any command it's allowed to run, so injected or mistaken instructions could make it run code you didn't want.
+>
+> *How it has gone wrong:* Agents running commands without approval have run a delete command aimed at a home directory and wiped a drive. Another user reported an automatic driver update while getting help with GPU performance. [I2](https://github.com/chalkbadger/stay-safe/blob/v0.2.4/incidents.md#i2-home-directory-added-to-a-delete-command), [I3](https://github.com/chalkbadger/stay-safe/blob/v0.2.4/incidents.md#i3-windows-drive-wiped), [I24](https://github.com/chalkbadger/stay-safe/blob/v0.2.4/incidents.md#i24-driver-update-followed-by-boot-and-network-failures) (reported, not verified).
+>
+> *What to do:* If you want Codex to ask before running some commands it currently blocks, choose `approval_policy = "on-request"` and keep `sandbox_mode = "read-only"` (commands still can't write files). Ordinary commands can still run inside the sandbox without asking you. But commands a saved approval allows still run outside the sandbox.
+>
+> *Change it:* `approval_policy` near the top of the file, before any `[section]`, or ask Codex: "Edit `<config-1>` to set `approval_policy = "on-request"` without changing `sandbox_mode`; show only what you change."
+>
+> *Check:* Look for `approval_policy` and `sandbox_mode` in `<config-1>`.
+>
+> *Rule `commands_without_prompts` · setting `config-1:approval_policy` = `never`*
+
 ## The order of findings
 
 Each rule belongs to one group, fixed by what the rule's condition removes, as its
@@ -36,15 +53,15 @@ the JSON report keeps its own order.
 
 | Group | Heading in the report | Rule | Reported incidents |
 | --- | --- | --- | --- |
-| 1 | Nothing stands between a mistaken or injected instruction and your computer | `unrestricted_filesystem` | [I1](../incidents.md#i1-home-directory-deleted-by-rm--rf), [I3](../incidents.md#i3-windows-drive-wiped) |
+| 1 | Nothing stands between a mistaken or injected instruction and your computer | `unrestricted_filesystem` | [I1](../incidents.md#i1-home-directory-deleted-by-rm--rf), [I3](../incidents.md#i3-windows-drive-wiped), [I32](../incidents.md#i32-powershell-cleanup-deleted-files-in-the-home-directory), [I20](../incidents.md#i20-injected-text-turned-off-approvals), [I33](../incidents.md#i33-intruders-changed-claude-code-project-settings-to-download-a-backdoor) |
 | 1 | Nothing stands between a mistaken or injected instruction and your computer | `commands_without_prompts` | [I2](../incidents.md#i2-home-directory-added-to-a-delete-command), [I3](../incidents.md#i3-windows-drive-wiped), [I24](../incidents.md#i24-driver-update-followed-by-boot-and-network-failures) |
 | 1 | Nothing stands between a mistaken or injected instruction and your computer | `saved_approval` | [I26](../incidents.md#i26-saved-command-approval-persisted-across-sessions-and-workspaces), [I30](../incidents.md#i30-railway-credentials-printed-in-a-claude-code-transcript) |
 | 2 | Network access, credentials, and connected tools | `destructive_tools` | [I7](../incidents.md#i7-production-volumes-deleted-with-a-found-token), [I8](../incidents.md#i8-database-changes-after-an-order-to-stop) |
 | 2 | Network access, credentials, and connected tools | `network_access` | [I15](../incidents.md#i15-prompt-injection-through-github-issues), [I21](../incidents.md#i21-issue-content-steered-an-agent-toward-workflow-secrets) |
 | 2 | Network access, credentials, and connected tools | `environment_inheritance` | [I23](../incidents.md#i23-production-tables-dropped-by-a-dev-only-migration-command) |
 | 2 | Network access, credentials, and connected tools | `automatic_tools` | [I15](../incidents.md#i15-prompt-injection-through-github-issues), [I20](../incidents.md#i20-injected-text-turned-off-approvals) |
-| 3 | Something else has to be tampered with first | `configured_program` | [I13](../incidents.md#i13-repository-settings-run-commands-on-collaborators-machines), [I14](../incidents.md#i14-readme-injection-bypassed-a-command-allowlist), [I19](../incidents.md#i19-worm-persisted-through-agent-startup-hooks) |
-| Not ranked | Based on Codex's source code and not yet seen in a live run, so stay-safe has no basis to rank these. That does not make them minor. | `self_described_tools` | [I15](../incidents.md#i15-prompt-injection-through-github-issues), [I21](../incidents.md#i21-issue-content-steered-an-agent-toward-workflow-secrets) |
+| 3 | Something else has to be tampered with first | `configured_program` | [I13](../incidents.md#i13-repository-settings-run-commands-on-collaborators-machines), [I14](../incidents.md#i14-readme-injection-bypassed-a-command-allowlist), [I19](../incidents.md#i19-worm-persisted-through-agent-startup-hooks), [I33](../incidents.md#i33-intruders-changed-claude-code-project-settings-to-download-a-backdoor) |
+| Not ranked | Based on Codex's source code and not yet seen in a live run, so stay-safe has no basis to rank these. That does not make them minor. | `self_described_tools`<br>`writable_project_settings` | [I15](../incidents.md#i15-prompt-injection-through-github-issues), [I21](../incidents.md#i21-issue-content-steered-an-agent-toward-workflow-secrets)<br>[I20](../incidents.md#i20-injected-text-turned-off-approvals), [I33](../incidents.md#i33-intruders-changed-claude-code-project-settings-to-download-a-backdoor) |
 
 ## Entry IDs
 
@@ -55,12 +72,56 @@ such as `~/.codex/config.toml` or `$CODEX_HOME/config.toml`, never by your own f
 Saved approvals use `rules-1:prefix_rule.N`, where N is the physical line number
 in the selected rules file.
 
+### A saved tool-description flag
+
+This synthetic [Snyk Agent Scan v0.7.1 fixture](../tests/see_every_connection_and_setting/pairing/saved-scan.json)
+flags a tool description on `team.api` in `approve.toml`. Run this example from the
+checkout root. Both Codex files name that server. Select `config-2` because
+`approve.toml` is the second `--config`. The quotes in the entry ID keep the
+dotted server name together. [Scanner JSON reference, read 2026-11-24](https://github.com/snyk/agent-scan/blob/a85612713593ab8beb1c0b6964eee954c1a498b0/docs/json-output.md#agent-scan-v06-and-later)
+
+```sh
+python3 - <<'PY'
+import json
+import subprocess
+import sys
+from pathlib import Path
+
+samples = Path("tests/see_every_connection_and_setting/pairing")
+saved = json.loads((samples / "saved-scan.json").read_text())
+server, = saved["scan_path_responses"][0]["server_risks"]
+report = json.loads(subprocess.check_output([
+    sys.executable, "-m", "stay_safe", "--format", "json",
+    "--config", samples / "prompt.toml", "--config", samples / "approve.toml",
+]))
+key = "config-2:mcp_servers." + json.dumps(server["name"])
+entry, = (row for row in report["catalog"] if row["id"] == key)
+approval, = (item for item in entry["observations"] if item.startswith("tool approval: "))
+flag = "prompt_injection_tool_desc"
+if flag in server["risk_indexes"]:
+    print(server["name"], flag, approval, sep=" | ")
+PY
+```
+
+The output is `team.api | prompt_injection_tool_desc | tool approval: approve`.
+Review the flagged description alongside the server’s configured default when
+deciding whether to change that setting.
+[Challenge this description](https://github.com/chalkbadger/stay-safe/issues/new?template=challenge.yml&title=Challenge%3A%20Snyk%20Agent%20Scan%20v0.7.1&disputed-claim=Snyk%20Agent%20Scan%20v0.7.1%20reports%20a%20tool-description%20flag%20in%20server_risks%5B%5D.risk_indexes.prompt_injection_tool_desc.)
+
 ## The commit, and release archives
 
 A last line names the stay-safe commit and
 report format. In a release zip, which has no Git history, the commit is read from
 `stay_safe/release.txt`, which GitHub fills in when it builds the zip, and is marked
 "(release archive)".
+
+stay-safe reads the commit from Git's own files ([repository layout](https://git-scm.com/docs/gitrepository-layout))
+without running Git. It follows a symbolic `HEAD` only to a ref name that
+[`git check-ref-format`](https://git-scm.com/docs/git-check-ref-format) accepts. Git trims only ASCII whitespace
+when it reads `HEAD` ([Git 2.43.0](https://github.com/git/git/blob/564d0252ca632e0264ed670534a51d18a689ef5d/refs/files-backend.c#L456)),
+so other control characters stay in the name. `git archive` fills in `release.txt` through its
+[`export-subst` attribute](https://git-scm.com/docs/gitattributes/2.43.0#_export_subst), which replaces
+`$Format:%H$` with the commit.
 
 ## Configuration names
 
@@ -99,7 +160,7 @@ The report's "What this report can't see" section summarizes these limits. In fu
 
 - Selected files are independent snapshots; other rules files are not read or merged.
 - Rules inspection lists saved-format approval candidates, one-line allow records whose syntax context and current effect are not checked; other lines, including prompt and forbidden rules that may override a candidate, make the check incomplete.
-- CLI flags, profile selection, trusted project layers, managed policies and runtime overrides are not inspected.
+- CLI flags, profile selection, trusted project layers, managed policies and runtime overrides are not inspected. A separately selected profile file can override the main config.
 - Connection reachability, authentication, active tools and effective permissions are not tested.
 - Source links point to the reported commit; whether that commit exists in the published GitHub repository is not checked.
 - The catalog contains configured entries, documented defaults and source-status observations; account, endpoint, environment, saved approval command (except a first word on stay-safe's program list) and other command and argument values are withheld.

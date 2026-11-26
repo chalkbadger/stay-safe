@@ -1,11 +1,3 @@
-"""Each Markdown finding leads with what it means for you, how it has gone wrong and what to do, then keeps its ids
-and labels on one trace line (archived issue #105 and its reading check).
-
-The expected headlines and sentences below were written from the issue's After example and from each rule's
-meaning in stay_safe/rules.py and harnesses/codex.md, not copied from the report. The headline, in bold, is one
-sentence that stands alone (archived issue #106 lists it on its own).
-"""
-
 import json
 import subprocess
 import sys
@@ -19,7 +11,6 @@ DESTRUCTIVE = "A mistaken operation could change or delete data in the connected
 SOURCE_ONLY = "Based on Codex's source code, not yet seen in a live run."
 GROUP_HINTS = '`auto` and `writes` use hints supplied by the server. ' + SOURCE_ONLY
 TOOL_HINTS = GROUP_HINTS
-# Rule -> one sentence on its cited incidents, from incidents.md (reading check, 2026-11-09).
 HOW = {
     "saved_approval": "A Codex user reported that a saved approval for `curl` let later `curl` commands run without "
                       "asking, even after restarting in another workspace. A Claude Code user reported that a broad "
@@ -28,9 +19,14 @@ HOW = {
     "commands_without_prompts": "Agents running commands without approval have run a delete command aimed at a home "
                                 "directory and wiped a drive. Another user reported an automatic driver update while getting help with GPU performance.",
     "unrestricted_filesystem": "Agents have deleted a home directory and wiped a whole drive with one mistaken delete "
-                               "command.",
+                               "command. A Claude Code user reported losing SSH keys and cloud credentials when a "
+                               "PowerShell cleanup deleted files in their home directory. GitHub Copilot was tricked into "
+                               "editing its own approval settings. Intruders changed project settings that Claude Code "
+                               "used at startup.",
     "configured_program": "Flaws in other agents let repository settings run commands on collaborators' machines, "
-                          "and a worm wrote itself into an agent's settings so its code ran at every start.",
+                          "and a worm wrote itself into an agent's settings so its code ran at every start. "
+                          "Google reported that intruders changed project settings so Claude Code would download a "
+                          "backdoor at startup.",
     "automatic_tools": "Hidden instructions in public GitHub issues could take over agents using a GitHub MCP server, "
                        "and injected text got another agent to turn off its own approvals.",
     "destructive_tools": "Agents have deleted production data with a token they found, and changed a database after "
@@ -47,13 +43,10 @@ RULES = 'prefix_rule(pattern=["git", "seed-rule-word"], decision="allow")\n'
 SEEDS = ["seed-notify-program", "seed-notify-arg", "seed-github-command", "seed-search-host", "seed-wiki-host",
          "seed-docs-host", "seed-hook-command", "seed-rule-word"]
 
-# (rule, entry) -> headline and why. The What to do part is checked in tests/findings_say_what_to_do/test_what_to_do.py.
 EXPECTED = {
     ("commands_without_prompts", "config-1:approval_policy"):
         "**With these settings, Codex runs commands without asking you.** It won't ask before any command it's "
         "allowed to run, so injected or mistaken instructions could make it run code you didn't want.",
-    # Issue #141: never with danger-full-access can let tool calls run without asking (row approval_policy `never with
-    # danger-full-access`).
     ("automatic_tools", "config-1:approval_policy"):
         "**With these settings, Codex can use MCP server and app tools without asking you.** "
         "`approval_policy = \"never\"` with `sandbox_mode = \"danger-full-access\"` can allow MCP server and app tools "
@@ -91,8 +84,10 @@ EXPECTED = {
     ("configured_program", "config-1:notify"):
         f"**Your `notify` setting can start a program on your computer.** {PROGRAM}",
     ("unrestricted_filesystem", "config-1:sandbox_mode"):
-        "**Your config turns off Codex's sandbox.** Commands Codex runs aren't limited to your project, so a "
-        "mistaken command could damage files elsewhere on your computer.",
+        "**Your config turns off Codex’s sandbox.** A mistaken command could damage files outside your project. "
+        "A command could also change Codex’s own settings, saved approvals, or instructions if your account can "
+        "edit those files. A later Codex run could then follow different instructions or run a command it would "
+        "otherwise ask you to approve.",
     ("environment_inheritance", "config-1:shell_environment_policy"):
         "**With these settings, commands Codex runs get your environment variables.** They start with the "
         "environment Codex was launched with, apart from a few Codex launch variables. Credentials in it could be "
@@ -176,16 +171,12 @@ class PlainFindingTests(ConfigCase):
             lead = EXPECTED[(risk["rule"], risk["entry"])]
             citations = ", ".join(f"[{i}]({report['incident_links'][i]})" for i in risk["incidents"])
             kind = "rules entry" if risk["entry"].startswith("rules-") else "setting"
-            # Each part is its own paragraph, with italic labels and an italic trace line (reading check, layout).
             expected.append([
                 lead,
                 f"*How it has gone wrong:* {HOW[risk['rule']]} {citations} (reported, not verified).",
                 f"*Rule `{risk['rule']}` · {kind} `{risk['entry']}` = `{'; '.join(risk['configured_evidence'])}`*",
             ])
         found = [item.split("\n\n") for item in finding_items(markdown)]
-        # What to do sits between the incidents and the trace line; its content is risk_trace evidence (archived issue #119).
-        # The findings follow the findings list's order, not the JSON report's (issue #82);
-        # tests/overview_lists_findings_first/test_overview.py checks that order.
         self.assertCountEqual([paragraphs[:2] + paragraphs[-1:] for paragraphs in found], expected)
         for paragraphs in found:
             self.assertTrue(paragraphs[2].startswith("*What to do:*"), paragraphs[2])

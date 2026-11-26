@@ -1,11 +1,3 @@
-"""Independent conditions for the source-documented hint-based approval rule.
-
-Expected modes and overrides: ../../harnesses/codex.md and
-https://github.com/openai/codex/blob/086ccc833bc9cf01024ad2dd6af7dbd421b6bf9a/codex-rs/core/src/mcp_tool_call.rs
-requires_mcp_tool_approval_for_mode. This diagnostic does not execute Codex or
-observe a server's hints; it reports the configured dependence on those hints.
-"""
-
 from stay_safe.report import inspect
 from tests.support import ConfigCase
 
@@ -55,9 +47,6 @@ class SelfDescribedToolTests(ConfigCase):
             ('[apps._default]\ndefault_tools_approval_mode="writes"\n[apps.files]', ['apps.files']),
             ('[apps._default]\ndefault_tools_approval_mode="prompt"\n[apps.files]', []),
             ('[apps._default]\ndefault_tools_approval_mode="writes"\n[apps.files]\ndefault_tools_approval_mode="prompt"', []),
-            # apps._default.enabled disables no named app (archived issue #90; openai/codex@086ccc8
-            # codex-rs/connectors/src/app_tool_policy.rs L174-L185 and the recorded run,
-            # https://github.com/chalkbadger/stay-safe-archive/issues/90#issuecomment-6726050010).
             ('[apps._default]\nenabled=false\ndefault_tools_approval_mode="writes"\n[apps.files]', ['apps.files']),
             ('[apps._default]\nenabled=false\ndefault_tools_approval_mode="writes"\n[apps.files]\nenabled=true', ['apps.files']),
         ]:
@@ -82,8 +71,6 @@ class SelfDescribedToolTests(ConfigCase):
                 self.check(MCP + tail, expected)
 
     def test_template_tool_blocks_are_skipped_and_named_app_overrides_still_work(self):
-        # AppsDefaultConfig has no tools field; AppConfig has per-tool overrides.
-        # Source: ../../harnesses/codex.md [apps] and [configuration-reference].
         for mode, expected_rule in [("auto", "self_described_tools"), ("writes", "self_described_tools"),
                                     ("approve", "automatic_tools"), ("prompt", None)]:
             with self.subTest(mode=mode):
@@ -98,7 +85,6 @@ class SelfDescribedToolTests(ConfigCase):
                 control = '[apps._default]\ndefault_tools_approval_mode="prompt"\n' + template
                 control += '\n[apps.files.tools.read]\napproval_mode="' + mode + '"'
                 report = self.check(control, ["apps.files.tools.read"] if expected_rule == "self_described_tools" else [], gap=True)
-                # The named app sets nothing else, so Codex's default lets it run destructive tools.
                 self.assertEqual([(r["rule"], r["entry"]) for r in report["risks"]],
                                  [("destructive_tools", "config-1:apps.files")]
                                  + ([(expected_rule, "config-1:apps.files.tools.read")] if expected_rule else [])

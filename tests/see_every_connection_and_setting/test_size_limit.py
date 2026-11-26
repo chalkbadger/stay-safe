@@ -1,7 +1,6 @@
 from stay_safe.report import inspect
 from tests.support import CHATGPT_APPS, ConfigCase
 
-# The gap messages state a 1 MiB limit; this value is fixed here, not imported.
 LIMIT = 1024 * 1024
 CONFIG = b'approval_policy="never"\nsandbox_mode="read-only"\n'
 RULES = b'prefix_rule(pattern=["git", "status"], decision="allow")\n'

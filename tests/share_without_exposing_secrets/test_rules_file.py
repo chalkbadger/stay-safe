@@ -1,8 +1,11 @@
 import json
+import re
 import subprocess
 import sys
 
 from html import escape
+
+from stay_safe import codex_rules
 
 from tests.support import INCOMPLETE
 from tests.support import (ConfigCase, HARD_WORDS, NEAR_PROGRAMS, PROGRAMS, REPORT, ROOT, copy_checkout,
@@ -11,13 +14,21 @@ from tests.see_every_connection_and_setting.test_plain_gaps import gap_text
 
 
 class ShareableRulesTests(ConfigCase):
+    def test_shown_program_names_are_the_list_in_the_meanings_document(self):
+        text = (ROOT / "harnesses/codex.md").read_text(encoding="utf-8")
+        section = text.split("## Saved approval records", 1)[1].split("\n## ", 1)[0]
+        listed = re.findall(r"(?m)^`([a-z0-9 ]+)`$", section)
+        self.assertEqual(len(listed), 1)
+        self.assertEqual(listed[0].split(), list(codex_rules.PROGRAMS))
+        self.assertEqual(listed[0].split(), PROGRAMS)
+
     def test_invalid_json_escape_does_not_disclose_private_source(self):
         path = self.config(r'prefix_rule(pattern=["curl", "private\qvalue"], decision="allow")', 'warning.rules')
         gap = 'rules-1: Rules contain lines that are not inspected.'
         try:
             json.loads(r'["curl", "private\qvalue"]')
         except ValueError as error:
-            raw_error = str(error)  # Python's own message, e.g. "Invalid \escape: line 1 column 19 (char 18)"
+            raw_error = str(error)
         for fmt in ['markdown', 'json']:
             with self.subTest(format=fmt):
                 run = subprocess.run([sys.executable, '-B', '-m', 'stay_safe', '--rules', str(path), '--format', fmt],
@@ -32,19 +43,15 @@ class ShareableRulesTests(ConfigCase):
                     self.assertNotIn(leaked, run.stdout)
 
     def test_no_saved_approval_word_other_than_a_listed_first_word_appears_in_any_output(self):
-        # Codex writes each approved word into the rules file as given (openai/codex@086ccc8,
-        # codex-rs/execpolicy/src/amend.rs L65-L81), so any word may be private (archived issue #60).
         private = [
-            ['deploy', 'Hunter2Secret', 'acct12345'],                 # ordinary-looking password and account ID
-            ['vaultlogin', '123e4567-e89b-12d3-a456-426614174000'],   # UUID-like string
-            ['notifybot', 'xoxb-20481-93710-QWxPz7KkLm'],              # credential format stay-safe does not recognise
-            ['backupctl'],                                           # one-word approval
-            ['git', 'Hunter2Secret'],                                # listed first word, private second word
+            ['deploy', 'Hunter2Secret', 'acct12345'],
+            ['vaultlogin', '123e4567-e89b-12d3-a456-426614174000'],
+            ['notifybot', 'xoxb-20481-93710-QWxPz7KkLm'],
+            ['backupctl'],
+            ['git', 'Hunter2Secret'],
         ] + [['curl', word] for word in HARD_WORDS]
-        # Listed names after the first word and first words near a listed name (archived issue #89).
         near = [['deploy', 'git'], ['deploy', 'rm', 'curl']] + [[word, 'status'] for word in NEAR_PROGRAMS]
         approvals = private + near
-        # The same approvals with every word except a listed first word replaced by a placeholder.
         placeholders = [[word if i == 0 and word in PROGRAMS else f'w{n}x{i}' for i, word in enumerate(words)]
                         for n, words in enumerate(approvals)]
         ids = [f'rules-1:prefix_rule.{line}' for line in range(1, len(approvals) + 1)]
@@ -72,7 +79,6 @@ class ShareableRulesTests(ConfigCase):
                     self.assertNotIn(json.dumps(word)[1:-1], run.stdout)
                 self.assertNotIn(str(paths[0]), run.stdout)
                 self.assertEqual(run.stdout, runs[1].stdout)
-        # --save: standard output (the Markdown report and the open command) and the saved page (archived issue #106).
         checkout = copy_checkout(self.root / 'checkout')
         outputs = []
         for path in paths:

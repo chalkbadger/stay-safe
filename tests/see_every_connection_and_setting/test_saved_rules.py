@@ -1,10 +1,10 @@
 from tests.support import without_rule_links
 """Independent expectations for the saved prefix_rule format and its declared meaning.
 
-Writer: openai/codex@086ccc833bc9cf01024ad2dd6af7dbd421b6bf9a,
+Writer: openai/codex@3d86e43b075adeba2193ec5c22ac92f55afd82e6,
 codex-rs/execpolicy/src/amend.rs::blocking_append_allow_prefix_rule.
 Decision precedence: execpolicy/src/policy.rs::Evaluation::from_matches.
-Sandbox bypass: core/src/exec_policy.rs::create_exec_approval_requirement_for_command_platform.
+Sandbox bypass: core/src/exec_policy.rs::create_exec_approval_requirement_for_parsed_commands.
 """
 
 from contextlib import redirect_stderr, redirect_stdout
@@ -74,11 +74,7 @@ prefix_rule(pattern=["curl"], decision="allow")
         self.assertEqual(report['inspection_gaps'], [])
 
     def test_only_a_first_word_exactly_on_the_program_list_is_shown(self):
-        # A check of source structure: no report fixture can show that an unknown name was not added, so the
-        # code's list must be exactly the decided one (no additions, removals or duplicates).
         self.assertEqual(sorted(CODE_PROGRAMS), sorted(PROGRAMS))
-        # Each listed name first, with a private second word; then one-word approvals; then first words that
-        # are near a listed name, and listed names after the first word.
         approvals = ([[name, 'Hunter2Secret'] for name in PROGRAMS] + [['rm'], ['backupctl']]
                      + [[word, 'status'] for word in NEAR_PROGRAMS] + [['deploy', 'git'], ['deploy', 'rm', 'curl']])
         path = self.rules(''.join(f'prefix_rule(pattern={json.dumps(words)}, decision="allow")\n'
@@ -103,7 +99,6 @@ prefix_rule(pattern=["curl"], decision="allow")
         self.assertEqual([e['id'] for e in report['catalog']], ['rules-1:prefix_rule.2'])
         self.assertIn(SCOPE, report['scope'])
         markdown = self.run_report(['--rules', str(path)], status=2, format_name='markdown')
-        # Markdown links the full scope in docs/report.md at its commit, which holds this line (archived issues #105, #137).
         revision = report['provenance']['source_revision']
         self.assertIn(f'[Full scope of this report](https://github.com/chalkbadger/stay-safe/blob/{revision}/docs/report.md#full-scope)',
                       markdown)
@@ -119,7 +114,6 @@ prefix_rule(pattern=["curl"], decision="allow")
             'prefix_rule(pattern=["curl"], decision="unknown")',
             'prefix_rule(pattern=["curl"], decision="allow", decision="forbidden")',
             'prefix_rule(pattern=["curl"], decision="allow", justification="private-value")',
-            # https://github.com/openai/codex/blob/086ccc833bc9cf01024ad2dd6af7dbd421b6bf9a/codex-rs/execpolicy/src/parser.rs#L355
             'prefix_rule(pattern=["curl"], decision="allow", canonical_matching=True)',
             'prefix_rule(["curl"], "allow")',
             'prefix_rule(pattern=["cu" "rl"], decision="allow")',
@@ -160,7 +154,6 @@ prefix_rule(pattern=["curl"], decision="allow")
         directory = self.root / 'rules'
         directory.mkdir()
         default = self.rules(ALLOW, 'rules/default.rules')
-        # The default file has a one-part approval on line 1; the selected file a two-part one on line 2.
         selected = self.rules('\nprefix_rule(pattern=["git", "status"], decision="allow")')
         default_approval = ('rules-1:prefix_rule.1', ['program: curl', 'tokens: 1', 'broad: one-token prefix'])
         selected_approval = ('rules-1:prefix_rule.2', ['program: git', 'tokens: 2'])

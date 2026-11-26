@@ -1,41 +1,26 @@
-"""The saved page holds the Markdown report's content and loads nothing (archived issue #106).
-
-The Markdown report is the reference: each check reads the page with Python's HTML parser and compares what a
-browser would show with what the Markdown report says, read with the Markdown rules in markdown_view below.
-"""
-
 from html import unescape
 from html.parser import HTMLParser
 import re
 
 from tests.overview_lists_findings_first.test_report_layout import AFTER
+from tests.support import SELECTOR_GAP
 from tests.support import FIRST, SECOND, ConfigCase, REPORT, copy_checkout, run_checkout
 from tests.findings_say_what_to_do.test_plain_findings import EXPECTED, RULES
 from tests.see_every_connection_and_setting.test_plain_gaps import PLAIN
 
-# What the page may contain: document structure, text elements and links (HTML Living Standard element index,
-# https://html.spec.whatwg.org/multipage/indices.html#elements-3). None of these runs code or loads a resource;
-# an `a` element navigates only when clicked, and its target must be https or, for the findings list (issue #82),
-# one of the page's own findings or its Not checked section, which headings name with an `id`.
 ALLOWED = {"html": {"lang"}, "head": set(), "meta": {"charset", "http-equiv", "content", "name"}, "title": set(),
            "style": set(), "body": set(), "h1": set(), "h2": {"id"}, "h3": {"id"}, "hr": set(), "p": set(), "br": set(),
            "strong": set(), "em": set(), "code": set(), "a": {"href"}, "ul": set(), "ol": {"start"}, "li": set()}
 OWN = r"#finding-\d+|#not-checked"
-# A second layer: the page tells the browser to load nothing and allow only its own inline style.
 POLICY = "default-src 'none'; style-src 'unsafe-inline'"
-# Elements with no end tag (https://html.spec.whatwg.org/multipage/syntax.html#void-elements).
 VOID = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "source", "track", "wbr"}
-# Phrasing elements, which do not separate words (https://html.spec.whatwg.org/multipage/dom.html#phrasing-content).
 INLINE = {"a", "abbr", "b", "code", "em", "i", "kbd", "mark", "q", "s", "samp", "small", "span", "strong", "sub",
           "sup", "u", "var"}
-# A word that stands for a horizontal rule in both readings; text can't produce it.
 RULE = "\x00rule"
 LINK = re.compile(r"\[([^\]\n]*)\]\((https://[^)\s]*|" + OWN + r")\)")
 
 
 class Page(HTMLParser):
-    """What a browser shows from a page's body, and every tag and attribute in the page."""
-
     def __init__(self, text):
         super().__init__(convert_charrefs=True)
         self.words, self.links, self.strong, self.em, self.code, self.tags, self.styles = [], [], [], [], [], [], []
@@ -87,13 +72,6 @@ class Page(HTMLParser):
 
 
 def markdown_view(text):
-    """The words, link targets, bold, italic and code text a Markdown previewer shows for the report.
-
-    Headings (`#`) and list items (`- `, or a number as in `1. `) are block markers, not words; a horizontal rule
-    (`---`) is the word RULE.
-    Code spans come first, as in Markdown: their text is kept as written, and `**` (bold), `*` (italic), links and
-    entities such as &#124; are read only outside them.
-    """
     words, links, strong, em, code = [], [], [], [], []
     for line in text.splitlines():
         if line == "---":
@@ -132,25 +110,19 @@ class SavedPageTests(ConfigCase):
         return markdown.stdout, (checkout / REPORT).read_text(encoding="utf-8")
 
     def test_saved_page_shows_the_markdown_reports_words_links_bold_and_code_text(self):
-        # Every rule, every kind of entry, gaps with and without a source label, and source and incident links.
         markdown, page = self.saved(FIRST, SECOND, AFTER, rules=RULES)
         expected = markdown_view(markdown)
         self.assertIn("https://github.com/chalkbadger/stay-safe/blob/0123456789abcdef0123456789abcdef01234567/"
                       "incidents.md#i13-repository-settings-run-commands-on-collaborators-machines", expected["links"])
         github = EXPECTED[("configured_program", "config-1:mcp_servers.github")]
         self.assertIn(re.match(r"\*\*(.+?)\*\*", github)[1].replace("`", ""), expected["strong"])
-        profiles = PLAIN["Profiles are outside reader coverage; a selected profile can override the reported settings."]
+        profiles = PLAIN[SELECTOR_GAP]
         self.assertIn(re.match(r"\*\*(.+?)\*\*", profiles)[1], expected["strong"])
         self.assertIn("How it has gone wrong:", expected["em"])
         self.assertIn("https://github.com/chalkbadger/stay-safe/issues/new/choose", expected["links"])
         self.assertEqual(Page(page).view(), expected)
 
     def test_found_file_labels_and_name_placeholders_show_as_text(self):
-        # A default run names found files `~/.codex/...` or `$CODEX_HOME/...` (archived issue #105), and Your setup's note on left-out
-        # values shows `[mcp_servers.<name>]`; on the page each must be code text, not markup or the expanded folder.
-        # Both Codex homes are temporary folders, so plugin discovery never reads the real home. One has a plugin in
-        # plugins/cache and an invalid features.apps (two gaps); the other leaves features.apps out, which names
-        # the ChatGPT Apps connection (archived PR #118, archived issue #121).
         self.require_no_system_folder()
         checkout = copy_checkout(self.root / "checkout")
         home, codex_home, work = self.root / "home", self.root / "codex-home", self.root / "work"
@@ -195,7 +167,6 @@ class SavedPageTests(ConfigCase):
                     if name == "href":
                         self.assertRegex(value, r"^(https://|(" + OWN + r")$)")
                     if tag == "meta" and name == "http-equiv":
-                        # HTML matches http-equiv values case-insensitively; attribute order doesn't matter.
                         self.assertEqual((value.lower(), dict(attrs).get("content")), ("content-security-policy", POLICY))
         self.assertEqual([dict(a).get("content") for t, a in parsed.tags
                           if t == "meta" and (dict(a).get("http-equiv") or "").lower() == "content-security-policy"],

@@ -3,11 +3,6 @@ import unittest
 from stay_safe.report import inspect
 from tests.support import CHATGPT_APPS, ConfigCase
 
-# Every file sets these top-level keys (a case may replace or remove one) and ends with an
-# unrelated valid server. BASELINE and BASELINE_RISKS are the anchor-only configuration's catalog
-# and risks, from the harnesses/codex.md rows for `approval_policy` `on-request`, `sandbox_mode`
-# `read-only`, `mcp_servers.*.command` `nonempty command, no url`, `shell_environment_policy`
-# `omitted` and `features.apps` `omitted`; everything a case does not name must survive each invalid value.
 TOP = {"approval_policy": '"on-request"', "sandbox_mode": '"read-only"'}
 ANCHOR = '[mcp_servers.anchor]\ncommand="synthetic-command"\n'
 BASELINE = {"approval_policy": ["on-request"], "sandbox_mode": ["read-only"],
@@ -19,15 +14,9 @@ BASELINE_RISKS = [("configured_program", "mcp_servers.anchor"), ("self_described
 BOOLEAN_GAP = "{} has an invalid boolean; its behavior is unknown."
 HOOKS_GAP = "Hook execution policy is outside reader coverage."
 APP = '[apps.cal]\nenabled=true\n'
-# With nothing else set, Codex lets an enabled app run destructive tools (harnesses/codex.md [app-tool-policy]).
-CODEX_DEFAULT = "destructive tools enabled by Codex default"
-APP_OBSERVATIONS = ["configured enabled", CODEX_DEFAULT, "tool approval: auto (default)"]
-APP_RISKS = [("destructive_tools", "apps.cal"), ("self_described_tools", "apps.cal")]
+LOAD_ERROR = "Codex cannot load this configuration file"
 TARGET_HTTP = ["configured enabled", "HTTP; endpoint withheld", "tool approval: auto (default)"]
 
-# field: (top-level overrides, tables, expected gaps,
-#         catalog entries that differ from the baseline with their observations (None: no entry),
-#         expected risks beyond the baseline).
 CASES = {
     "approval_policy": ({"approval_policy": '"yes"'}, "",
                         ["approval_policy is unsupported or invalid; its value was withheld."],
@@ -61,10 +50,6 @@ CASES = {
                                             ["A per-tool approval mode is unsupported or invalid; its value was withheld."],
                                             {"mcp_servers.target": TARGET_HTTP, "mcp_servers.target.tools.search": ["configured enabled"]},
                                             [("self_described_tools", "mcp_servers.target")]),
-    # Codex rejects this file; stay-safe's rule for invalid input applies (contracts/claims.md [see_every_connection_and_setting]):
-    # unrelated valid findings remain. A named app's enablement never comes from the template (archived issue #90), so
-    # apps.cal is unrelated and keeps its findings: harnesses/codex.md rows `apps.*.destructive_enabled`
-    # `omitted` and `apps.*.default_tools_approval_mode`.
     "apps._default.enabled": ({}, '[apps._default]\nenabled="yes"\n[apps.cal]\ndefault_tools_approval_mode="approve"\n',
                               [BOOLEAN_GAP.format("apps")],
                               {"apps._default": ["enablement unknown", "tool approval: auto (default)"],
@@ -74,36 +59,29 @@ CASES = {
     "apps.*.enabled": ({}, '[apps.cal]\nenabled="yes"\ndefault_tools_approval_mode="approve"\n',
                        [BOOLEAN_GAP.format("apps")], {"apps.cal": ["enablement unknown", "tool approval: approve"]}, []),
     "apps.*.default_tools_enabled": ({}, APP + 'default_tools_enabled="yes"\ndefault_tools_approval_mode="approve"\n',
-                                     [BOOLEAN_GAP.format("apps")], {"apps.cal": ["configured enabled", "default tools disabled or unknown", "tool approval: approve"]}, []),
-    "apps.*.destructive_enabled": ({}, APP + 'destructive_enabled="yes"\n', ["apps has an invalid destructive_enabled flag."],
-                                   {"apps.cal": ["configured enabled", "tool approval: auto (default)"]}, [("self_described_tools", "apps.cal")]),
-    # apps._default.enabled = false disables no named app (archived issue #90; openai/codex@086ccc8
-    # codex-rs/connectors/src/app_tool_policy.rs L174-L185), so apps.cal is enabled and keeps the gap above.
+                                     ["Codex cannot load this configuration file because apps.cal.default_tools_enabled is not a boolean."], {"apps.cal": [LOAD_ERROR, "default tools disabled or unknown", "tool approval: approve"]}, []),
+    "apps.*.destructive_enabled": ({}, APP + 'destructive_enabled="yes"\n', ["Codex cannot load this configuration file because apps.cal.destructive_enabled is not a boolean."],
+                                   {"apps.cal": ["Codex cannot load this configuration file", "tool approval: auto (default)"]}, []),
     "apps.*.destructive_enabled under apps._default.enabled = false": ({}, '[apps._default]\nenabled=false\n[apps.cal]\ndestructive_enabled="yes"\n',
-                                                                     ["apps has an invalid destructive_enabled flag."],
+                                                                     ["Codex cannot load this configuration file because apps.cal.destructive_enabled is not a boolean."],
                                                                      {"apps._default": ["disabled", "tool approval: auto (default)"], "features.apps": CHATGPT_APPS[:3] + ["apps not named in this file: disabled by apps._default.enabled"], 
-                                                                      "apps.cal": ["configured enabled", "tool approval: auto (default)"]},
-                                                                     [("self_described_tools", "apps.cal")]),
-    # Codex rejects this file; stay-safe's rule for invalid input applies (contracts/claims.md [see_every_connection_and_setting]): the
-    # invalid value gives a gap. A disabled apps._default keeps its own gaps, because it still supplies settings to
-    # named apps (archived issue #90's answer to https://github.com/chalkbadger/stay-safe-archive/issues/90#issuecomment-6727960187).
+                                                                      "apps.cal": ["Codex cannot load this configuration file", "tool approval: auto (default)"]}, []),
     "apps._default.destructive_enabled under apps._default.enabled = false": ({}, '[apps._default]\nenabled=false\ndestructive_enabled="yes"\n',
-                                                                             ["apps has an invalid destructive_enabled flag."],
+                                                                             ["Codex cannot load this configuration file because apps._default.destructive_enabled is not a boolean."],
                                                                              {"apps._default": ["disabled", "tool approval: auto (default)"],
                                                                               "features.apps": CHATGPT_APPS[:3] + ["apps not named in this file: disabled by apps._default.enabled"]}, []),
     "apps.*.default_tools_approval_mode": ({}, APP + 'default_tools_approval_mode="yes"\n',
-                                           ["A tool approval mode is unsupported or invalid; its value was withheld."],
-                                           {"apps.cal": ["configured enabled", CODEX_DEFAULT]}, [("destructive_tools", "apps.cal")]),
+                                           ["Codex cannot load this configuration file because apps.cal.default_tools_approval_mode is not one of auto, prompt, writes, approve."],
+                                           {"apps.cal": [LOAD_ERROR]}, []),
     "apps.*.tools.*.enabled": ({}, APP + '[apps.cal.tools.delete]\nenabled="yes"\napproval_mode="approve"\n',
-                               [BOOLEAN_GAP.format("tools")], {"apps.cal": APP_OBSERVATIONS, "apps.cal.tools.delete": ["disabled or enablement unknown", "tool approval: approve"]}, APP_RISKS),
-    # An app whose enablement is unknown might be enabled, so its tool's value can still change a finding.
+                               ["Codex cannot load this configuration file because apps.cal.tools.delete.enabled is not a boolean."], {"apps.cal": [LOAD_ERROR, "tool approval: auto (default)"], "apps.cal.tools.delete": [LOAD_ERROR, "tool approval: approve"]}, []),
     "apps.*.tools.*.enabled under unknown app enablement": ({}, '[apps.cal]\nenabled="yes"\n[apps.cal.tools.delete]\nenabled="yes"\napproval_mode="approve"\n',
-                                                         [BOOLEAN_GAP.format("apps"), BOOLEAN_GAP.format("tools")],
-                                                         {"apps.cal": ["enablement unknown", "tool approval: auto (default)"],
-                                                          "apps.cal.tools.delete": ["disabled or enablement unknown", "tool approval: approve"]}, []),
+                                                         [BOOLEAN_GAP.format("apps"), "Codex cannot load this configuration file because apps.cal.tools.delete.enabled is not a boolean."],
+                                                         {"apps.cal": [LOAD_ERROR, "tool approval: auto (default)"],
+                                                          "apps.cal.tools.delete": [LOAD_ERROR, "tool approval: approve"]}, []),
     "apps.*.tools.*.approval_mode": ({}, APP + '[apps.cal.tools.delete]\napproval_mode="yes"\n',
-                                     ["A per-tool approval mode is unsupported or invalid; its value was withheld."],
-                                     {"apps.cal": APP_OBSERVATIONS, "apps.cal.tools.delete": ["configured enabled"]}, APP_RISKS),
+                                     ["Codex cannot load this configuration file because apps.cal.tools.delete.approval_mode is not one of auto, prompt, writes, approve."],
+                                     {"apps.cal": [LOAD_ERROR, "tool approval: auto (default)"], "apps.cal.tools.delete": [LOAD_ERROR]}, []),
     "notify": ({"notify": '"synthetic-command"'}, "", ["notify is not a command list with a nonempty program."], {"notify": None}, []),
     "notify empty program": ({"notify": '[""]'}, "", ["notify is not a command list with a nonempty program."], {"notify": None}, []),
     "notify non-string argument": ({"notify": '["synthetic-command", 1]'}, "", ["notify is not a command list with a nonempty program."],
@@ -112,8 +90,6 @@ CASES = {
                 ["hooks contains an invalid event configuration.", HOOKS_GAP], {"hooks.PreToolUse": None}, []),
     "hooks.*.hooks": ({}, '[[hooks.PreToolUse]]\nhooks={type="command", command="synthetic-command"}\n',
                       ["hooks contains an invalid handler group.", HOOKS_GAP], {"hooks.PreToolUse": ["contents withheld"]}, []),
-    # Codex reads [features] toggles as booleans and rejects any other value (openai/codex@086ccc8
-    # codex-rs/features/src/lib.rs L960-L962), so whether the connection exists is unknown.
     "features.apps": ({}, '[features]\napps="yes"\n', [BOOLEAN_GAP.format("features.apps")], {"features.apps": None}, []),
     "web_search": ({"web_search": '"yes"'}, "", ["web_search is unsupported or invalid; its value was withheld."], {"web_search": None}, []),
 }
@@ -139,16 +115,8 @@ class InvalidValueTests(ConfigCase):
                 expected = [risk for risk in BASELINE_RISKS if risk[1] not in entries] + risks
                 self.assertCountEqual([(r["rule"], r["entry"].removeprefix("config-1:")) for r in report["risks"]], expected)
 
-    def test_a_disabled_app_gives_no_gap_from_its_other_settings(self):
-        # Archived issue #95: Codex disables every tool of a disabled app whatever else it sets
-        # (codex-rs/connectors/src/app_tool_policy.rs L272-L277 at 086ccc8), so none can change a finding.
-        # Only a named app's own enabled disables it: apps._default.enabled disables no named app (archived issue #90).
-        settings = {"tool enabled": ("", '[apps.cal.tools.delete]\nenabled="yes"\n'),
-                    "tool approval_mode": ("", '[apps.cal.tools.delete]\napproval_mode="yes"\n'),
-                    "unknown tool field": ("", "[apps.cal.tools.delete]\nsynthetic=1\n"),
-                    "destructive_enabled": ('destructive_enabled="yes"\n', ""),
-                    "default_tools_approval_mode": ('default_tools_approval_mode="yes"\n', ""),
-                    "default_tools_enabled": ('default_tools_enabled="yes"\n', ""),
+    def test_a_disabled_app_gives_no_gap_for_unknown_fields_or_valid_links(self):
+        settings = {"unknown tool field": ("", "[apps.cal.tools.delete]\nsynthetic=1\n"),
                     "unknown app field": ("synthetic=1\n", ""),
                     "links": ("", "[apps.cal.links.account]\ndefault_tools_approval_mode=\"approve\"\n")}
         for setting, (field, tables) in settings.items():
@@ -159,15 +127,16 @@ class InvalidValueTests(ConfigCase):
                 self.assertCountEqual([(r["rule"], r["entry"].removeprefix("config-1:")) for r in report["risks"]], BASELINE_RISKS)
 
     def test_a_disabled_app_keeps_the_gaps_of_an_app_before_it(self):
-        # The enabled app's gap is the one it gives alone (CASES "apps.*.destructive_enabled").
-        tables = '[apps.a]\ndestructive_enabled="yes"\n[apps.cal]\nenabled=false\n'
+        tables = '[apps.cal]\ndestructive_enabled="yes"\n[apps.other]\nenabled=false\n'
         report = inspect([self.config(configuration({}, tables))])
         self.assertEqual(report["inspection_gaps"], [f"config-1: {gap}" for gap in CASES["apps.*.destructive_enabled"][2]])
 
     def test_an_app_under_a_non_table_apps_default_keeps_its_gaps(self):
-        # A non-table apps._default disables no named app (archived issue #90), so the app is enabled and its settings keep their gaps.
         report = inspect([self.config(configuration({}, '[apps]\n_default=1\n[apps.cal]\n[apps.cal.tools.delete]\nenabled="yes"\n'))])
-        self.assertEqual(report["inspection_gaps"], ["config-1: apps._default must be a table.", "config-1: " + BOOLEAN_GAP.format("tools")])
+        self.assertEqual(report["inspection_gaps"], [
+            "config-1: Codex cannot load this configuration file because apps.cal.tools.delete.enabled is not a boolean.",
+            "config-1: apps._default must be a table.",
+        ])
 
     def test_notify_arguments_after_the_program_may_be_empty(self):
         report = inspect([self.config(configuration({"notify": '["synthetic-command", ""]'}, ""))])

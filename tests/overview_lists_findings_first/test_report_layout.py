@@ -1,5 +1,3 @@
-"""Readers can find results and limits without interpreting a missing section as success."""
-
 import json
 import subprocess
 import sys
@@ -7,8 +5,6 @@ import sys
 from tests.support import INCOMPLETE
 from tests.support import ConfigCase, ROOT, section
 
-# Four findings (commands_without_prompts; configured_program and self_described_tools on github;
-# environment_inheritance by default) and two gaps (profiles, an unread setting), as in the issue's After example.
 AFTER = ('approval_policy = "never"\nsandbox_mode = "read-only"\nprofile = "work"\nfuture_setting = 1\n'
          '[mcp_servers.github]\ncommand = "seed-command"\n')
 EMPTY_FINDINGS = ("None of stay-safe's rules matched your settings. That doesn't mean your setup is safe: "
@@ -16,11 +12,11 @@ EMPTY_FINDINGS = ("None of stay-safe's rules matched your settings. That doesn't
 EMPTY_GAPS = ("stay-safe checked every setting it supports in the files it read. What this report can't see, below, "
               "still applies.")
 HEADINGS = ["## Findings", "## Not checked", "## Your setup", "## Sources", "## What this report can't see"]
-# Each limit says why and what to do (reading check, 2026-11-09).
 CANT_SEE = [
-    "- Settings chosen in the app or with command-line flags, and which profile Codex uses: these can override the "
-    "files listed under Your setup, and stay-safe can't see them. Check them where you start Codex, and the "
-    "`profile` setting in your config file.",
+    "- Settings you choose in the app or with command-line flags can override your config. "
+    "Check how you start Codex. If you select a separate profile file with `--profile`, "
+    "that file can override your main config. Run stay-safe with `--config` and the path "
+    "to that file to inspect it separately.",
     "- Whether connections work, or what Codex actually allows when it runs: stay-safe only reads files; it doesn't "
     "start Codex or contact any service. Watch what Codex asks before it acts.",
     "- Private values such as commands, addresses and tokens are left out, but names like `github` are shown as "
@@ -70,7 +66,6 @@ class ReportLayoutTests(ConfigCase):
         self.assertIn("0 findings, 1 thing not checked.", gaps_only.stdout.splitlines())
         self.assertEqual(section(gaps_only.stdout, "Findings"), EMPTY_FINDINGS)
         self.assertNotIn(EMPTY_GAPS, section(gaps_only.stdout, "Not checked"))
-        # A gap without a source label: a hooks.json file in the Codex home, beside a config file without gaps.
         home = self.root / "codex-home"
         home.mkdir()
         (home / "config.toml").write_text('approval_policy = "on-request"\nsandbox_mode = "read-only"\n'

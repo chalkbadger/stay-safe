@@ -1,15 +1,3 @@
-"""destructive_tools follows the setting Codex uses to decide whether a destructive tool can run.
-
-Expected results come from Codex at 086ccc8, not from the reader's output. For a tool of an
-enabled app, Codex uses the first of these that is set: the tool's own `enabled`, the app's
-`default_tools_enabled`, then `destructive_enabled` from the app, then `apps._default`, then true.
-A tool without a destructive mark counts as destructive.
-- Order: https://github.com/openai/codex/blob/086ccc833bc9cf01024ad2dd6af7dbd421b6bf9a/codex-rs/connectors/src/app_tool_policy.rs#L279-L305
-- Tests of that order: https://github.com/openai/codex/blob/086ccc833bc9cf01024ad2dd6af7dbd421b6bf9a/codex-rs/connectors/src/app_tool_policy_tests.rs#L685-L770
-- An `apps._default` table without `destructive_enabled` holds true:
-  https://github.com/openai/codex/blob/086ccc833bc9cf01024ad2dd6af7dbd421b6bf9a/codex-rs/config/src/types.rs#L471-L476
-"""
-
 from stay_safe.report import inspect
 from tests.support import ConfigCase
 
@@ -20,7 +8,6 @@ AUTO = "tool approval: auto (default)"
 
 class DestructiveToolTests(ConfigCase):
     def destructive(self, tail):
-        """Return each destructive_tools risk as (entry, configured evidence)."""
         report = inspect([self.config(BASE + tail)])
         self.assertEqual(report["inspection_gaps"], [])
         return [(r["entry"].removeprefix("config-1:"), r["configured_evidence"])
@@ -39,16 +26,12 @@ class DestructiveToolTests(ConfigCase):
             self.assert_destructive(tail, [("apps.files", evidence)])
 
     def test_risk_names_where_destructive_enabled_true_comes_from(self):
-        # An enabled template with destructive_enabled = true also gives the risk for apps the file does not name
-        # (issue #139; app_tool_policy.rs L287-L294 at 086ccc8).
         template = [("apps._default", ["configured enabled", "applies to apps not named in this file",
                                        "destructive tools enabled by apps._default.destructive_enabled", AUTO])]
         for tail, source, unnamed in [
             ('[apps.files]\ndestructive_enabled=true', "destructive_enabled", []),
             ('[apps._default]\ndestructive_enabled=false\n[apps.files]\ndestructive_enabled=true', "destructive_enabled", []),
             ('[apps._default]\ndestructive_enabled=true\n[apps.files]', "apps._default.destructive_enabled", template),
-            # apps._default.enabled = false leaves this app enabled (archived issue #90; app_tool_policy.rs L174-L185 at
-            # 086ccc8), and destructive_enabled still falls back to the template (L287-L294 at 086ccc8).
             ('[apps._default]\nenabled=false\ndestructive_enabled=true\n[apps.files]', "apps._default.destructive_enabled", []),
         ]:
             self.assert_destructive(tail, unnamed + [("apps.files", ["configured enabled", "destructive tools enabled by " + source, AUTO])])
@@ -79,7 +62,6 @@ class DestructiveToolTests(ConfigCase):
 
     def test_no_risk_when_no_setting_lets_destructive_tools_run(self):
         for tail, observations in [
-            # A disabled app runs no tools, whatever its tool settings say (app_tool_policy.rs L272-L277).
             ('[apps.files]\nenabled=false\ndefault_tools_enabled=true\n[apps.files.tools.delete]\nenabled=true',
              {"apps.files": ["disabled", AUTO],
               "apps.files.tools.delete": ["disabled or enablement unknown", "tool approval: auto"]}),
@@ -94,8 +76,6 @@ class DestructiveToolTests(ConfigCase):
             ('[apps._default]\ndestructive_enabled=false\n[apps.files]',
              {"apps._default": ["configured enabled", "destructive tools disabled by apps._default.destructive_enabled", AUTO],
               "apps.files": ["configured enabled", "destructive tools disabled by apps._default.destructive_enabled", AUTO]}),
-            # The same under apps._default.enabled = false, which disables no named app (archived issue #90; app_tool_policy.rs
-            # L174-L185 at 086ccc8); destructive_enabled still falls back to the template (L287-L294 at 086ccc8).
             ('[apps._default]\nenabled=false\ndestructive_enabled=false\n[apps.files]',
              {"apps._default": ["disabled", AUTO],
               "apps.files": ["configured enabled", "destructive tools disabled by apps._default.destructive_enabled", AUTO]}),

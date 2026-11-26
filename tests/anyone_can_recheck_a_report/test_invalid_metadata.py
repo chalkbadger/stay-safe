@@ -14,7 +14,6 @@ ZERO = "0" * 40
 
 class InvalidMetadataTests(GitCase):
     def repository(self, name):
-        """A one-commit repository whose `main` is packed only, with a commit any wrong reading would return."""
         repo = self.root / name
         repo.mkdir()
         self.git(repo, "init", "-b", "main")
@@ -24,7 +23,6 @@ class InvalidMetadataTests(GitCase):
         return repo, commit
 
     def test_rejected_names_and_bad_values_report_revision_unknown_without_contents(self):
-        """Rejected names, non-hex and all-zero values in HEAD, loose refs or packed-refs, or no HEAD, give no commit and no contents."""
         cases = {
             "HEAD all zeros": {"HEAD": ZERO},
             "HEAD non-hex": {"HEAD": SECRET},
@@ -36,9 +34,6 @@ class InvalidMetadataTests(GitCase):
             "HEAD relative path": {"HEAD": f"ref: ../../{SECRET}"},
             "HEAD absent": {"HEAD": None},
             "HEAD missing ref": {"HEAD": "ref: refs/heads/missing"},
-            # Git writes HEAD as "ref: %s\n" and trims only ASCII whitespace (sane_ctype) when reading it, so it
-            # keeps \x1f, and check-ref-format rejects that name. Git v2.43.0 refs/files-backend.c lines 456 and 1931,
-            # strbuf.c strbuf_rtrim, ctype.c: https://github.com/git/git/blob/564d0252ca632e0264ed670534a51d18a689ef5d/refs/files-backend.c#L456
             "HEAD rejected trailing \\x1f": {"HEAD": "ref: refs/heads/a\x1f", "refs/heads/a": "{commit}"},
             "loose all zeros": {"refs/heads/main": ZERO},
             "loose non-hex": {"refs/heads/main": SECRET},
@@ -63,7 +58,6 @@ class InvalidMetadataTests(GitCase):
                 self.assertNotIn(SECRET, json.dumps(result))
 
     def test_seeded_secret_in_packed_refs_gives_status_2_without_showing_it(self):
-        """A malformed packed-refs line holding a secret, beside an all-zero entry, gives revision unknown and status 2."""
         checkout = self.checkout()
         self.git(checkout, "pack-refs", "--all", "--prune")
         (checkout / ".git/packed-refs").write_text(

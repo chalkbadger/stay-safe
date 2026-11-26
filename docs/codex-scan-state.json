@@ -1,0 +1,10 @@
+{
+  "last_scanned_tag": "rust-v0.172.0",
+  "last_scanned_commit": "3d86e43b075adeba2193ec5c22ac92f55afd82e6",
+  "reviewed_behavior": "See the row-specific evidence and checked versions in harnesses/codex.md.",
+  "scan_record": "https://github.com/chalkbadger/stay-safe/pull/131#issuecomment-7176657473",
+  "pending_review": "Consult the retained scan for unresolved findings in earlier comparisons before extending other reviewed behavior ranges.",
+  "field_reviews": {
+    "rust-v0.172.0": "codex-0.172.0-fields.md"
+  }
+}

@@ -1,10 +1,3 @@
-"""`--save` writes only its own report file in the checkout, then prints the Markdown report and a command that
-opens the page (archived issue #106 and @weiks's decision after his macOS run).
-
-Each run uses a copy of the checkout outside the home and working directories, with Python's bytecode cache off:
-the claim is about stay-safe's code, and Python's own cache (stay_safe/__pycache__, in .gitignore) is outside it.
-"""
-
 from contextlib import redirect_stdout
 import io
 import os
@@ -21,13 +14,9 @@ from tests.support import FEEDBACK, INCOMPLETE
 from tests.support import ConfigCase, REPORT, copy_checkout, run_checkout, tree_state
 
 NO_GAPS = 'approval_policy = "on-request"\nsandbox_mode = "read-only"\nshell_environment_policy = { inherit = "none" }\n'
-# The one line archived issue #106 asks for when the file can't be written; error details are withheld.
 NOT_SAVED = "Could not save stay-safe-report.html in the stay-safe folder; the full report follows.\n"
-# The last line archived issue #106 now asks for, before its command; the command is `open` on macOS, `xdg-open` elsewhere.
 OPEN_WITH = "Saved the formatted report. Open it with: "
 OPENER = "open" if sys.platform == "darwin" else "xdg-open"
-# A checkout folder name a shell would misread unless the path is quoted: a space, double quotes, `$`, a backtick,
-# a single quote, `!`, `#` and `%`.
 FOLDER = "check out \"1\" $HOME `id` it's !x #2 %20"
 
 
@@ -44,7 +33,7 @@ class SaveTests(ConfigCase):
         return run_checkout(self.checkout, *args, cwd=self.work, env=self.env, user=user)
 
     def test_without_save_nothing_is_written_and_with_save_only_the_report_is_added_or_replaced(self):
-        self.require_no_system_folder()  # one run below is a default run
+        self.require_no_system_folder()
         config = str(self.config(AFTER))
         report = self.checkout / REPORT
         before = tree_state(self.root)
@@ -92,9 +81,7 @@ class SaveTests(ConfigCase):
                 self.assertEqual(run.stdout[:len(plain.stdout)], plain.stdout)
                 last = run.stdout[len(plain.stdout):]
                 self.assertTrue(last.startswith(OPEN_WITH) and last.endswith("\n") and last.count("\n") == 1, last)
-                # The shell's own reading of the command (shlex follows POSIX sh quoting) gives the page's plain path.
                 self.assertEqual(shlex.split(last[len(OPEN_WITH):]), [OPENER, page])
-        # Pasted into a shell, the command hands the opener exactly that path; a stand-in opener records it.
         command = last[len(OPEN_WITH):].rstrip("\n")
         tools, record = self.root / "tools", self.root / "opened.txt"
         tools.mkdir()
@@ -127,7 +114,7 @@ class SaveTests(ConfigCase):
     def test_when_the_report_cannot_be_written_one_line_says_so_then_the_markdown_report_follows(self):
         cases = [("report path is a folder", None)]
         if os.geteuid() == 0:
-            cases.append(("checkout is read-only", "nobody"))  # root can write to a read-only folder
+            cases.append(("checkout is read-only", "nobody"))
         else:
             cases.append(("checkout is read-only", None))
         for name, user in cases:
@@ -159,5 +146,5 @@ class SaveTests(ConfigCase):
         self.assertEqual((run.returncode, run.stdout, run.stderr),
                          (2, "", "--save can't be combined with --format json. Use --help.\n" + FEEDBACK))
         help_text = self.run_save("--help").stdout
-        self.assertIn("Not with --format json.", " ".join(help_text.split()))
+        self.assertIn("Use --save with Markdown output only.", " ".join(help_text.split()))
         self.assertEqual(tree_state(self.root), before)

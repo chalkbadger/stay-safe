@@ -1,30 +1,3 @@
-"""Skills in skills/ and an environments.toml file in the Codex home, in a run with no file arguments (issue #142).
-
-Expected results follow openai/codex@086ccc833bc9cf01024ad2dd6af7dbd421b6bf9a (links are to codex-rs/ there):
-- Skills. For the User layer, whose config folder is the Codex home, Codex loads skills from `skills` there
-  (ext/skills/src/host_roots.rs L134-L140, L28). A skill can name an MCP server that Codex installs and starts
-  (core/src/mcp_skill_dependencies.rs L40-L83, L115-L150), without asking when the approval prompt is
-  auto-approved (L245-L257).
-  - A skill is a file named exactly `SKILL.md` anywhere in the walk (ext/skills/src/loader/mod.rs L19;
-    loader/discovery.rs L142-L154, recursive mode for a non-plugin root: loader/host.rs L104-L110).
-  - The walk descends from the root (depth 0) into directories at depth below 6 (loader/mod.rs L24;
-    loader/discovery.rs L69-L72; exec-server/src/local_file_system.rs L860), so `SKILL.md` six folders down
-    is found and seven folders down is not.
-  - Hidden folders are skipped (loader/host.rs L176-L180; local_file_system.rs L861-L863;
-    loader/discovery.rs L121, L179-L191). Codex writes its own bundled skills to the hidden `skills/.system`
-    (skills/src/lib.rs L66-L70, L72-L104; called at startup from ext/skills/src/host_service.rs L432), so those
-    alone are not skills someone added.
-  - Folder symlinks are followed for the User scope (loader/host.rs L164-L167); a symlinked file is skipped
-    (local_file_system.rs L837-L839). A `skills` path that is not a folder holds no skills (L765-L767), and a
-    missing one gives no skills (loader/discovery.rs L88).
-- environments.toml. Codex reads `environments.toml` in the Codex home (exec-server/src/environment_toml.rs
-  L26, L234-L246; exec-server/src/environment.rs L194-L209). An entry can name a `program` with `args` that
-  Codex runs as the exec server (environment_toml.rs L49-L50, L183-L198). A missing file, including a broken
-  link, is skipped; other read failures are errors, so a folder by that name gets its own gap (L330-L341).
-The gap texts follow the issue: each names the location and says it was not inspected; contents are not read.
-A failure to check either location gets its own gap, as for the plugin cache (archived issue #116).
-"""
-
 from contextlib import redirect_stderr, redirect_stdout
 import io
 import json
@@ -51,7 +24,6 @@ PRIVATE = ('private-skill', 'private-description', 'private-env', 'private-progr
 
 class SkillsAndEnvironmentsTests(ConfigCase):
     def home(self, name, skills=(), config=True):
-        # As in test_hooks_json.py: a home directory holding .codex/. With nothing else in it the run exits 0.
         home = self.root / name / '.codex'
         home.mkdir(parents=True)
         if config:
@@ -73,10 +45,9 @@ class SkillsAndEnvironmentsTests(ConfigCase):
             self.assertNotIn(private, text)
         return code, (json.loads(text)['inspection_gaps'] if fmt == 'json' else text)
 
-    # Skills
 
     def test_a_skill_in_the_skills_folder_gives_the_gap_and_exits_2(self):
-        deep = '/'.join(f'd{n}' for n in range(1, 7)) + '/SKILL.md'  # six folders below skills/
+        deep = '/'.join(f'd{n}' for n in range(1, 7)) + '/SKILL.md'
         cases = [('one skill', ['deploy/SKILL.md']),
                  ('several skills', ['deploy/SKILL.md', 'review/SKILL.md']),
                  ('skill in a group folder', ['team/deploy/SKILL.md']),
@@ -102,21 +73,17 @@ class SkillsAndEnvironmentsTests(ConfigCase):
             (home / 'skills').symlink_to(target, target_is_directory=True)
             self.assertEqual(self.run_report(home), (2, [SKILLS_GAP]))
         with self.subTest(kind='a longer link to a skill folder beside its shorter route'):
-            # Review of #142: Codex walks breadth-first, so the short route lists the folder; a link that reaches
-            # it near the depth limit must not hide the skill below it.
             home = self.home('two-routes', ['team/deploy/SKILL.md'])
             deep = home / 'skills' / 'a' / 'b' / 'c' / 'd' / 'e'
             deep.mkdir(parents=True)
             (deep / 'link').symlink_to(home / 'skills' / 'team', target_is_directory=True)
             real = os.listdir
-            # Sorted listing puts the long route (a/...) before team/, the order that hid the skill.
             with patch('os.listdir', lambda path: sorted(real(path))):
                 self.assertEqual(self.run_report(home), (2, [SKILLS_GAP]))
         with self.subTest(kind='CODEX_HOME unset'):
             home = self.home('unset', ['deploy/SKILL.md'])
             self.assertEqual(self.run_report(home, env={'HOME': str(home.parent)}), (2, [SKILLS_GAP]))
         with self.subTest(kind='no config.toml'):
-            # The missing file's own gaps belong to other claims.
             code, gaps = self.run_report(self.home('no-config', ['deploy/SKILL.md'], config=False))
             self.assertEqual(code, 2)
             self.assertIn(SKILLS_GAP, gaps)
@@ -127,7 +94,7 @@ class SkillsAndEnvironmentsTests(ConfigCase):
             self.assertIn('Review the skills in `skills` yourself.', text)
 
     def test_skills_folder_without_a_skill_gives_no_gap(self):
-        seven = '/'.join(f'd{n}' for n in range(1, 8)) + '/SKILL.md'  # seven folders below skills/
+        seven = '/'.join(f'd{n}' for n in range(1, 8)) + '/SKILL.md'
         cases = [('no skills folder', None), ('empty skills folder', []),
                  ('only Codex system skills', ['.system/imagegen/SKILL.md', '.system/.codex-system-skills.marker']),
                  ('skill in a hidden folder', ['.private/deploy/SKILL.md']),
@@ -179,7 +146,6 @@ class SkillsAndEnvironmentsTests(ConfigCase):
                     for private in (str(home), 'private-group', 'private-error'):
                         self.assertNotIn(private, result if fmt == 'markdown' else json.dumps(result))
         with self.subTest(kind='a skill found beside an unlistable folder'):
-            # A skill Codex loads is already known, so the report names it rather than the failure.
             home = self.home('found-and-denied', ['a-deploy/SKILL.md', 'private-group/private-skill/README.md'])
             denied_path = home / 'skills' / 'private-group'
             real = os.listdir
@@ -188,8 +154,6 @@ class SkillsAndEnvironmentsTests(ConfigCase):
                 self.assertEqual(self.run_report(home), (2, [SKILLS_GAP]))
 
     def test_permission_error_on_a_linked_skills_folder_reports_failure(self):
-        # Second review of #142: a folder link whose target can't be checked is not an absent folder. Path.is_dir()
-        # reports it as absent, so the walk checks the file type with os.stat and keeps other errors.
         for where in ('skills root', 'inside skills'):
             home = self.home(where.replace(' ', '-'))
             outside = self.root / (where.replace(' ', '-') + '-outside')
@@ -202,7 +166,7 @@ class SkillsAndEnvironmentsTests(ConfigCase):
                 (home / 'skills').mkdir()
                 (home / 'skills' / 'linked').symlink_to(target, target_is_directory=True)
             real_stat, real_listdir = os.stat, os.listdir
-            prefix = str(outside.resolve())  # resolved before os.stat is patched
+            prefix = str(outside.resolve())
             inside = lambda path: os.path.realpath(path).startswith(prefix)
 
             def denied_stat(path, *args, follow_symlinks=True, **kwargs):
@@ -227,7 +191,6 @@ class SkillsAndEnvironmentsTests(ConfigCase):
 
     @unittest.skipIf(os.name != 'posix' or os.geteuid() == 0, 'needs a POSIX user that file permissions apply to')
     def test_unreadable_parent_of_a_linked_skills_folder_reports_failure(self):
-        # The same check with real permissions, as in the review: deny access to the link target's parent.
         home = self.home('chmod')
         parent = self.root / 'chmod-outside'
         (parent / 'target' / 'deploy').mkdir(parents=True)
@@ -241,7 +204,6 @@ class SkillsAndEnvironmentsTests(ConfigCase):
             parent.chmod(0o755)
         self.assertEqual(self.run_report(home), (2, [SKILLS_GAP]))
 
-    # environments.toml
 
     def test_environments_toml_gives_the_gap_and_exits_2(self):
         for kind in ['file with a program', 'empty file', 'symlink to a file', 'CODEX_HOME unset', 'no config.toml']:
@@ -278,8 +240,6 @@ class SkillsAndEnvironmentsTests(ConfigCase):
                 self.assertEqual(self.run_report(home), (0, []))
 
     def test_environments_toml_that_is_not_a_file_gives_its_own_gap(self):
-        # Review of #142: Codex treats read failures other than a missing file as errors (environment_toml.rs
-        # L330-L341), so a folder by that name is not the same as no file.
         for kind in ['folder', 'symlink to a folder']:
             with self.subTest(kind=kind):
                 home = self.home(kind.replace(' ', '-'))
@@ -315,7 +275,6 @@ class SkillsAndEnvironmentsTests(ConfigCase):
                 for private in (str(home), 'private-error'):
                     self.assertNotIn(private, result if fmt == 'markdown' else json.dumps(result))
 
-    # Both, and runs with file arguments
 
     def test_skills_and_environments_toml_each_give_their_own_gap(self):
         home = self.home('both', ['deploy/SKILL.md'])
@@ -330,7 +289,6 @@ class SkillsAndEnvironmentsTests(ConfigCase):
         rules = self.config('prefix_rule(pattern=["git", "status"], decision="allow")\n', 'default.rules')
         for args in [['--config', str(config)], ['--rules', str(rules)], ['--config', str(config), '--rules', str(rules)]]:
             with self.subTest(args=args[0::2]):
-                # The same as with neither.
                 result = self.run_report(home, args)
                 self.assertEqual(result, self.run_report(without, args))
                 self.assertNotIn(SKILLS_GAP, result[1])

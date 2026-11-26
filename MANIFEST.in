@@ -1,1 +1,1 @@
-include incidents.md harnesses/codex.md stay_safe/release.txt
+include incidents.md harnesses/codex.md harnesses/claude-code.md stay_safe/release.txt

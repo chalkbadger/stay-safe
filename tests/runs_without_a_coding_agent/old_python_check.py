@@ -1,11 +1,3 @@
-"""Run stay-safe on a real Python older than 3.11, both as `python -m stay_safe` and `python stay_safe` (issue #48).
-
-The CI job in .github/workflows/checks.yml runs this with Python 3.9, and on macOS also with Apple's /usr/bin/python3.
-Each run gets a PATH holding only a temporary folder: empty, so the message links to Python setup, or
-holding a runnable python3.12 (and a python3.13 that can't be run), so the message names python3.12. It checks the
-exit status 2, the exact message and feedback link on stderr, an empty stdout, and that the fake python3.12 was not started. On Python 3.11
-or newer nothing is checked, so it fails. Not a unittest module: the test suite runs on Python 3.11+.
-"""
 import os
 from pathlib import Path
 import subprocess

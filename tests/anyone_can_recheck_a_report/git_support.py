@@ -1,4 +1,3 @@
-"""Shared Git fixtures for the tests that a report can be rechecked. Git metadata: https://git-scm.com/docs/gitrepository-layout"""
 import shutil
 import subprocess
 import sys
@@ -13,7 +12,6 @@ class GitCase(ConfigCase):
                                        cwd=root, text=True, stderr=subprocess.PIPE, timeout=10).strip()
 
     def checkout(self, name="checkout"):
-        """Copy this checkout's files into a new repository with one commit."""
         target = self.root / name
         shutil.copytree(ROOT, target, ignore=shutil.ignore_patterns(".git", "__pycache__"))
         self.git(target, "init", "-b", "main")

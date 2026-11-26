@@ -1,4 +1,3 @@
-"""Build and run the artifacts outside the source tree, with no network access."""
 import json
 import os
 from pathlib import Path
@@ -32,6 +31,9 @@ class PackageTests(unittest.TestCase):
             wheel = next((source / 'dist').glob('*.whl'))
             install = base / 'installed'
             with zipfile.ZipFile(wheel) as archive:
+                self.assertFalse(any(name.endswith("sarif-schema-2.1.0.json") for name in archive.namelist()))
+                self.assertEqual(archive.read("stay_safe/data/harnesses/claude-code.md"),
+                                 (source / "harnesses/claude-code.md").read_bytes())
                 archive.extractall(install)
                 metadata = archive.read(next(n for n in archive.namelist() if n.endswith('/METADATA'))).decode()
                 self.assertIn('Requires-Python: >=3.11', metadata)
@@ -96,9 +98,9 @@ class PackageTests(unittest.TestCase):
             self.assertEqual([r['rule'] for r in corrupt_result['risks']], [r['rule'] for r in expected['risks']])
             self.assertTrue(all(r['rule_source'] is None for r in corrupt_result['risks']))
             self.assertNotIn('private-invalid-stamp', corrupt.stdout + corrupt.stderr)
-            # `build` builds its wheel from the sdist by default: this also checks the source distribution.
             with tarfile.open(next((source / 'dist').glob('*.tar.gz'))) as archive:
                 names = archive.getnames()
+                self.assertTrue(any(n.endswith('/harnesses/claude-code.md') for n in names))
                 self.assertTrue(any(n.endswith('/incidents.md') for n in names))
                 stamp = archive.extractfile(next(n for n in names if n.endswith('/stay_safe/release.txt'))).read().decode().strip()
                 self.assertEqual(stamp, revision)

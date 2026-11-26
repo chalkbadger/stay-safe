@@ -1,9 +1,3 @@
-"""Protect a complete, navigable overview and an honest account of inspection gaps (issue #82).
-
-Ordering expectations come from the policy in docs/report.md, not the renderer's sorting table.
-One introduction example checks the copy; other cases check the facts a reader could be misled about.
-"""
-
 from html.parser import HTMLParser
 import json
 import re
@@ -11,8 +5,9 @@ import subprocess
 import sys
 
 from stay_safe.report import inspect, render
+from tests.support import SELECTOR_GAP
 from tests.support import without_rule_links
-from tests.support import INCOMPLETE, ROOT, ConfigCase, section
+from tests.support import INCOMPLETE, REPORT, ROOT, ConfigCase, copy_checkout, run_checkout, section
 
 GROUP_1 = "**Nothing stands between a mistaken or injected instruction and your computer**"
 GROUP_2 = "**Network access, credentials, and connected tools**"
@@ -23,11 +18,9 @@ LEAD_IN = "Here are the findings for you to review, with actionable advice."
 NO_FINDINGS = ("None of stay-safe's rules matched your settings. That doesn't mean your setup is safe: "
                "see what stay-safe didn't check and what this report can't see, below.")
 
-SANDBOX_OFF = "Your config turns off Codex's sandbox."
+SANDBOX_OFF = "Your config turns off Codex’s sandbox."
 
-# Explicit supported settings with no findings or inspection gaps.
 QUIET = 'approval_policy = "on-request"\nsandbox_mode = "read-only"\nshell_environment_policy = { inherit = "none" }\n'
-# Findings from every group; `profile` adds one thing not checked.
 EVERY_GROUP = """approval_policy = "never"
 sandbox_mode = "danger-full-access"
 profile = "work"
@@ -39,7 +32,6 @@ command = "seed-command"
 url = "https://seed-host.example/mcp"
 default_tools_approval_mode = "approve"
 """
-# The rules of group 2 that EVERY_GROUP lacks, each on two settings or files.
 CHANNELS = QUIET.replace("read-only", "workspace-write") + """
 [sandbox_workspace_write]
 network_access = true
@@ -50,16 +42,13 @@ default_tools_approval_mode = "prompt"
 [apps.calendar]
 default_tools_approval_mode = "prompt"
 """
-# Saved approvals on lines 2 and 10: as text "10" sorts before "2", as line numbers after it.
 APPROVALS = ('\nprefix_rule(pattern=["git", "status"], decision="allow")\n' + "\n" * 7
              + 'prefix_rule(pattern=["curl"], decision="allow")\n')
 SANDBOX_ONLY = QUIET.replace("read-only", "danger-full-access")
-# With danger-full-access, on-request lets ordinary commands run without asking (issue #141).
 MOST_COMMANDS = "With these settings, Codex runs most commands without asking you."
 
 
 def overview(report):
-    """The paragraphs between the title and the Findings section."""
     head, found, _ = report.partition("\n\n## Findings\n\n")
     if not found:
         raise AssertionError("The report has no Findings section.")
@@ -67,7 +56,6 @@ def overview(report):
 
 
 def listed(report):
-    """The findings list: (group heading, number, text after the number) for each line, in order."""
     lines, heading = [], None
     for paragraph in overview(report):
         if paragraph.startswith("**"):
@@ -81,7 +69,6 @@ def listed(report):
 
 
 def details(report):
-    """The detailed findings in order: (number, headline, rule, entry), read from each finding's own lines."""
     body = section(without_rule_links(report), "Findings")
     found = []
     for item in body.split("\n\n---\n\n"):
@@ -93,9 +80,6 @@ def details(report):
 
 
 class Targets(HTMLParser):
-    """A saved page's links (overview_links: those before the first id), its elements with an id, and the text
-    that follows each id up to the next one."""
-
     def __init__(self, text):
         super().__init__(convert_charrefs=True)
         self.links, self.overview_links, self.ids, self.text, self.tags, self.words = [], [], [], {}, [], []
@@ -122,6 +106,17 @@ class Targets(HTMLParser):
 
 
 class OverviewTests(ConfigCase):
+    def test_claude_finding_groups_keep_numbered_lists_in_markdown_and_html(self):
+        path = self.config(json.dumps({"permissions": {"defaultMode": "default",
+                                                      "allow": ["Bash", "Bash(git status)", "WebFetch"]}}))
+        checkout = copy_checkout(self.root / "checkout")
+        run = run_checkout(checkout, "--agent", "claude", "--config", str(path), "--format", "markdown",
+                           "--save", cwd=checkout)
+        self.assertEqual(run.returncode, 0)
+        self.assertRegex(run.stdout, r"(?m)^2\. .*\n\n\*\*Network access\*\*\n\n3\. ")
+        page = (checkout / REPORT).read_text()
+        self.assertEqual(re.findall(r'<ol start="(\d+)">', page), ["1", "3"])
+
     def report(self, *texts, rules=None):
         paths = [self.config(text, f"config-{index}.toml") for index, text in enumerate(texts, 1)]
         return inspect(paths, rules_path=self.config(rules, "selected.rules") if rules is not None else None)
@@ -141,7 +136,6 @@ class OverviewTests(ConfigCase):
             ("network_access", "config-2:sandbox_workspace_write.network_access"),
             ("network_access", "config-3:sandbox_workspace_write.network_access"),
             ("environment_inheritance", "config-1:shell_environment_policy"),
-            # never with danger-full-access can let tool calls run without asking (issue #141).
             ("automatic_tools", "config-1:approval_policy"),
             ("automatic_tools", "config-1:mcp_servers.search"),
             ("configured_program", "config-1:mcp_servers.github"),
@@ -153,7 +147,6 @@ class OverviewTests(ConfigCase):
         self.assertEqual(listed(markdown), [
             (heading, number, f"[{headline}](#finding-{number}) (`{entry.split(':')[0]}`)")
             for heading, (number, headline, _, entry) in zip(headings, found)])
-        # The terminal retains the same titles and numbers without links.
         plain = render(report, "plain")
         for number, headline, _, entry in found:
             line = f"{number}. {headline.replace('`', '')} ({entry.split(':')[0]})"
@@ -169,7 +162,6 @@ class OverviewTests(ConfigCase):
                                             (GROUP_1, 2, f"[{SANDBOX_OFF}](#finding-2) (`config-2`)"),
                                             (GROUP_1, 3, f"[{MOST_COMMANDS}](#finding-3) (`config-1`)"),
                                             (GROUP_1, 4, f"[{MOST_COMMANDS}](#finding-4) (`config-2`)")])
-        # Check Markdown heading destinations; actual browser navigation is a separate observation.
         body = section(markdown, "Findings")
         for number in (1, 2):
             heading = f"Finding {number}"
@@ -178,7 +170,6 @@ class OverviewTests(ConfigCase):
             self.assertTrue(finding.startswith(f"**{SANDBOX_OFF}** "), finding)
             self.assertIn(f"*Rule `unrestricted_filesystem` · setting `config-{number}:sandbox_mode` = ", without_rule_links(finding))
         self.assertEqual(markdown.count("\n## Not checked\n"), 1)
-        # Saved page: each link's target is one element's id, and the finding that follows it is that file's.
         page = Targets(render(report, "html"))
         self.assertEqual([link for link in page.links if link.startswith("#")],
                          ["#finding-1", "#finding-2", "#finding-3", "#finding-4"])
@@ -190,7 +181,6 @@ class OverviewTests(ConfigCase):
             self.assertIn(f"config-{number}:sandbox_mode", page.text[f"finding-{number}"])
             self.assertNotIn(f"config-{3 - number}:sandbox_mode", page.text[f"finding-{number}"])
         self.assertTrue(page.text["not-checked"].startswith("Not checked"))
-        # A single file needs no disambiguating label.
         self.assertEqual(listed(render(self.report(SANDBOX_ONLY), "markdown")),
                          [(GROUP_1, 1, f"[{SANDBOX_OFF}](#finding-1)"),
                           (GROUP_1, 2, f"[{MOST_COMMANDS}](#finding-2)")])
@@ -219,7 +209,6 @@ class OverviewTests(ConfigCase):
                         self.assertIn(f"{count_phrase} {topic}.", text)
 
     def test_representative_introduction_explains_results_and_limits(self):
-        # A default run, as in the issue's example: both files exist where Codex keeps them.
         self.require_no_system_folder()
         home = self.root / "home"
         (home / ".codex" / "rules").mkdir(parents=True)
@@ -252,7 +241,7 @@ class OverviewTests(ConfigCase):
         markdown = render(report, "markdown")
         self.assertIn(NO_FINDINGS, section(markdown, "Findings"))
         self.assertIn("1 thing not checked", "\n".join(overview(markdown)))
-        self.assertIn("Not checked: your profiles", section(markdown, "Not checked"))
+        self.assertIn("This file uses an old way to select a profile.", section(markdown, "Not checked"))
         self.assertEqual(listed(markdown), [])
         self.assertNotIn("#finding", markdown)
         plain = render(report, "plain")
@@ -296,8 +285,6 @@ class OverviewTests(ConfigCase):
                     self.assertNotIn("not checked:", intro)
 
     def test_names_with_markdown_or_html_characters_are_escaped_in_the_list_and_links_stay_https_or_own(self):
-        # Codex's own names cannot hold these characters today (stay_safe/codex.py NAME), so this sets entry
-        # names on a report, as tests/share_without_exposing_secrets/test_page.py does.
         names = ["<b>bold</b>", "*x*", "[x](javascript:alert(1))", "a](https://example.com/)[b", "<script>alert(1)</script>"]
         report = self.report(QUIET + "".join(f'[mcp_servers.s{index}]\ncommand = "seed-command"\n'
                                              for index in range(len(names))))
@@ -306,7 +293,6 @@ class OverviewTests(ConfigCase):
         for risk, name in zip(programs, names):
             risk["entry"] = f"config-1:mcp_servers.{json.dumps(name)}"
         markdown, plain, html = (render(report, name) for name in ("markdown", "plain", "html"))
-        # Names remain code text inside each line's link. Backticks and newlines are outside Codex's NAME.
         written = [f"`{name}`" for name in names]
         lines = [(number, text) for heading, number, text in listed(markdown) if heading == GROUP_3]
         self.assertCountEqual([re.sub(r"\(#finding-(\d+)\)$", "", text) for _, text in lines],
@@ -320,7 +306,6 @@ class OverviewTests(ConfigCase):
             self.assertRegex(plain, r"\n\d+\. " + re.escape(sentence) + r"\n")
         self.assertEqual([tag for tag in page.tags if tag in {"script", "b", "img"}], [])
         own = [f"#finding-{number}" for number in range(1, len(report["risks"]) + 1)]
-        # The list and the line after it hold exactly the links to the page's own findings and Not checked section.
         self.assertEqual(page.overview_links, own)
         self.assertEqual([link for link in page.links if not link.startswith("https://")], own)
         for link in own:
@@ -328,8 +313,6 @@ class OverviewTests(ConfigCase):
 
 
 class UnchangedTests(ConfigCase):
-    """Presentation ordering must not reorder the machine-readable report or change command status."""
-
     def test_overview_order_does_not_change_json_or_exit_status(self):
         for suffix, status in (("", 0), ('profile = "work"\n', 2)):
             with self.subTest(status=status):
@@ -349,4 +332,4 @@ class UnchangedTests(ConfigCase):
                                   ("commands_without_prompts", "config-1:approval_policy"),
                                   ("configured_program", "config-1:notify")])
                 self.assertEqual(report["inspection_gaps"], [] if status == 0 else [
-                    "config-1: Profiles are outside reader coverage; a selected profile can override the reported settings."])
+                    "config-1: " + SELECTOR_GAP])

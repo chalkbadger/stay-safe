@@ -1,14 +1,68 @@
+import ast
+import io
 import re
 import shlex
 import shutil
 import subprocess
 import sys
 import tempfile
+import tokenize
 import unittest
 from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
+DOCUMENTED = (ast.Module, ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)
+
+
+def comments_and_docstrings(root):
+    names = subprocess.run(['git', 'ls-files', '-z', '--', '*.py'], cwd=root, check=True, capture_output=True,
+                           text=True).stdout.split('\0')
+    found = []
+    for name in filter(None, names):
+        path = root / name
+        if not path.is_file():
+            continue
+        source = path.read_text(encoding='utf-8')
+        for token in tokenize.generate_tokens(io.StringIO(source).readline):
+            if token.type == tokenize.COMMENT:
+                found.append(f'{name}:{token.start[0]}: comment')
+        for node in ast.walk(ast.parse(source)):
+            if isinstance(node, DOCUMENTED) and ast.get_docstring(node, clean=False) is not None:
+                found.append(f'{name}:{node.body[0].lineno}: docstring')
+    return sorted(found)
+
+
+class NoCommentsTests(unittest.TestCase):
+    def test_code_has_no_comments_or_docstrings(self):
+        self.assertEqual(comments_and_docstrings(ROOT), [])
+
+    def test_each_comment_and_docstring_is_named_with_its_file_and_line(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / 'stay_safe').mkdir()
+            (root / 'tests' / 'nested').mkdir(parents=True)
+            (root / 'setup.py').write_text('x = 1  # inline\n')
+            (root / 'check_tests.py').write_text("'''Module.'''\n")
+            (root / 'stay_safe' / 'code.py').write_text(
+                'text = "# not a comment"\n\n\nclass Thing:\n    """Class."""\n\n    def run(self):\n'
+                '        # full line\n        return text\n')
+            (root / 'tests' / 'nested' / 'test_thing.py').write_text(
+                'async def check():\n    """Function."""\n    """Not a docstring."""\n')
+            (root / 'tools').mkdir()
+            (root / 'tools' / 'script.py').write_text('# tracked anywhere\n')
+            (root / 'untracked.py').write_text('# not committed\n')
+            (root / 'docs.md').write_text('# Heading\n')
+            subprocess.run(['git', 'init', '-q'], cwd=root, check=True)
+            subprocess.run(['git', 'add', '--', '*.py', 'docs.md', ':!untracked.py'], cwd=root, check=True)
+            self.assertEqual(comments_and_docstrings(root), [
+                'check_tests.py:1: docstring',
+                'setup.py:1: comment',
+                'stay_safe/code.py:5: docstring',
+                'stay_safe/code.py:8: comment',
+                'tests/nested/test_thing.py:2: docstring',
+                'tools/script.py:1: comment',
+            ])
 
 
 class LayoutCheckTests(unittest.TestCase):

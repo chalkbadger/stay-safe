@@ -1,4 +1,3 @@
-"""Bundle committed references and stamp artifacts at build time, never during diagnostics."""
 from pathlib import Path
 import re
 import subprocess
@@ -22,12 +21,17 @@ def revision():
     return value
 
 
+def replace_rather_than_write_through_a_link(path, text):
+    path.unlink(missing_ok=True)
+    path.write_text(text)
+
+
 class Package(build_py):
     def run(self):
         commit = revision()
         super().run()
         target = Path(self.build_lib) / 'stay_safe'
-        for name in ('incidents.md', 'harnesses/codex.md'):
+        for name in ('incidents.md', 'harnesses/codex.md', 'harnesses/claude-code.md'):
             dest = target / 'data' / name
             dest.parent.mkdir(parents=True, exist_ok=True)
             dest.write_bytes((ROOT / name).read_bytes())
@@ -38,10 +42,7 @@ class Source(sdist):
     def make_release_tree(self, base_dir, files):
         commit = revision()
         super().make_release_tree(base_dir, files)
-        # Replace the copy rather than writing through setuptools' possible hard link.
-        stamp = Path(base_dir) / 'stay_safe/release.txt'
-        stamp.unlink(missing_ok=True)
-        stamp.write_text(commit + '\n')
+        replace_rather_than_write_through_a_link(Path(base_dir) / 'stay_safe/release.txt', commit + '\n')
 
 
 setup(cmdclass={'build_py': Package, 'sdist': Source})

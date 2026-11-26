@@ -15,7 +15,6 @@ class ScopeTests(ConfigCase):
                 self.assertIn(" ".join(line.split()), full)
 
     def test_selected_rules_file_is_named_when_it_has_no_saved_approvals(self):
-        # Alhibb: https://github.com/chalkbadger/stay-safe/issues/109#issuecomment-7009857808
         checkout = copy_checkout(self.root / "checkout")
         cleared = self.config("", "cleared.rules")
         commented = self.config("  # removed\n\n", "commented.rules")

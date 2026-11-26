@@ -1,9 +1,3 @@
-"""Names on the saved page are shown as written, never as markup or links.
-
-Page and markdown_view, which read the page and the Markdown report, live with the other saved-page checks in
-tests/nothing_in_my_setup_changes/test_page.py.
-"""
-
 import json
 
 from stay_safe.report import inspect, render
@@ -14,8 +8,6 @@ from tests.support import ConfigCase
 
 class SavedPageNameTests(ConfigCase):
     def test_names_with_html_characters_are_shown_as_written_not_as_markup(self):
-        # Codex's own names cannot hold these characters today (stay_safe/codex.py NAME); the page must still
-        # show any name as text, so this sets entry names directly on a report.
         report = inspect([self.config(AFTER)])
         names = ["<script>alert(1)</script>", "a&amp;b <img src=x onerror=alert(1)>", "it's \"quoted\"",
                  "[x](javascript:alert(1))", "[y](data:text/html,<b>z</b>)", "*x*", "[x](#other)"]
@@ -27,8 +19,6 @@ class SavedPageNameTests(ConfigCase):
         self.assertNotIn("#other", parsed.links)
         self.assertEqual(parsed.view(), markdown_view(markdown))
         self.assertEqual([tag for tag, _ in parsed.tags if tag in {"script", "img", "b"}], [])
-        # The only other links are the findings list's links to the page's own findings and Not checked section
-        # (issue #82).
         self.assertEqual([href for href in parsed.links if not href.startswith("https://")],
                          ["#finding-1", "#finding-2", "#finding-3", "#finding-4", "#not-checked"])
         text = " ".join(parsed.view()["words"])

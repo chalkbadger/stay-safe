@@ -4,7 +4,9 @@ import re
 
 from stay_safe.report import inspect, render
 from tests.support import ConfigCase, INCOMPLETE, ReportRuns, gap_items
-from tests.see_every_connection_and_setting.test_plain_gaps import gap_text
+from tests.see_every_connection_and_setting.test_plain_gaps import (
+    APP_ENABLED_GAP, APP_MODE_GAP, TOOL_ENABLED_GAP, TOOL_MODE_GAP, gap_text,
+)
 
 BASE = '''approval_policy="on-request"
 sandbox_mode="read-only"
@@ -14,17 +16,13 @@ inherit="none"
 '''
 MODE_GAP = 'A tool approval mode is unsupported or invalid; its value was withheld.'
 OWN_MODE_GAP = 'A per-tool approval mode is unsupported or invalid; its value was withheld.'
-APP_GAP = 'apps has an invalid boolean; its behavior is unknown.'
-OWN_APP_GAP = 'tools has an invalid boolean; its behavior is unknown.'
-# Expected inheritance follows harnesses/codex.md [tool-approval] and [app-tool-policy];
-# issue #63 specifies that an inherited invalid value is reported only at its source.
 PARENTS = (
     ('mcp_servers.example', 'url="https://private-endpoint.invalid"\ndefault_tools_approval_mode="private-invalid"\n',
      'approval_mode', MODE_GAP, OWN_MODE_GAP, '"approve"', [('automatic_tools', 'mcp_servers.example.tools.lookup')]),
     ('apps.example', 'destructive_enabled=false\ndefault_tools_approval_mode="private-invalid"\n',
-     'approval_mode', MODE_GAP, OWN_MODE_GAP, '"approve"', [('automatic_tools', 'apps.example.tools.lookup')]),
+     'approval_mode', APP_MODE_GAP, TOOL_MODE_GAP, '"approve"', []),
     ('apps.example', 'destructive_enabled=false\ndefault_tools_approval_mode="prompt"\ndefault_tools_enabled="private-invalid"\n',
-     'enabled', APP_GAP, OWN_APP_GAP, 'true', [('destructive_tools', 'apps.example.tools.lookup')]),
+     'enabled', APP_ENABLED_GAP, TOOL_ENABLED_GAP, 'true', []),
 )
 
 
@@ -58,7 +56,7 @@ class InheritedGapTests(ConfigCase, ReportRuns):
             with self.subTest(parent=parent, key=key):
                 self.check_report(parent, fields, f'{key}="private-override"\n', [gap, own_gap], [])
 
-    def test_valid_tool_overrides_keep_their_findings_with_an_invalid_parent(self):
+    def test_valid_overrides_remain_observable_on_mcp_but_an_unloadable_app_has_no_tool_risks(self):
         for parent, fields, key, gap, own_gap, valid, risks in PARENTS:
             with self.subTest(parent=parent, key=key):
                 self.check_report(parent, fields, f'{key}={valid}\n', [gap], risks)

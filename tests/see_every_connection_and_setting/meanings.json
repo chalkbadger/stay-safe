@@ -69,6 +69,24 @@
     "entry": "sandbox_mode"
   },
   {
+    "setting": "profile",
+    "value": "top-level string",
+    "config": "approval_policy=\"on-request\"\nsandbox_mode=\"read-only\"\nprofile=\"work\"\n[profiles.work]\n",
+    "entry": "profile",
+    "gaps": [
+      "Codex 0.172.0 rejects a top-level profile selector in the configuration it uses at startup. It ignores this setting in project configuration. On versions that support inline profiles, settings in the selected table can override your top-level settings."
+    ]
+  },
+  {
+    "setting": "profiles.*",
+    "value": "named tables without a selector",
+    "config": "approval_policy=\"on-request\"\nsandbox_mode=\"read-only\"\n[profiles.work]\n",
+    "entry": "profiles.work",
+    "gaps": [
+      "Legacy profile tables do not select a profile. If this is the base user config, starting Codex 0.172.0 with a matching --profile name stops configuration loading. On versions that support inline profiles, settings in the selected table can override your top-level settings."
+    ]
+  },
+  {
     "setting": "default_permissions",
     "value": "selected with sandbox_mode",
     "config": "approval_policy=\"on-request\"\nsandbox_mode=\"danger-full-access\"\ndefault_permissions=\":read-only\"",
@@ -111,7 +129,17 @@
     "config": "approval_policy=\"on-request\"\nsandbox_mode=\"workspace-write\"\n[sandbox_workspace_write]\nwritable_roots=[\"/srv/shared\"]\n",
     "entry": "sandbox_workspace_write.writable_roots",
     "gaps": [
-      "sandbox_workspace_write.writable_roots lists extra folders that commands may write in workspace-write mode, some possibly outside the workspace; their paths were withheld and were not evaluated."
+      "sandbox_workspace_write.writable_roots lists extra folders commands may write, some possibly outside the workspace. Their paths are withheld. No --workspace was supplied to check project .codex. The folders' other effects were not assessed."
+    ]
+  },
+  {
+    "setting": "sandbox_workspace_write.writable_roots",
+    "value": "direct grant to project .codex",
+    "config": "approval_policy=\"on-request\"\nsandbox_mode=\"workspace-write\"\n[sandbox_workspace_write]\nwritable_roots=[\"{workspace}/.codex\"]\n",
+    "workspace": true,
+    "entry": "sandbox_workspace_write.writable_roots",
+    "gaps": [
+      "sandbox_workspace_write.writable_roots lists extra folders commands may write, some possibly outside the workspace. Their paths are withheld. Only a direct grant to project .codex is checked. Aliases and other effects of extra folders are unassessed."
     ]
   },
   {
@@ -133,6 +161,42 @@
     "entry": "mcp_servers.remote"
   },
   {
+    "setting": "mcp_servers.*.env",
+    "value": "nonempty stdio table",
+    "config": "approval_policy=\"on-request\"\nsandbox_mode=\"read-only\"\n[mcp_servers.docs]\ncommand=\"private-command\"\ndefault_tools_approval_mode=\"prompt\"\nenv={Private=\"example\"}\n",
+    "entry": "mcp_servers.docs.env",
+    "gaps": [
+      "mcp_servers.docs.env contains inline values. Check the entries for credentials."
+    ]
+  },
+  {
+    "setting": "mcp_servers.*.http_headers",
+    "value": "nonempty HTTP table",
+    "config": "approval_policy=\"on-request\"\nsandbox_mode=\"read-only\"\n[mcp_servers.docs]\nurl=\"https://example.invalid\"\ndefault_tools_approval_mode=\"prompt\"\nhttp_headers={Private=\"example\"}\n",
+    "entry": "mcp_servers.docs.http_headers",
+    "gaps": [
+      "mcp_servers.docs.http_headers contains inline values. Check the entries for credentials."
+    ]
+  },
+  {
+    "setting": "mcp_servers.*.env_vars",
+    "value": "stdio references",
+    "config": "approval_policy=\"on-request\"\nsandbox_mode=\"read-only\"\n[mcp_servers.docs]\ncommand=\"private-command\"\ndefault_tools_approval_mode=\"prompt\"\nenv_vars=[\"REF\"]\n",
+    "entry": "mcp_servers.docs.env_vars"
+  },
+  {
+    "setting": "mcp_servers.*.env_http_headers",
+    "value": "HTTP references",
+    "config": "approval_policy=\"on-request\"\nsandbox_mode=\"read-only\"\n[mcp_servers.docs]\nurl=\"https://example.invalid\"\ndefault_tools_approval_mode=\"prompt\"\nenv_http_headers={Private=\"REF\"}\n",
+    "entry": "mcp_servers.docs.env_http_headers"
+  },
+  {
+    "setting": "mcp_servers.*.bearer_token_env_var",
+    "value": "HTTP reference",
+    "config": "approval_policy=\"on-request\"\nsandbox_mode=\"read-only\"\n[mcp_servers.docs]\nurl=\"https://example.invalid\"\ndefault_tools_approval_mode=\"prompt\"\nbearer_token_env_var=\"REF\"\n",
+    "entry": "mcp_servers.docs.bearer_token_env_var"
+  },
+  {
     "setting": "mcp_servers.*.http_headers_helper",
     "value": "nonempty command",
     "config": "approval_policy=\"on-request\"\nsandbox_mode=\"read-only\"\n[mcp_servers.remote]\nurl=\"https://example.com\"\nhttp_headers_helper=\"synthetic-helper\"",
@@ -143,7 +207,9 @@
     "value": "on a stdio server",
     "config": "approval_policy=\"on-request\"\nsandbox_mode=\"read-only\"\n[mcp_servers.remote]\ncommand=\"synthetic-command\"\nhttp_headers_helper=\"synthetic-helper\"",
     "entry": "mcp_servers.remote",
-    "gaps": ["Codex cannot load this configuration because stdio MCP server remote sets http_headers_helper."]
+    "gaps": [
+      "Codex cannot load this configuration because stdio MCP server remote sets http_headers_helper."
+    ]
   },
   {
     "setting": "mcp_servers.*.enabled_tools",
@@ -302,6 +368,15 @@
     "entry": "apps.files"
   },
   {
+    "setting": "apps.*",
+    "value": "non-boolean open_world_enabled or destructive_enabled on a named App or _default",
+    "config": "approval_policy=\"on-request\"\nsandbox_mode=\"read-only\"\n[apps.calendar]\nopen_world_enabled=\"false\"\n",
+    "entry": "apps.calendar",
+    "gaps": [
+      "Codex cannot load this configuration file because apps.calendar.open_world_enabled is not a boolean."
+    ]
+  },
+  {
     "setting": "apps.*.links",
     "value": "per-account policy",
     "config": "approval_policy=\"on-request\"\nsandbox_mode=\"read-only\"\n[apps.files.links.private-account]\nenabled=false",
@@ -309,6 +384,30 @@
     "gaps": [
       "Per-account app policy is not evaluated; account identifiers were withheld."
     ]
+  },
+  {
+    "setting": "apps.*.approvals_reviewer",
+    "value": "per-app reviewer",
+    "config": "approval_policy=\"on-request\"\nsandbox_mode=\"read-only\"\n[apps.files]\napprovals_reviewer=\"auto_review\"",
+    "entry": "apps.files",
+    "gaps": [
+      "App approvals_reviewer is not evaluated; Codex may let a reviewer decide an app's tool calls instead of asking you."
+    ]
+  },
+  {
+    "setting": "apps.*.tools.*.approvals_reviewer",
+    "value": "auto_review or guardian_subagent",
+    "config": "approval_policy=\"on-request\"\nsandbox_mode=\"read-only\"\n[apps.calendar.tools.read]\napprovals_reviewer=\"auto_review\"",
+    "entry": "apps.calendar.tools.read",
+    "gaps": [
+      "apps.calendar.tools.read.approvals_reviewer requests AI review if this tool needs approval. A policy can require human review. The effective reviewer was not checked."
+    ]
+  },
+  {
+    "setting": "apps.*.tools.*.approvals_reviewer",
+    "value": "user",
+    "config": "approval_policy=\"on-request\"\nsandbox_mode=\"read-only\"\n[apps.calendar.tools.read]\napprovals_reviewer=\"user\"",
+    "entry": "apps.calendar.tools.read"
   },
   {
     "setting": "model_providers.*",
@@ -331,8 +430,27 @@
     "config": "approval_policy=\"on-request\"\nsandbox_mode=\"read-only\"\n[model_providers.amazon-bedrock.aws.credential_export]\ncommand=\"synthetic-export\"\n[model_providers.amazon-bedrock.aws.auth_refresh]\ncommand=\"aws\"",
     "entry": "model_providers.amazon-bedrock",
     "gaps": [
-      "Model-provider setting aws.auth_refresh was not checked for a credential command.",
-      "Model-provider setting aws.credential_export was not checked for a credential command."
+      "Model-provider setting aws.auth_refresh is for a credential command. Stay-safe did not check its value.",
+      "Model-provider setting aws.credential_export is for a credential command. Stay-safe did not check its value."
+    ]
+  },
+  {
+    "setting": "model_providers.*.gateway_oauth.credential_export",
+    "value": "present",
+    "config": "approval_policy=\"on-request\"\nsandbox_mode=\"read-only\"\n[model_providers.internal.gateway_oauth.credential_export]\ncommand=\"synthetic-export\"",
+    "entry": "model_providers.internal",
+    "gaps": [
+      "Model-provider setting gateway_oauth.credential_export is for a credential command. Stay-safe did not check its value."
+    ]
+  },
+  {
+    "setting": "otel.headers_helper",
+    "value": "present",
+    "config": "approval_policy=\"on-request\"\nsandbox_mode=\"read-only\"\n[otel]\nheaders_helper=\"synthetic-helper\"",
+    "entry": "otel",
+    "gaps": [
+      "Configuration contains fields outside reader coverage; their values were withheld.",
+      "otel.headers_helper is for a command that supplies telemetry headers. Stay-safe did not check its value."
     ]
   },
   {

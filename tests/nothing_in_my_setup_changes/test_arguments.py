@@ -1,4 +1,3 @@
-"""Issue #19: a destination after --save is an error, not an inspected or written path."""
 from contextlib import redirect_stderr, redirect_stdout
 import io
 import subprocess

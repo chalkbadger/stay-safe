@@ -1,9 +1,3 @@
-"""Markdown's "Your setup" lists every catalog entry in plain words, under its file (archived issue #105, reading check).
-
-The JSON catalog is unchanged. Each expected line below restates an entry's observations from their meaning in
-harnesses/codex.md and docs/usage.md, written by hand rather than copied from the report.
-"""
-
 import json
 import subprocess
 import sys
@@ -12,10 +6,8 @@ from stay_safe.report import inspect, markdown
 from tests.see_every_connection_and_setting.test_config import FIXTURE
 from tests.support import CHATGPT_APPS, FIRST, SECOND, ConfigCase, ROOT, section
 
-# Approval mode settings: harnesses/codex.md.
 AUTO = "tool approval `auto`"
 DEFAULT_AUTO = ("tool approval left at the default, `auto`")
-# (entry id, kind, observations) -> expected line, covering every observation the readers can produce.
 ENTRIES = [
     ("config-1:approval_policy", "permission", ["never"], "Approval: `never` (doesn't ask before commands)"),
     ("config-1:apps._default", "app policy", ["configured enabled", "tool approval: writes"],
@@ -81,8 +73,6 @@ ENTRIES = [
      ["No default Codex configuration file was found. Assessed defaults: command environment and ChatGPT Apps."],
      "Config file: none found, so stay-safe assessed Codex's documented defaults (the environment of commands and "
      "the ChatGPT Apps connection)"),
-    # Archived issue #121, harnesses/codex.md row `features.apps` `omitted`: Codex adds this MCP connection to ChatGPT when it
-    # is signed in with ChatGPT, which stay-safe doesn't check; `false` removes it.
     ("config-3:features.apps", "MCP server", CHATGPT_APPS,
      "ChatGPT Apps connection: an MCP connection to ChatGPT, only when Codex is signed in with ChatGPT (stay-safe "
      "doesn't check sign-in), `features.apps = false` turns it off, apps your file doesn't name have tools that "
@@ -90,7 +80,6 @@ ENTRIES = [
     ("config-3:sandbox_mode", "permission", ["read-only"], "Sandbox: `read-only` (commands can't write files)"),
     ("config-3:shell_environment_policy", "permission", ["inherit: none (explicit)", "ignore_default_excludes: true (default)"],
      "Environment for commands: none passed on (you set this), `ignore_default_excludes` true (default)"),
-    # An observation without plain wording is shown as it is, not dropped.
     ("config-3:future_setting", "permission", ["a future observation"], "`future_setting`: a future observation"),
     ("rules-1:prefix_rule.2", "saved approval", ["program: git", "tokens: 2"], "Saved approval, line 2: starts with `git`, 2 words"),
     ("rules-1:prefix_rule.3", "saved approval", ["program: curl", "tokens: 1", "broad: one-token prefix"],
@@ -98,14 +87,11 @@ ENTRIES = [
     ("rules-1:prefix_rule.4", "saved approval", ["tokens: 3"], "Saved approval, line 4: 3 words"),
     ("rules-2:rules", "rules file", ["absent"], "Saved approvals file: none found"),
 ]
-# Each file passed with --config or --rules keeps its label, explained once with how Codex uses such a file
-# (reading check, 2026-11-09).
 CONFIG_USE = "Codex reads settings from config files like this."
 RULES_USE = "Codex loads saved approvals from rules files like this."
 HEADINGS = {f"config-{n}": f"**Config file `config-{n}`**: the {word} file you passed with `--config`. {CONFIG_USE}"
             for n, word in ((1, "first"), (2, "second"), (3, "third"))}
 HEADINGS |= {f"rules-{n}": f"**Rules file `rules-{n}`**: the file you passed with `--rules`. {RULES_USE}" for n in (1, 2)}
-# Said once, before the lists, when a value is left out or a saved approval's words are counted, not shown.
 WITHHELD = ("stay-safe doesn't show commands, addresses, credentials, hook contents, tool names that look private "
             "or the words of saved approvals, because they can hold private paths or tokens. You'll find them in the file named in each list's "
             "heading, for example a server's command under `[mcp_servers.<name>]`.")
@@ -136,13 +122,10 @@ class YourSetupTests(ConfigCase):
             counts[entry["source"]] = counts.get(entry["source"], 0) + 1
         self.assertEqual([(group.splitlines()[0], len(group.splitlines()) - 1) for group in setup.split("\n\n")],
                          [(HEADINGS[source], count) for source, count in counts.items()])
-        # Every observation has plain wording: none of the catalog's own phrasing is shown.
         for raw in ("withheld", "configured enabled", "tool approval:", "tokens:", "program:", "inherit:", "broad:"):
             self.assertNotIn(raw, setup)
 
     def test_the_withheld_explanation_appears_for_saved_approval_words_and_only_when_something_is_withheld(self):
-        # A saved approval's words are counted, not shown, so they need the explanation even with no "left out" value;
-        # a setup with nothing withheld has none (re-review F29).
         approval = {"id": "config-1:approval_policy", "source": "config-1", "name": "approval_policy",
                     "kind": "permission", "observations": ["never"]}
         saved = {"id": "rules-1:prefix_rule.1", "source": "rules-1", "name": "prefix_rule.1",

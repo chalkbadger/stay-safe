@@ -8,10 +8,6 @@ import unittest
 from tests.support import FEEDBACK, ROOT
 
 SAMPLE = ROOT / "tests" / "runs_without_a_coding_agent" / "sample.toml"
-# Runs stay-safe the way `python3 -m stay_safe` (module) or `python3 stay_safe` (folder) does, after making the
-# interpreter report itself as the version given, such as 3.9.6, macOS's own python3 (issue #48). It prints which
-# stay-safe modules and whether tomllib (new in Python 3.11) were loaded when stay-safe stopped, then exits with
-# stay-safe's status.
 OLD_PYTHON = """import collections, json, runpy, sys
 way, version = sys.argv.pop(1), sys.argv.pop(1)
 sys.version = version + " (default, simulated) [Clang 13.0.0]"
@@ -29,7 +25,6 @@ print(json.dumps(sorted(name for name in sys.modules if name == "tomllib" or nam
 sys.exit(status)
 """
 TOO_OLD = "stay-safe needs Python 3.11 or newer; this is Python 3.9.6. "
-# A command that writes a marker file when started, so a run shows whether stay-safe started it.
 FAKE = "#!/bin/sh\necho started > \"$(dirname \"$0\")/started-$(basename \"$0\")\"\n"
 
 
@@ -39,7 +34,6 @@ def run(*args, env=None):
 
 
 def old_python(way, path, version="3.9.6"):
-    """Run stay-safe under a simulated Python `version` with only `path` on the PATH."""
     return run("-c", OLD_PYTHON, way, version, "--config", str(SAMPLE), env={"PATH": path})
 
 
@@ -71,8 +65,6 @@ class PythonEntryTests(unittest.TestCase):
     def test_too_old_python_names_the_newest_python_on_the_path_and_exits_2(self):
         with tempfile.TemporaryDirectory() as first, tempfile.TemporaryDirectory() as second, \
                 tempfile.TemporaryDirectory() as third:
-            # python3.13 in `first` can't be run and in `third` is a folder, so neither is a command;
-            # python3.12 is the newest one found.
             (Path(third) / "python3.13").mkdir()
             path = (commands(first, ["python3", "python3.10", "python3.11"], plain=["python3.13"]) + ":" + third
                     + ":" + commands(second, ["python3.12", "python3.11"]))
@@ -90,13 +82,11 @@ class PythonEntryTests(unittest.TestCase):
     def test_too_old_python_without_a_recognized_command_links_setup_and_exits_2(self):
         install = "Select or install a supported Python: https://github.com/chalkbadger/stay-safe/blob/main/docs/usage.md#python-setup\n" + FEEDBACK
         with tempfile.TemporaryDirectory() as folder:
-            # A PATH entry too long to look up is skipped rather than ending in a traceback.
             path = commands(folder, ["python3", "python3.9", "python3.10", "python3.14", "python3.15"]) + ":/" + "a" * 5000
             for way in ("module", "folder"):
                 with self.subTest(way=way):
                     result = old_python(way, path)
                     self.assertEqual((result.returncode, result.stderr, result.stdout), (2, TOO_OLD + install, "[]\n"))
-                # The edges of "older than 3.11": the last 3.10 release is too old; 3.11.0 runs the report.
                 with self.subTest(way=way, version="3.10.19"):
                     result = old_python(way, path, "3.10.19")
                     self.assertEqual((result.returncode, result.stderr, result.stdout),
@@ -114,10 +104,6 @@ class PythonEntryTests(unittest.TestCase):
                 with self.subTest(way=way):
                     result = old_python(way, folder)
                     self.assertEqual((result.returncode, result.stdout), (2, "[]\n"))
-        # `python3 -m stay_safe` runs __init__.py first; `python3 stay_safe` compiles __main__.py first.
-        # ast's feature_version is best-effort: it rejects newer statements such as `match`, but accepts f-strings
-        # written as only Python 3.12 allows, and annotations such as `str | None`, which Python 3.9 evaluates and
-        # fails on. So these two files must also hold no f-string and no annotation.
         for name in ("__init__.py", "__main__.py"):
             with self.subTest(name=name):
                 tree = ast.parse((ROOT / "stay_safe" / name).read_text(encoding="utf-8"), filename=name,

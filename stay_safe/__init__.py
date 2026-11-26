@@ -1,8 +1,3 @@
-"""Deterministic configuration diagnostics.
-
-The version check below runs before any module that needs Python 3.11 is imported (issue #48), so this file must
-stay parseable by older Pythons, such as macOS's own Python 3.9.
-"""
 import os
 from pathlib import Path
 import stat
@@ -13,7 +8,6 @@ FEEDBACK = "Report a problem or suggest an idea: https://github.com/chalkbadger/
 
 
 def command(path):
-    """Whether `path` is a file with an execute bit set, read from its metadata only; stay-safe never starts it."""
     try:
         return path.is_file() and bool(path.stat().st_mode & (stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH))
     except OSError:
@@ -29,7 +23,6 @@ if sys.version_info < (3, 11):
         NEXT = "Run: %s -m stay_safe" % NEWER[0]
     else:
         NEXT = "Select or install a supported Python: https://github.com/chalkbadger/stay-safe/blob/main/docs/usage.md#python-setup"
-    # Like the "Invalid arguments" message, this goes to stderr with exit status 2.
     sys.stderr.write("stay-safe needs Python 3.11 or newer; this is Python %s. %s\n" % (THIS, NEXT))
     sys.stderr.write(FEEDBACK)
     sys.exit(2)

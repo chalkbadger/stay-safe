@@ -1,12 +1,3 @@
-"""Default discovery selects the directory Codex selects, as in the pinned `find_codex_home`:
-https://github.com/openai/codex/blob/086ccc833bc9cf01024ad2dd6af7dbd421b6bf9a/codex-rs/utils/home-dir/src/lib.rs
-An empty CODEX_HOME counts as unset; a set one must exist and be a directory, or Codex refuses to start;
-the home directory is looked up only when CODEX_HOME is unset ("Could not find home directory" otherwise).
-Python's Path.home raises RuntimeError when the home directory cannot be resolved:
-https://docs.python.org/3/library/pathlib.html#pathlib.Path.home
-An empty HOME is reported as an undetermined home (owner decision, archived PR #67), not resolved further.
-"""
-
 import io
 import json
 import os
@@ -34,7 +25,6 @@ def unknown_home():
 class CodexHomeTests(ConfigCase):
     def setUp(self):
         super().setUp()
-        # A populated ~/.codex and a decoy configuration in the working directory.
         self.home, self.work = self.root / 'home', self.root / 'work'
         (self.home / '.codex' / 'rules').mkdir(parents=True)
         (self.home / '.codex' / 'config.toml').write_text(POLICY.format('core'))
@@ -86,7 +76,6 @@ class CodexHomeTests(ConfigCase):
                 self.assertEqual((status, report['inspection_gaps']), (2, [SET_GAP]))
                 self.assertEqual((report['file_inspection'], report['catalog'], report['risks']),
                                  ('incomplete', [], []))
-        # Python 3.11-3.13 Path.is_dir propagates PermissionError for a path under an unsearchable directory.
         with self.subTest(codex_home='unreadable'), \
                 patch.object(Path, 'is_dir', side_effect=PermissionError(13, 'Permission denied')):
             status, report = self.in_process({'CODEX_HOME': str(self.home / '.codex')})

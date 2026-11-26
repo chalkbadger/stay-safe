@@ -1,9 +1,3 @@
-"""Symlinked inputs (archived issue #62), run with the platform's real os.O_NOFOLLOW.
-
-open(2) with O_NOFOLLOW fails when the final path component is a symbolic link:
-https://pubs.opengroup.org/onlinepubs/9799919799/functions/open.html
-"""
-
 from contextlib import redirect_stdout
 import io
 import json

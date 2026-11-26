@@ -14,13 +14,12 @@ from tests.see_every_connection_and_setting.test_plain_gaps import gap_text
 
 class ShareableTests(ReportRuns, ConfigCase):
     def test_report_excludes_private_values(self):
-        # Running the same files twice gives the same output: tests/anyone_can_recheck_a_report/test_repeatable.py.
         path = self.config(SEEDED)
         before = path.read_bytes()
         for format_name in ("markdown", "json"):
             with self.subTest(format=format_name):
                 one = self.run_cli("--config", str(path), "--format", format_name)
-                self.assertEqual((one.returncode, one.stderr), (0, ""))
+                self.assertEqual((one.returncode, one.stderr), (2, INCOMPLETE))
                 for field, seed in SEEDS.items():
                     for form in (seed, escape(seed, quote=True)):
                         self.assertNotIn(form, one.stdout, field)
@@ -34,13 +33,11 @@ class ShareableTests(ReportRuns, ConfigCase):
                         self.assertIn("\n- " + name, setup)
                 self.assertIn("reported, not verified", one.stdout)
                 self.assertIn("/incidents.md#i13-repository-settings-run-commands-on-collaborators-machines", one.stdout)
-                # AGENTS.md names the agent's commentary section with an ASCII apostrophe.
                 self.assertNotIn("Agent's own report", one.stdout)
                 self.assertNotIn("No risks found", one.stdout)
-        # --save: standard output (the Markdown report and the open command) and the saved page (archived issue #106).
         checkout = copy_checkout(self.root / "checkout")
         run = run_checkout(checkout, "--config", str(path), "--save", cwd=self.root)
-        self.assertEqual((run.returncode, run.stderr), (0, ""))
+        self.assertEqual((run.returncode, run.stderr), (2, INCOMPLETE))
         output_text, page = run.stdout, (checkout / REPORT).read_text(encoding="utf-8")
         self.assertTrue(output_text.splitlines()[-1].startswith("Saved the formatted report. Open it with: "))
         self.assertIn("**Your `local` MCP server can start a program on your computer.**", output_text)
@@ -74,7 +71,6 @@ class ShareableTests(ReportRuns, ConfigCase):
                 self.assertIn(names[format_name], groups["config-1"])
 
     def test_the_snapshot_note_counts_only_files_that_were_found(self):
-        # A default run always lists config-1 and rules-1, found or not (re-review F22).
         self.require_no_system_folder()
         note = ("- These files are read as separate snapshots, not combined: Codex may apply several of them together, "
                 "so a setting in one can change what another allows.")
@@ -94,17 +90,12 @@ class ShareableTests(ReportRuns, ConfigCase):
                 self.assertEqual(note in section(run.stdout, "What this report can't see").splitlines(), expected)
 
     def test_found_files_are_named_by_where_codex_keeps_them_without_the_users_folder(self):
-        # Reading check (2026-11-09): a found file shows where it is, as `~/.codex/...` or `$CODEX_HOME/...`, never
-        # the expanded folder, which can hold a user name.
         self.require_no_system_folder()
-        # Codex also re-reads the file while it runs, and a file that wasn't found is read once it exists (F24).
         config_use = {True: "Codex reads its settings from this file.",
                       False: "Codex reads its settings from this file when it exists."}
         rules_use = "Codex saves \"don't ask again\" approvals to this file and loads them from it."
         home = self.root / "alice@example.com-home"
         codex_home = self.root / "alice@example.com-codex"
-        # An empty CODEX_HOME counts as unset, as in Codex's find_codex_home (openai/codex 086ccc8,
-        # utils/home-dir/src/lib.rs L13-L62); a set CODEX_HOME is named as such even when it is ~/.codex.
         empty, same = self.root / "alice@example.com-empty-codex-home", self.root / "alice@example.com-same"
         cases = [("home", {"HOME": str(home)}, home / ".codex", "~/.codex", True),
                  ("CODEX_HOME", {"CODEX_HOME": str(codex_home)}, codex_home, "$CODEX_HOME", True),
@@ -234,7 +225,6 @@ with patch('stay_safe.codex.os.open', side_effect=denied):
                     if format_name == 'json':
                         self.assertCountEqual(json.loads(run.stdout)['inspection_gaps'], gaps)
                     else:
-                        # A default run names config-1 by where Codex keeps it, not by its folder.
                         self.assertCountEqual(gap_items(run.stdout),
                                               [gap_text(gap, file='$CODEX_HOME/config.toml') for gap in gaps])
                     for private in ('private-error-marker', 'alice@example.com', str(self.root)):

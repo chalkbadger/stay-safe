@@ -1,21 +1,6 @@
 from stay_safe.report import inspect
 from tests.support import CHATGPT_APPS, ConfigCase
 
-# Expected results come from Codex at 086ccc833bc9cf01024ad2dd6af7dbd421b6bf9a, not from the reader.
-# A `type = "command"` handler with a nonempty command becomes a command Codex can run
-# (codex-rs/hooks/src/engine/discovery.rs#L650-L727). A matcher only selects events
-# (codex-rs/hooks/src/engine/matcher.rs#L32-L40), and `timeout`, `async`, `statusMessage` and
-# `commandWindows` are handler options (codex-rs/protocol/src/hooks.rs#L140-L188).
-# Codex runs every group and every handler in it (discovery.rs#L632, #L650), so a command group counts
-# wherever it sits. A group's fields other than `matcher` and `hooks` are ignored, since `MatcherGroup`
-# does not deny unknown fields (protocol/src/hooks.rs#L140-L146).
-# `hooks.state` holds trust and enablement (discovery.rs#L917-L923, #L1000-L1027), which stay-safe
-# does not inspect, so the risk stays whatever it says. HASH matches no hook, so Codex reads an entry
-# with it as modified, not trusted (discovery.rs#L1011-L1013).
-# The handler's `type` picks its variant, which ignores fields it lacks, such as `command` on `prompt`
-# (hooks.rs#L140-L188). Codex skips `prompt` and `agent` handlers (discovery.rs#L782-L801), an
-# `mcp_tool` handler calls a tool on an MCP server (#L729-L781), and an empty command is skipped
-# (#L665-L671).
 
 BASE = 'approval_policy="on-request"\nsandbox_mode="read-only"\n'
 CATALOG = {'approval_policy': ['on-request'], 'sandbox_mode': ['read-only'],
@@ -78,11 +63,6 @@ class HookProgramTests(ConfigCase):
             with self.subTest(handlers=handlers):
                 self.assert_hook(f'[[hooks.PreToolUse]]\nmatcher="shell"\nhooks=[{handlers}]\n', [])
 
-    # Codex reads the Windows command as `commandWindows` or its alias `command_windows`, in config.toml and
-    # hooks.json alike, and `command` itself is required (codex-rs/protocol/src/hooks.rs#L150-L155). On Windows
-    # Codex runs the Windows command when it is set, otherwise `command`, and skips the chosen command when it is
-    # empty (codex-rs/hooks/src/engine/discovery.rs#L660-L671). The file may be used on either platform, so a
-    # handler counts when either string is nonempty.
     def test_windows_command_alone_reports_program(self):
         for handler in [
             '{type="command", command="", commandWindows="private-windows"}',

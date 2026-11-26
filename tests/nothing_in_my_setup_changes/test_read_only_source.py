@@ -1,10 +1,3 @@
-"""Static check: the diagnostic's source has no way to run programs, connect or evaluate input, and only its save
-step, stay_safe/save.py, can write files.
-
-Python documents audit hooks as unsuitable for sandboxing (https://github.com/python/cpython/issues/87604),
-so this reads the source instead of trapping a run. Which file the save step writes is shown by running it, in
-tests/nothing_in_my_setup_changes/test_save.py.
-"""
 import argparse
 import ast
 import pathlib
@@ -12,26 +5,22 @@ import unittest
 
 from tests.support import ROOT
 
-MODULES = {"argparse", "dataclasses", "errno", "hashlib", "html", "ipaddress", "json", "os", "pathlib", "re",
-           "stat", "sys", "tomllib", "urllib.parse"}
+MODULES = {"argparse", "dataclasses", "errno", "hashlib", "html", "ipaddress", "json", "os", "pathlib", "posixpath", "re",
+           "stat", "sys", "tomllib", "unicodedata", "urllib.parse"}
 OS_NAMES = {"open", "fdopen", "fstat", "environ", "listdir", "pathsep", "O_RDONLY", "O_NONBLOCK", "O_NOFOLLOW"}
 OS_READ_FLAGS = {"O_RDONLY", "O_NONBLOCK", "O_NOFOLLOW"}
 BANNED_NAMES = {"exec", "eval", "compile", "__import__", "open", "getattr", "importlib",
                 "__builtins__", "globals", "vars"}
 PATHLIB_ARGPARSE = set(dir(pathlib.Path)) | set(dir(argparse)) | set(dir(argparse.ArgumentParser))
-# The pathlib and argparse names the package uses; any other name of theirs is reported.
-USED_NAMES = {"Path", "home", "resolve", "parents", "is_dir", "is_file", "stat", "read_text", "read_bytes", "as_uri",
+USED_NAMES = {"Path", "absolute", "anchor", "parts", "home", "resolve", "parents", "name", "is_dir", "is_file", "stat", "read_text", "read_bytes", "as_uri",
               "ArgumentParser", "add_argument", "parse_known_args", "error", "exit"}
-# The save step may also create a temporary file beside the report, write it, move it into place or remove it.
 WRITER = "stay_safe/save.py"
 WRITER_MODULES = {"tempfile"}
 WRITER_OS_NAMES = {"replace", "unlink"}
-# `python3 stay_safe` runs __main__.py outside its package, so it imports the package's own modules by name (issue #48).
 PACKAGE = "stay_safe"
 
 
 def own_module(name):
-    """The package itself or one of its modules, such as stay_safe.cli."""
     parts = name.split(".")
     return parts[0] == PACKAGE and len(parts) <= 2
 
@@ -53,13 +42,11 @@ def argument(call, position, keyword):
 
 
 def violations(source, filename):
-    """Return 'file:line: problem' for each construct outside the allow-lists."""
     writer = filename == WRITER
     modules = MODULES | WRITER_MODULES if writer else MODULES
     os_names = OS_NAMES | WRITER_OS_NAMES if writer else OS_NAMES
     tree = ast.parse(source, filename)
     found = []
-    # Allowed: str.replace(old, new); Path.replace(target) takes one argument.
     exempt = {id(n.func) for n in ast.walk(tree) if isinstance(n, ast.Call)
               and isinstance(n.func, ast.Attribute) and n.func.attr == "replace" and len(n.args) >= 2}
 
@@ -69,7 +56,7 @@ def violations(source, filename):
     for node in ast.walk(tree):
         if isinstance(node, ast.Import):
             for alias in node.names:
-                exempt.add(id(alias))  # a module name, checked against MODULES
+                exempt.add(id(alias))
                 if alias.name not in modules and not own_module(alias.name):
                     report(node, f"import {alias.name} is outside the allowed modules")
                 elif alias.name == "os" and alias.asname not in (None, "os"):

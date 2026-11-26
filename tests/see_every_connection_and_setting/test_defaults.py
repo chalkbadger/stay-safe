@@ -1,6 +1,6 @@
 from tests.support import without_rule_links
 """Default values are independently expected from the pinned Codex conversion:
-https://github.com/openai/codex/blob/086ccc833bc9cf01024ad2dd6af7dbd421b6bf9a/codex-rs/config/src/shell_environment_policy.rs#L133-L169
+https://github.com/openai/codex/blob/3d86e43b075adeba2193ec5c22ac92f55afd82e6/codex-rs/config/src/shell_environment_policy.rs#L133-L169
 Selection and absence behavior are specified in stay-safe issue #7; notice wording in issue #42.
 """
 

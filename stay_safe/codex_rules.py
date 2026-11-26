@@ -1,18 +1,13 @@
-"""Inventory Codex's saved one-line allow records without parsing a rules program."""
-
 import json
 import os
 import re
 import stat
 
-from .codex import MAX_BYTES, Reader, open_input
+from .codex import MAX_BYTES, Reader, exclude_account_files, open_input
 
 
 RECORD = re.compile(r'prefix_rule\(pattern=(\[.*\]), decision="allow"\)')
 UNCHECKED_RULE_LINES = 'Rules contain lines that are not inspected.'
-# The only words of a saved approval the report may show, as its first word: the program list in
-# harnesses/codex.md, under "Saved approval records". Change it only by pull request, together
-# with that documented list.
 PROGRAMS = ('git', 'gh', 'npm', 'npx', 'pnpm', 'yarn', 'node', 'python', 'python3', 'pip', 'pip3', 'uv', 'cargo',
             'go', 'make', 'docker', 'kubectl', 'curl', 'wget', 'ssh', 'bash', 'sh', 'rm', 'mv', 'cp', 'chmod')
 
@@ -30,6 +25,7 @@ def declaration(line):
     return pattern
 
 
+@exclude_account_files
 def read_file(path, source, *, discovered=False):
     reader = Reader(source)
     try:
@@ -68,7 +64,6 @@ def read_file(path, source, *, discovered=False):
 
 
 def other_files(path, source):
-    """Codex also loads every other *.rules file beside the default one; flag them unread and unnamed."""
     try:
         names = os.listdir(path.parents[0])
     except FileNotFoundError:

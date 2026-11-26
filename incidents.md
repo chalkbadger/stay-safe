@@ -175,3 +175,21 @@ Real-world reports of coding agents doing destructive or risky things. Risk rule
 - What happened: a user reported that a successful `create-pod` result asked their agent to rate RunPod without telling them. Their agent declined and told them. RunPod confirmed it had collected agent ratings with each agent’s self-reported model, referral answers and per-account creation counts.
 - Enabling condition: the hosted server could append its rating request to a creation result. Separately, its initialization instructions asked agents to report how the user had found RunPod. Version 4.14.1 removed the instruction to hide the rating. Version 4.15.0 removed both survey requests.
 - Sources: [User report](https://github.com/runpod/runpod-mcp/issues/202), [maintainer’s account of the changes](https://github.com/runpod/runpod-mcp/issues/202#issuecomment-7072863075), [maintainer’s account of the data collected](https://github.com/runpod/runpod-mcp/issues/202#issuecomment-7075788457), [versioned changelog](https://github.com/runpod/runpod-mcp/blob/66cf5f5e3464320a599aba813d7d2802435b8d15/CHANGELOG.md#4150)
+
+## I32. PowerShell cleanup deleted files in the home directory
+- Harness: Claude Code, Windows PowerShell 5.1
+- What happened: a user reported that Claude Code tried to clean up a temporary folder. PowerShell rejected an assignment to its read-only `$HOME` variable. The delete that followed still targeted the user profile. It removed directories containing SSH keys and cloud credentials before it reached a locked file.
+- Enabling condition: the delete could reach the user profile outside the intended temporary folder. The report leaves the sandbox and permission mode unspecified.
+- Source: [Claude Code issue #111755](https://github.com/anthropics/claude-code/issues/111755)
+
+## I33. Intruders changed Claude Code project settings to download a backdoor
+- Harness: Claude Code
+- What happened: Google Threat Intelligence Group reported that intruders changed `.claude/settings.json` in internal repositories at cryptocurrency organizations. The change made starting Claude Code trigger a download of SOMBERMEME, a backdoor. Google did not identify the setting or command, or give a count of successful downloads.
+- Enabling condition: after gaining access to the organization, the intruders could modify project settings that Claude Code used at startup.
+- Source: [Google Threat Intelligence Group, November 16, 2026](https://cloud.google.com/blog/topics/threat-intelligence/agentic-threat-activity-crosses-a-significant-threshold)
+
+## I34. Test run deleted backups in the home directory
+- Harness: Claude Code (reported model: Opus)
+- What happened: a user asked Claude Code to review, validate and deploy a repository. They reported that it ran every file in the test directory without reading them first. One test worked on a live application's configuration folder in the home directory and pruned its backups. Four backup files were deleted with `rm -f`.
+- Enabling condition: a command the agent ran could delete files outside the repository. The report does not state the permission mode or whether the sandbox was on.
+- Source: [Claude Code issue #111921](https://github.com/anthropics/claude-code/issues/111921)

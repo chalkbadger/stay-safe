@@ -1,9 +1,9 @@
-"""Expected status explanation comes from stay-safe issue #18, not production text."""
 import io
 import json
 from unittest.mock import patch
 
 from stay_safe.cli import main
+from stay_safe.report import inspect, render
 from tests.support import FEEDBACK, ConfigCase, copy_checkout, run_checkout, section
 
 
@@ -13,7 +13,6 @@ COMPLETE = 'approval_policy = "on-request"\nsandbox_mode = "read-only"\n'
 
 class StatusTests(ConfigCase):
     def test_stdio_header_helper_names_the_rejected_setting(self):
-        # Codex rust-v0.167.0, mcp_types.rs:513-548 (linked from issue #155).
         checkout = copy_checkout(self.root / "checkout")
         config = COMPLETE + 'shell_environment_policy.inherit="core"\n[mcp_servers."docs.local"]\n'
         command = 'command="private-server"\n'
@@ -42,9 +41,82 @@ class StatusTests(ConfigCase):
                     for private in ("private-server", "private-helper"):
                         self.assertNotIn(private, run.stdout + human.stdout)
 
+    def test_gateway_and_otel_helpers_name_unchecked_commands(self):
+        quiet = COMPLETE + 'shell_environment_policy={inherit="none"}\nfeatures.apps=false\nnotify=["kept-program"]\n'
+        generic = "config-1: Configuration contains fields outside reader coverage; their values were withheld."
+        gateway = "Model-provider setting gateway_oauth.credential_export is for a credential command. Stay-safe did not check its value."
+        otel = "otel.headers_helper is for a command that supplies telemetry headers. Stay-safe did not check its value."
+        cases = (
+            ("gateway_oauth.credential_export", "credential_export", "[model_providers.corp.gateway_oauth]\n", gateway),
+            ("otel.headers_helper", "headers_helper", "[otel]\n", otel),
+        )
+        values = (None, '""', '"private-helper"', '{}', '{command="private-helper", args=["private-arg"]}')
+        for label, key, table, message in cases:
+            for selected in (False, True):
+                for value in values:
+                    with self.subTest(setting=label, selected=selected, value=value):
+                        text = quiet
+                        if label.startswith("gateway") and selected:
+                            text += 'model_provider="corp"\n'
+                        text += table
+                        if label.startswith("otel") and selected:
+                            text += 'exporter={otlp-http={endpoint="https://example.com/v1/logs", protocol="json"}}\n'
+                        if value is not None:
+                            text += f'{key}={value}\n'
+                        path = self.config(text)
+                        report = inspect([path])
+                        expected = [generic] if selected or label.startswith("otel") else []
+                        if value is not None:
+                            expected.append("config-1: " + message)
+                        self.assertCountEqual(report["inspection_gaps"], expected)
+                        self.assertEqual([(r["rule"], r["entry"]) for r in report["risks"]],
+                                         [("configured_program", "config-1:notify")])
+                        human = render(report, "markdown")
+                        unchecked = section(human, "Not checked") if expected else ""
+                        self.assertEqual(unchecked.count("**Not checked:"), len(expected))
+                        if value is not None:
+                            plain = ("**Not checked: a model provider's `gateway_oauth.credential_export`.** This setting "
+                                     "is for a credential command. Stay-safe did not check its value.\n\n"
+                                     "*What to do:* Find `gateway_oauth.credential_export` under "
+                                     "`[model_providers.<name>]` and review its value. If it specifies a command, check that you trust it."
+                                     if label.startswith("gateway") else
+                                     "**Not checked: `otel.headers_helper`.** This setting is for a command that supplies "
+                                     "telemetry headers. Stay-safe did not check its value.\n\n"
+                                     "*What to do:* Review `otel.headers_helper`. If it specifies a command, check that you trust it.")
+                            self.assertIn(plain + "\n\n*File `config-1`*", unchecked)
+                        for output in (human, json.dumps(report)):
+                            for private in ("private-helper", "private-arg", "kept-program"):
+                                self.assertNotIn(private, output)
+
+        both = ('[model_providers.corp.gateway_oauth.credential_export]\n'
+                'command="private-helper"\nargs=["private-arg"]\n'
+                '[otel]\nheaders_helper="private-helper private-arg"\n')
+        other_fields = "some settings in your config file"
+        cli_cases = (
+            (both, [generic, "config-1: " + gateway, "config-1: " + otel],
+             [other_fields, "a model provider's `gateway_oauth.credential_export`", "`otel.headers_helper`"]),
+            ('[model_providers.corp]\ngateway_oauth=false\n', ["config-1: gateway_oauth must be a table."],
+             ["your `gateway_oauth` settings"]),
+            ('otel="private-helper"\n', [generic], [other_fields]),
+            ('otel=["private-arg"]\n', [generic], [other_fields]),
+        )
+        checkout = copy_checkout(self.root / "checkout")
+        for settings, gaps, labels in cli_cases:
+            with self.subTest(settings=settings):
+                path = str(self.config(quiet + settings))
+                human = run_checkout(checkout, "--config", path, "--format", "markdown", cwd=self.root)
+                machine = run_checkout(checkout, "--config", path, "--format", "json", cwd=self.root)
+                self.assertCountEqual(json.loads(machine.stdout)["inspection_gaps"], gaps)
+                unchecked = section(human.stdout, "Not checked")
+                self.assertEqual(unchecked.count("**Not checked:"), len(labels))
+                for label in labels:
+                    self.assertIn(f"**Not checked: {label}.**", unchecked)
+                for run in (human, machine):
+                    self.assertEqual((run.returncode, run.stderr), (2, EXPLANATION))
+                    for private in ("private-helper", "private-arg", "kept-program"):
+                        self.assertNotIn(private, run.stdout + run.stderr)
+
     def test_aws_credentials_name_each_unchecked_command(self):
-        # NirajBhattarai: https://github.com/chalkbadger/stay-safe/issues/109#issuecomment-7003842313
-        # openai/codex 086ccc8 codex-rs/model-provider-info/src/lib.rs L241–260, L308–324.
         checkout = copy_checkout(self.root / "checkout")
         quiet = COMPLETE + 'shell_environment_policy={inherit="none"}\nfeatures.apps=false\n'
         keys = ("credential_export", "auth_refresh")
@@ -66,9 +138,11 @@ class StatusTests(ConfigCase):
                     expected = [generic] if selected else []
                     for key in settings:
                         label = f"aws.{key}"
-                        expected.append(f"config-1: Model-provider setting {label} was not checked for a credential command.")
-                        self.assertIn(f"**Not checked: `{label}`.** Stay-safe did not check this setting for a credential "
-                                      f"command.\n\n*What to do:* Review `{label}` in your config file.\n\n*File `config-1`*",
+                        expected.append(f"config-1: Model-provider setting {label} is for a credential command. Stay-safe did not check its value.")
+                        self.assertIn(f"**Not checked: a model provider's `{label}`.** This setting is for a credential command. "
+                                      "Stay-safe did not check its value.\n\n"
+                                      f"*What to do:* Find `{label}` under `[model_providers.<name>]` and review its value. "
+                                      "If it specifies a command, check that you trust it.\n\n*File `config-1`*",
                                       section(human.stdout, "Not checked"))
                     report = json.loads(machine.stdout)
                     self.assertCountEqual(report["inspection_gaps"], expected)
@@ -83,7 +157,6 @@ class StatusTests(ConfigCase):
         self.assertEqual(control.returncode, 2)
         self.assertIn("a model provider's sign-in command", section(control.stdout, "Not checked"))
 
-        # The two providers in the second file each contribute a gap.
         malformed = self.config(quiet + '[model_providers.corp]\naws=false\n', "bad.toml")
         other = self.config(quiet + '[model_providers.first.aws.credential_export]\n'
                             '[model_providers.second.aws.auth_refresh]\n')
@@ -92,10 +165,92 @@ class StatusTests(ConfigCase):
         self.assertEqual(report.returncode, 2)
         self.assertCountEqual(json.loads(report.stdout)["inspection_gaps"], [
             "config-1: aws must be a table.",
-            "config-2: Model-provider setting aws.auth_refresh was not checked for a credential command.",
-            "config-2: Model-provider setting aws.credential_export was not checked for a credential command."])
+            "config-2: Model-provider setting aws.auth_refresh is for a credential command. Stay-safe did not check its value.",
+            "config-2: Model-provider setting aws.credential_export is for a credential command. Stay-safe did not check its value."])
         output = section(run_checkout(checkout, *args, cwd=self.root).stdout, "Not checked")
         self.assertIn("**Not checked: your `aws` settings.**", output)
+
+    def test_app_tool_ai_reviewer_is_named_and_explains_policy_limits(self):
+        checkout = copy_checkout(self.root / "checkout")
+        base = COMPLETE + '[apps.calendar.tools."events/read"]\n'
+        field = 'apps.calendar.tools."events/read".approvals_reviewer'
+        named = (f"config-1: {field} requests AI review if this tool needs approval. "
+                 "A policy can require human review. The effective reviewer was not checked.")
+        generic = "config-1: tools contains fields outside reader coverage; their values were withheld."
+        wording = ("If this tool needs approval, your file asks Codex to have an AI reviewer approve or deny "
+                   "the request. Your organization can limit who may review requests. For example, if its policy "
+                   "allows only human review, Codex may ask you to decide. Stay-safe can’t tell from this file "
+                   "which policy applies to your run.")
+        unknown = 'future_field="private-test-value"\n'
+        for settings, expected in (
+            ('approvals_reviewer="auto_review"', [named]),
+            ('approvals_reviewer="guardian_subagent"', [named]),
+            (unknown + 'approvals_reviewer="auto_review"', [named, generic]),
+            (unknown, [generic]),
+            ('approvals_reviewer="user"', []),
+            (unknown + 'approvals_reviewer="user"', [generic]),
+            ('approvals_reviewer="private-test-value"', [generic]),
+            ('approvals_reviewer=["private-test-value"]', [generic]),
+            ("", []),
+        ):
+            with self.subTest(settings=settings):
+                path = str(self.config(base + settings))
+                machine = run_checkout(checkout, "--config", path, "--format", "json", cwd=self.root)
+                human = run_checkout(checkout, "--config", path, "--format", "markdown", cwd=self.root)
+                self.assertCountEqual(json.loads(machine.stdout)["inspection_gaps"], expected)
+                unchecked = section(human.stdout, "Not checked")
+                self.assertEqual(f"**Not checked: `{field}`.** {wording}" in unchecked, named in expected)
+                self.assertEqual("Codex added this tool setting in 0.172.0." in unchecked, named in expected)
+                self.assertEqual("some `tools` settings" in unchecked, generic in expected)
+                for run in (machine, human):
+                    self.assertEqual((run.returncode, run.stderr), (2, EXPLANATION) if expected else (0, ""))
+                    self.assertNotIn("private-test-value", run.stdout)
+
+    def test_app_auto_reviewer_is_named_as_unchecked(self):
+        app = COMPLETE + 'shell_environment_policy={inherit="none"}\n[apps.calendar]\ndefault_tools_approval_mode="prompt"\n'
+        gap = ("config-1: App approvals_reviewer is not evaluated; Codex may let a reviewer decide an app's tool calls "
+               "instead of asking you.")
+        cases = [(app + 'approvals_reviewer="auto_review"\n', [gap]),
+                 (app + 'approvals_reviewer="guardian_subagent"\n', [gap]),
+                 (app.replace("[apps.calendar]", '[apps._default]\napprovals_reviewer="auto_review"\n[apps.calendar]'), [gap]),
+                 (app + 'approvals_reviewer="user"\n', []),
+                 (app, [])]
+        checkout = copy_checkout(self.root / "checkout")
+        for text, expected in cases:
+            with self.subTest(config=text):
+                path = str(self.config(text))
+                human = run_checkout(checkout, "--config", path, cwd=self.root)
+                report = json.loads(run_checkout(checkout, "--config", path, "--format", "json", cwd=self.root).stdout)
+                self.assertEqual(report["inspection_gaps"], expected)
+                self.assertEqual((human.returncode, human.stderr), (2, EXPLANATION) if expected else (0, ""))
+                if expected:
+                    self.assertIn("**Not checked: an app's approval reviewer.**", section(human.stdout, "Not checked"))
+
+    def test_removing_an_app_reviewer_can_leave_the_default_reviewer_in_place(self):
+        base = COMPLETE + 'shell_environment_policy={inherit="none"}\n[apps._default]\napprovals_reviewer="auto_review"\n'
+        app = '[apps.calendar]\ndefault_tools_approval_mode="prompt"\n'
+        advice = ("Check the reviewer on the App and on `apps._default`. If you remove the App's override, the App can "
+                  "still inherit automatic review from `apps._default`.")
+        gap = ("config-1: App approvals_reviewer is not evaluated; Codex may let a reviewer decide an app's tool calls "
+               "instead of asking you.")
+        checkout = copy_checkout(self.root / "checkout")
+        overrides = ('[apps.calendar.links.account]\napprovals_reviewer="user"\n'
+                     '[apps.calendar.tools.read]\napprovals_reviewer="user"\n')
+        account_gap = "config-1: Per-account app policy is not evaluated; account identifiers were withheld."
+        for name, text, expected in (("before", base + app + 'approvals_reviewer="auto_review"\n', [gap]),
+                                     ("after", base + app, [gap]),
+                                     ("specific", base + app + overrides, sorted([gap, account_gap]))):
+            with self.subTest(run=name):
+                path = str(self.config(text, f"{name}.toml"))
+                human = run_checkout(checkout, "--config", path, cwd=self.root)
+                report = json.loads(run_checkout(checkout, "--config", path, "--format", "json", cwd=self.root).stdout)
+                self.assertEqual(report["inspection_gaps"], expected)
+                self.assertEqual((human.returncode, human.stderr), (2, EXPLANATION))
+                unchecked = section(human.stdout, "Not checked")
+                self.assertIn("**Not checked: an app's approval reviewer.**", unchecked)
+                self.assertIn("Check the tool and linked account first.", unchecked)
+                self.assertIn(advice, unchecked)
+                self.assertNotIn("main reviewer", human.stdout)
 
     def test_reports_with_gaps_explain_exit_two_on_stderr_only(self):
         checkout = copy_checkout(self.root / "checkout")

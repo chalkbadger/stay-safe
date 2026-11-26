@@ -13,14 +13,12 @@ from stay_safe.provenance import identify
 
 
 CITATION_GAP = "Committed incident citations are incomplete; source links are unavailable."
-# The Markdown lead for this rule (archived issue #105); tests/findings_say_what_to_do/test_plain_findings.py covers every rule.
 RISK = ("**With these settings, Codex runs commands without asking you.** It won't ask before any command it's allowed to "
         "run, so injected or mistaken instructions could make it run code you didn't want.\n\n"
         "*How it has gone wrong:* Agents running commands without approval have run a delete command aimed at a home "
         "directory and wiped a drive. Another user reported an automatic driver update while getting help with GPU performance. {} (reported, not verified).\n\n"
         + commands("read-only").replace("{", "{{").replace("}", "}}") + "\n\n"
         "*Rule `commands_without_prompts` · setting `config-1:approval_policy` = `never`*")
-# The catalog of that configuration in Markdown's "Your setup" (archived issue #105, reading check).
 SETUP = [
     "**Config file `config-1`**: the first file you passed with `--config`. Codex reads settings from config files "
     "like this.",
@@ -37,7 +35,6 @@ SOURCE = "https://github.com/chalkbadger/stay-safe/blob/" + REVISION + "/"
 
 class RiskOutputTests(ConfigCase):
     def checkout(self):
-        """A disposable copy of the package whose incidents.md each test may break."""
         checkout = self.root / "checkout"
         shutil.copytree(ROOT / "stay_safe", checkout / "stay_safe",
                         ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
@@ -50,7 +47,6 @@ class RiskOutputTests(ConfigCase):
         checkout = self.checkout()
         revision = REVISION
         source = SOURCE
-        # Only this disposable copy has an intentionally incomplete incident catalog.
         (checkout / "incidents.md").write_text(
             "# Reported incidents\n\nEach entry is reported, not verified.\n\n## I2. Synthetic retained incident\n",
             encoding="utf-8")
@@ -77,7 +73,7 @@ class RiskOutputTests(ConfigCase):
                            ("invalid-utf8", [CITATION_GAP])]:
             checkout = self.checkout()
             if name == "unreadable":
-                (checkout / "incidents.md").mkdir()  # reading a directory raises OSError on every platform
+                (checkout / "incidents.md").mkdir()
             else:
                 (checkout / "incidents.md").write_bytes(b"# Reported incidents\n\n## I2. \xff\n")
             for format_name in ("markdown", "json"):
@@ -103,8 +99,8 @@ class RiskOutputTests(ConfigCase):
         expected = [
             ("commands_without_prompts", "config-1:approval_policy", ["I2", "I3", "I24"]),
             ("self_described_tools", "config-1:apps.calendar", ["I15", "I21"]),
-            ("configured_program", "config-1:mcp_servers.git", ["I13", "I14", "I19"]),
-            ("configured_program", "config-1:notify", ["I13", "I14", "I19"]),
+            ("configured_program", "config-1:mcp_servers.git", ["I13", "I14", "I19", "I33"]),
+            ("configured_program", "config-1:notify", ["I13", "I14", "I19", "I33"]),
             ("environment_inheritance", "config-1:shell_environment_policy", ["I23"]),
         ]
         for format_name in ("markdown", "json"):
@@ -112,12 +108,12 @@ class RiskOutputTests(ConfigCase):
                 run = subprocess.run([sys.executable, "-m", "stay_safe", "--config", str(FIXTURE),
                                       "--format", format_name], cwd=ROOT, text=True,
                                      capture_output=True, timeout=10)
-                self.assertEqual((run.returncode, run.stderr), (0, ""))
+                self.assertEqual((run.returncode, run.stderr), (2, INCOMPLETE))
                 if format_name == "json":
                     report = json.loads(run.stdout)
                     actual = [(r["rule"], r["entry"], r["incidents"]) for r in report["risks"]]
                     self.assertEqual(report["incident_status"], "reported, not verified")
-                    self.assertEqual(set(report["incident_links"]), {"I2", "I3", "I13", "I14", "I15", "I19", "I21", "I23", "I24"})
+                    self.assertEqual(set(report["incident_links"]), {"I2", "I3", "I13", "I14", "I15", "I19", "I21", "I23", "I24", "I33"})
                     explanation = next(r["explanation"] for r in report["risks"] if r["rule"] == "self_described_tools")
                     self.assertIn("Documented in source, not yet observed", explanation)
                     self.assertIn("server-declared hints", explanation)
@@ -137,6 +133,4 @@ class RiskOutputTests(ConfigCase):
                         self.assertEqual("Based on Codex's source code, not yet seen in a live run." in lines[0],
                                          rule == "self_described_tools")
                         actual.append((rule, entry, re.findall(r"\[(I\d+)\]\(https://github.com/chalkbadger/stay-safe/blob/[0-9a-f]{40}/incidents.md#[^)]+\)", citations)))
-                # Markdown lists the same findings in the findings list's order (issue #82): the commands finding,
-                # the environment finding, the two programs, then the finding that is not ranked.
                 self.assertEqual(actual, expected if format_name == "json" else [expected[i] for i in (0, 4, 2, 3, 1)])

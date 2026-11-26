@@ -1,5 +1,3 @@
-"""Check test package markers, then run the repository's unittest suite."""
-
 from pathlib import Path
 import subprocess
 import sys

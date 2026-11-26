@@ -1,12 +1,3 @@
-"""Expected policy comes from OpenAI's pinned source, not the reader:
-https://github.com/openai/codex/blob/086ccc833bc9cf01024ad2dd6af7dbd421b6bf9a/codex-rs/protocol/src/config_types.rs#L205-L272
-https://github.com/openai/codex/blob/086ccc833bc9cf01024ad2dd6af7dbd421b6bf9a/codex-rs/config/src/shell_environment_policy.rs#L133-L169
-Even with inherit = "all", Codex never passes on its non-inheritable launch variables:
-https://github.com/openai/codex/blob/086ccc833bc9cf01024ad2dd6af7dbd421b6bf9a/codex-rs/protocol/src/shell_environment.rs#L14-L22
-https://github.com/openai/codex/blob/086ccc833bc9cf01024ad2dd6af7dbd421b6bf9a/codex-rs/protocol/src/shell_environment.rs#L170-L172
-I23 supplies the related credential-misuse rationale, not an observed Codex run.
-"""
-
 import json
 import subprocess
 import sys
@@ -23,7 +14,6 @@ EXPLANATION = ('The selected configuration starts shell command environments fro
                'apart from a few Codex launch variables. '
                'Inherited credentials could be misused, even with automatic name filtering enabled.')
 
-# The Markdown lead of the finding (archived issue #105).
 MARKDOWN_LEAD = ("**With these settings, commands Codex runs get your environment variables.** They start with the "
                  "environment Codex was launched with, apart from a few Codex launch variables. Credentials in it "
                  "could be misused, even if Codex filters out some variable names.")

@@ -1,4 +1,3 @@
-"""Issue #9's bounded names and literal trusted-declaration count, not live trust."""
 import builtins
 import io
 import json
