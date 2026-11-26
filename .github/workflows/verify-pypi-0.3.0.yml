@@ -1,0 +1,57 @@
+name: Verify stay-safe 0.3.0 from PyPI
+on:
+  push:
+    branches: [verify/pypi-0.3.0-207]
+permissions:
+  contents: read
+jobs:
+  published-install:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: c0ad5e5e8a1b2063a754635e4236836a4d5d176f
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0
+        with:
+          python-version: '3.11'
+      - name: Run the documented uvx command outside the checkout
+        env:
+          SOURCE_REVISION: c0ad5e5e8a1b2063a754635e4236836a4d5d176f
+          UV_DEFAULT_INDEX: https://pypi.org/simple
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$SOURCE_REVISION"
+          work=$(mktemp -d)
+          cp tests/understand_inspection_limits/inline-env.toml "$work/"
+          cd "$work"
+          export UV_CACHE_DIR="$work/cache"
+          python -m pip install --index-url https://pypi.org/simple uv==0.13.10
+          python --version
+          uname -sm
+          uvx --python 3.11 stay-safe@0.3.0 --help
+          json_status=0
+          uvx --python 3.11 stay-safe@0.3.0 --config inline-env.toml --format json > report.json || json_status=$?
+          save_status=0
+          uvx --python 3.11 stay-safe@0.3.0 --config inline-env.toml --save || save_status=$?
+          echo "Exit status: JSON=$json_status HTML=$save_status"
+          test "$json_status" = 2
+          test "$save_status" = 2
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          report = json.loads(Path("report.json").read_text())
+          revision = os.environ["SOURCE_REVISION"]
+          findings = [(r["rule"], r["entry"]) for r in report["risks"]]
+          gaps = report["inspection_gaps"]
+          assert report["provenance"]["source_revision"] == revision, report["provenance"]
+          assert findings == [("configured_program", "config-1:mcp_servers.example")], findings
+          assert gaps == ["config-1: mcp_servers.example.env contains inline values. Check the entries for credentials."], gaps
+          (saved,) = Path(".").glob("*.html")
+          html = saved.read_text()
+          assert "https://github.com/chalkbadger/stay-safe/blob/" + revision + "/" in html
+          assert "synthetic-value-not-a-real-credential" not in html + Path("report.json").read_text()
+          print(f"Source commit {revision}\nFinding {findings[0]}\nGap {gaps[0]}\nHTML {saved} with source links to release commit")
+          PY
