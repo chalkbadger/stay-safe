@@ -55,3 +55,29 @@ jobs:
           assert "synthetic-value-not-a-real-credential" not in html + Path("report.json").read_text()
           print(f"Source commit {revision}\nFinding {findings[0]}\nGap {gaps[0]}\nHTML {saved} with source links to release commit")
           PY
+      - name: Verify the public tag, release assets, and README source ZIP
+        run: |
+          set -euo pipefail
+          repo=https://github.com/chalkbadger/stay-safe
+          revision=c0ad5e5e8a1b2063a754635e4236836a4d5d176f
+          test "$(git ls-remote "$repo.git" refs/tags/v0.3.0 | cut -f1)" = "$revision"
+          work=$(mktemp -d)
+          cd "$work"
+          for name in SHA256SUMS stay-safe-0.3.0.zip stay_safe-0.3.0-py3-none-any.whl stay_safe-0.3.0.tar.gz; do
+            curl --fail --silent --show-error --location --retry 2 "$repo/releases/download/v0.3.0/$name" -o "$name"
+          done
+          echo '0ea0b095a13becfbfe31c399fd3276b82a4f31fe361ed0e2e062cd64e24d999a  SHA256SUMS' | sha256sum --check
+          sha256sum --check SHA256SUMS
+          curl --fail --silent --show-error --location --retry 2 "$repo/archive/refs/tags/v0.3.0.zip" -o readme.zip
+          python - <<'PY'
+          from zipfile import ZipFile
+          revision = b"c0ad5e5e8a1b2063a754635e4236836a4d5d176f"
+          with ZipFile("stay-safe-0.3.0.zip") as prepared, ZipFile("readme.zip") as tagged:
+              expected = {entry.filename for entry in prepared.infolist() if not entry.is_dir()}
+              files = [entry.filename for entry in tagged.infolist() if not entry.is_dir()]
+              assert len(files) == len(expected) == 142 and set(files) == expected
+              for name in files:
+                  assert tagged.read(name) == prepared.read(name), name
+              assert tagged.read("stay-safe-0.3.0/stay_safe/release.txt").strip() == revision
+              print(f"README tag ZIP: all {len(files)} file paths and contents match the release ZIP.")
+          PY
