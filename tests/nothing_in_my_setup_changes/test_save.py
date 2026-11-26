@@ -146,5 +146,5 @@ class SaveTests(ConfigCase):
         self.assertEqual((run.returncode, run.stdout, run.stderr),
                          (2, "", "--save can't be combined with --format json. Use --help.\n" + FEEDBACK))
         help_text = self.run_save("--help").stdout
-        self.assertIn("Not with --format json.", " ".join(help_text.split()))
+        self.assertIn("Use --save with Markdown output only.", " ".join(help_text.split()))
         self.assertEqual(tree_state(self.root), before)

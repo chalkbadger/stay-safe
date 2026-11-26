@@ -239,10 +239,10 @@ def main(argv=None):
     parser.add_argument("--agent", action="append", choices=AGENTS,
                         help="Check this coding agent; repeat for both. With no files selected, inspect the agent folders found.")
     parser.add_argument("--format", choices=("markdown", "json", "sarif"),
-                        help="Write the report in this format. Use --format sarif without --save.")
+                        help="Choose the report format.")
     parser.add_argument("--save", action="store_true",
                         help=f"Also save the report as a formatted page, {NAME}, in {SAVE_FOLDER}, and end with a command "
-                             "that opens it. Not with --format json.")
+                             "that opens it. Use --save with Markdown output only.")
     args, extra = parser.parse_known_args(argv)
     if args.save and len(extra) == 1 and not extra[0].startswith("-"):
         parser.exit(2, f"--save takes no path. It saves {NAME} in {SAVE_FOLDER}.\n")

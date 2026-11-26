@@ -98,7 +98,9 @@ class SarifTests(ConfigCase):
         self.assertIn(run.returncode, (0, 2))
         document = json.loads(run.stdout)
         self.validate(document)
-        self.assertTrue(document["runs"][0]["results"])
+        entries = [location["fullyQualifiedName"] for result in document["runs"][0]["results"]
+                   for item in result["locations"] for location in item["logicalLocations"]]
+        self.assertIn("config-1:mcp_servers.local", entries)
         encoded = json.dumps(document, ensure_ascii=False) + run.stderr
         for private in [*SEEDS.values(), str(self.root), path.name]:
             with self.subTest(private=private):

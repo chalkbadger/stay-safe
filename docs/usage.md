@@ -136,7 +136,9 @@ python3 -m stay_safe --format sarif > stay-safe.sarif
 Open the file in a SARIF 2.1.0 viewer. Each agent has a run containing findings
 as results and inspection gaps as warnings in its invocation. A logical location
 identifies the setting. Review visible configuration names before sharing.
-An incomplete inspection writes the document and exits 2.
+A complete inspection with no findings produces no results or warnings and exits 0.
+An incomplete inspection still writes the document and exits 2. For example, if
+your selected rules file is missing, its run contains a warning about the file.
 
 ## Save the report as a page: `--save`
 
