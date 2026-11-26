@@ -72,9 +72,9 @@ PLAIN = {
         "**This file defines a profile but doesn’t select it.** If this is your main `config.toml` and you "
         "start Codex 0.172.0 with `--profile` and a name defined here, the matching table stops Codex from loading. "
         f"Starting with a name this file doesn’t define does not trigger that conflict. {INLINE_OVERRIDE}",
-    "Codex expects a string for the top-level profile setting when it validates this configuration.":
-        "**The `profile` setting has the wrong type.** Codex expects a profile name written as a string "
-        "when it validates this file.",
+    "Codex expects a string for the top-level profile setting. It ignores this setting in project configuration.":
+        "**`profile` isn’t a quoted name.** Codex expects a string here. It ignores this setting in project "
+        "configuration.",
     "The profiles table is empty. No profile names are defined. Startup profile selection was not checked.":
         "**Not checked: profile selection.** The `profiles` table is empty. It defines no names that could "
         "conflict with a startup profile.",
@@ -262,12 +262,12 @@ STEPS = {
     SELECTOR_GAP:
         "Remove the `profile` setting. To use a user profile named `work`, move the settings inside "
         "`[profiles.work]` in your main config into `work.config.toml` in your Codex folder. Remove the old table and start Codex "
-        "with `--profile work`.",
+        "with `--profile work`. Then run stay-safe with `--config` and the path to that file to check its settings.",
     TABLES_GAP:
         "If you want to use one of these profiles, move its settings into a separate file in your Codex folder "
         "and remove the matching table from the main config. For example, use `work.config.toml` with "
         "`--profile work`.",
-    "Codex expects a string for the top-level profile setting when it validates this configuration.":
+    "Codex expects a string for the top-level profile setting. It ignores this setting in project configuration.":
         "Remove the `profile` setting. To choose a profile, use a separate profile file and select it with "
         "`--profile`.",
     "The profiles table is empty. No profile names are defined. Startup profile selection was not checked.":

@@ -22,7 +22,7 @@ LEGACY_PROFILE_SELECTOR = (f"Codex {PROFILE_LOADER_VERSION} rejects a top-level 
 LEGACY_PROFILE_TABLES = ("Legacy profile tables do not select a profile. If this is the base user config, "
                          f"starting Codex {PROFILE_LOADER_VERSION} with a matching --profile name stops configuration "
                          f"loading. {INLINE_PROFILE_OVERRIDE}")
-INVALID_PROFILE_SELECTOR = "Codex expects a string for the top-level profile setting when it validates this configuration."
+INVALID_PROFILE_SELECTOR = "Codex expects a string for the top-level profile setting. It ignores this setting in project configuration."
 EMPTY_PROFILES = "The profiles table is empty. No profile names are defined. Startup profile selection was not checked."
 INVALID_APPROVAL = "Codex cannot load this configuration file because {label} is not one of " + ", ".join(APPROVALS) + "."
 INVALID_BOOLEAN = "Codex cannot load this configuration file because {label} is not a boolean."
@@ -484,6 +484,8 @@ class Reader:
     def profiles(self, data):
         if "profile" in data:
             self.gap(LEGACY_PROFILE_SELECTOR if isinstance(data["profile"], str) else INVALID_PROFILE_SELECTOR)
+            if "profiles" in data:
+                self.table(data["profiles"], "profiles")
         elif "profiles" in data:
             profiles = data["profiles"]
             if profiles == {}:

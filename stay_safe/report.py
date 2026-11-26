@@ -493,8 +493,8 @@ GAPS = {
         "Codex from loading. Starting with a name this file doesn’t define does not trigger that conflict. "
         f"{INLINE_PROFILE_OVERRIDE}",
     INVALID_PROFILE_SELECTOR:
-        "**The `profile` setting has the wrong type.** Codex expects a profile name written as a string "
-        "when it validates this file.",
+        "**`profile` isn’t a quoted name.** Codex expects a string here. It ignores this setting in project "
+        "configuration.",
     EMPTY_PROFILES:
         "**Not checked: profile selection.** The `profiles` table is empty. It defines no names that could "
         "conflict with a startup profile.",
@@ -700,7 +700,7 @@ STEPS = {
     LEGACY_PROFILE_SELECTOR:
         "Remove the `profile` setting. To use a user profile named `work`, move the settings inside "
         "`[profiles.work]` in your main config into `work.config.toml` in your Codex folder. Remove the old table and start Codex "
-        "with `--profile work`.",
+        "with `--profile work`. Then run stay-safe with `--config` and the path to that file to check its settings.",
     LEGACY_PROFILE_TABLES:
         "If you want to use one of these profiles, move its settings into a separate file in your Codex folder "
         "and remove the matching table from the main config. For example, use `work.config.toml` with "
@@ -716,6 +716,9 @@ STEPS = {
         "Set `ignore_default_excludes` to `true` or `false`.",
     "Configuration contains fields outside reader coverage; their values were withheld.":
         "Review those settings yourself; stay-safe didn't evaluate them.",
+    "profiles must be a table.":
+        "Remove the malformed `profiles` value. If you want to use a profile, put its settings in a separate "
+        "profile file in your Codex folder.",
     "{label} must be a table.": "Rewrite it as a group of settings, then run stay-safe again.",
     "{label} contains fields outside reader coverage; their values were withheld.":
         "Review the other settings under `{label}` yourself; stay-safe didn't evaluate them.",
