@@ -127,6 +127,19 @@ Without `--agent`, `--config` and `--rules` select Codex. Select one agent when
 passing `--config`. Only Codex accepts `--rules`. Both options skip files named
 `.claude.json` or `.credentials.json` and report an inspection gap.
 
+## Export findings as SARIF
+
+```sh
+python3 -m stay_safe --format sarif > stay-safe.sarif
+```
+
+Open the file in a SARIF 2.1.0 viewer. Each agent has a run containing findings
+as results and inspection gaps as warnings in its invocation. A logical location
+identifies the setting. Review visible configuration names before sharing.
+A complete inspection with no findings produces no results or warnings and exits 0.
+An incomplete inspection still writes the document and exits 2. For example, if
+your selected rules file is missing, its run contains a warning about the file.
+
 ## Save the report as a page: `--save`
 
 `--save` also writes the report as a self-contained page, `stay-safe-report.html`, in
@@ -142,7 +155,7 @@ elements ([HTML element index](https://html.spec.whatwg.org/multipage/indices.ht
 carry the [anchors GitHub gives them](https://docs.github.com/en/get-started/writing-on-github/getting-started-with-writing-and-formatting-on-github/basic-writing-and-formatting-syntax#section-links), so the report's own links work on the page. It is the only file stay-safe's code writes,
 and only with `--save`; Python itself may cache compiled code in `stay_safe/__pycache__`. If the page can't be written, for example in a read-only sandbox,
 stay-safe says so in one line and prints the report. `--save` can't be combined
-with `--format json`.
+with `--format json` or `--format sarif`.
 
 ## Symlinks
 

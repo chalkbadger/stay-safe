@@ -43,8 +43,10 @@ Tests: [tests/see_every_connection_and_setting/](../tests/see_every_connection_a
 - I set `disableAllHooks` and see my hooks listed as turned off in that file. `test_claude_programs.py::test_disable_all_hooks_turns_off_hooks_in_the_same_file`
 - I supply a malformed Claude Code hook and see it named as a gap. `test_claude_programs.py::test_malformed_hooks_name_the_field`
 - I run stay-safe in a project folder and see its `.claude/settings.json` read once beside my user settings. `test_claude_programs.py::test_discovery_reads_the_project_file_in_the_current_folder_once`
-- I set an AWS, GCP or telemetry helper command and see the setting listed with its command left out. `test_claude_cloud_helpers.py::test_each_helper_is_listed_with_its_command_withheld`
-- I set an AWS, GCP or telemetry helper to something that isn't a command and see that setting named as a gap. `test_claude_cloud_helpers.py::test_invalid_helper_value_names_the_setting`
+- When I set `apiKeyHelper`, I see the setting in the catalog. The command stays private. `test_claude_api_key_helper.py::test_api_key_helper_is_listed_with_its_command_withheld`
+- When I leave `apiKeyHelper` blank or give it a value other than text, I see why stay-safe flagged it. `test_claude_api_key_helper.py::test_malformed_api_key_helper_names_the_setting`
+- When I set an AWS, GCP or telemetry helper command, I see the setting in the catalog. The command stays private. `test_claude_cloud_helpers.py::test_each_helper_is_listed_with_its_command_withheld`
+- When I leave a helper blank or give it a value other than text, I see which setting needs attention and how to fix it. `test_claude_cloud_helpers.py::test_invalid_helper_value_names_the_setting`
 - I run in a project whose `.claude` folder can't be checked and see it named as a gap. `test_claude_programs.py::test_unreadable_project_folder_is_a_named_gap`
 
 ## [explain_profile_settings] I can tell when a profile setting in my file would stop Codex from loading it and when that depends on how I start Codex.
@@ -54,6 +56,7 @@ Tests: [tests/explain_profile_settings/](../tests/explain_profile_settings/)
 - I see why the old selector stops loading or when a named table conflicts with startup selection. `test_profiles.py::test_selector_and_named_tables_report_different_loading_conditions`
 - I inspect a project file with the old selector and see how Codex treats project configuration. `test_profiles.py::test_project_file_explains_why_its_selector_can_be_ignored`
 - I can check a separate profile file for settings that could override my main config. `test_profiles.py::test_migrated_profile_can_be_inspected_separately_from_the_main_config`
+- When my file sets `profile` and a `profiles` value that isn't a table, I see both under "Not checked". `test_profiles.py::test_selector_does_not_hide_a_malformed_profiles_value`
 - I inspect two files and see each profile message and finding attached to its own file. `test_profiles.py::test_each_snapshot_keeps_its_own_profile_message_and_settings`
 
 ## [understand_inspection_limits] I can tell what the report establishes and what needs further checking.
@@ -71,7 +74,7 @@ Tests: [tests/understand_inspection_limits/](../tests/understand_inspection_limi
 - If `env` or `http_headers` has the wrong type, the report names the setting and tells me Codex expects a table of strings. It also warns me about the command configured for the other server. `test_inline_mcp.py::test_rejected_inline_maps_keep_the_other_servers_finding`
 - I give a stdio server an HTTP header helper and see why Codex rejects the setting and how to fix it. `test_status.py::test_stdio_header_helper_names_the_rejected_setting`
 - I see which AWS credential commands were left unchecked even when the provider is selected elsewhere. `test_status.py::test_aws_credentials_name_each_unchecked_command`
-- I see each unassessed gateway or telemetry helper named in the incomplete report. `test_status.py::test_gateway_and_otel_helpers_name_unchecked_commands`
+- When I set a gateway credential command or a telemetry header helper, I see each one under "Not checked". `test_status.py::test_gateway_and_otel_helpers_name_unchecked_commands`
 - I choose an AI reviewer for an App tool, and "Not checked" names the setting and explains that a policy can require a different reviewer. `test_status.py::test_app_tool_ai_reviewer_is_named_and_explains_policy_limits`
 - I let automatic review decide an app's tool calls and see that reviewer under "Not checked", while `user` or no reviewer stays clean. `test_status.py::test_app_auto_reviewer_is_named_as_unchecked`
 - I set automatic review on `apps._default` and on a named App, follow the advice and remove only the App's reviewer, and run again. The default reviewer is still under "Not checked", the run still exits 2, and the advice says the App can still inherit automatic review from `apps._default`. `test_status.py::test_removing_an_app_reviewer_can_leave_the_default_reviewer_in_place`
@@ -129,7 +132,10 @@ Tests: [tests/each_risk_shows_its_cause/](../tests/each_risk_shows_its_cause/)
 - With two command hooks in one file, I follow the advice to remove one and rerun stay-safe. The other hook is still reported, and the removed one is gone from the catalog and the finding. `test_claude_program_risks.py::test_removing_one_of_two_command_hooks_keeps_the_other`
 - My user settings turn hooks off and the project turns them back on. Setting `disableAllHooks` to `true` again in my user file leaves the finding in place, because the project file still wins. Changing the project file removes it. `test_claude_program_risks.py::test_turning_hooks_off_in_user_settings_does_not_override_the_project`
 - An exec-form hook's Check tells me to look at its `args` as well as its `command`. `test_claude_program_risks.py::test_an_exec_form_hook_points_to_its_args`
-- Each AWS, GCP or telemetry helper in a project's settings gets its own finding, which names the file and leaves the command out. `test_claude_cloud_helpers_risk.py::test_each_project_helper_names_its_file_and_withholds_the_command`
+- When my project file defines an `apiKeyHelper` command, I see a finding that names the file and withholds the command. `test_claude_api_key_helper_risk.py::test_api_key_helper_finding_names_its_file_and_withholds_the_command`
+- When my user and project files both define an `apiKeyHelper` command, I see both settings in the catalog and one finding for the project file. When I remove the project setting, I see the finding for my user file. When I select both files with `--config`, I see a finding for each. `test_claude_api_key_helper_risk.py::test_discovery_reports_the_project_helper_and_falls_back_to_the_user_helper`
+- When my `apiKeyHelper` value is blank or has the wrong type, I see how to fix or remove the setting. `test_claude_api_key_helper_risk.py::test_malformed_helper_explains_how_to_fix_it`
+- When my project configures a helper, I see which file sets it and when Claude Code can run it. The command stays private. `test_claude_cloud_helpers_risk.py::test_each_project_helper_names_its_file_and_withholds_the_command`
 - When both discovered files set the same helper, I see the user setting marked as overridden and a finding for the project setting. Files selected with `--config` keep separate findings. `test_claude_cloud_helpers_risk.py::test_project_helper_overrides_user_helper_only_during_discovery`
 
 ## [findings_say_what_to_do] Each finding explains what is wrong and what I can do.
@@ -235,6 +241,16 @@ Tests: [tests/check_every_installed_agent/](../tests/check_every_installed_agent
 - I set `CLAUDE_CONFIG_DIR` and see the settings in that folder. `test_agents.py::test_claude_config_dir_selects_the_claude_folder`
 - I choose `--agent claude` without a Claude Code folder and see that nothing was inspected. `test_agents.py::test_agent_claude_without_its_folder_says_nothing_was_inspected`
 - I pass a file with both agents chosen, or a rules file for Claude Code, and am told what to choose. `test_agents.py::test_selected_files_need_exactly_one_agent_and_rules_need_codex`
+
+## [export_private_sarif] I can share findings and inspection gaps in SARIF. Configuration names can appear in the export. Private input paths and command details are withheld.
+Issue: https://github.com/chalkbadger/stay-safe/issues/204
+Tests: [tests/export_private_sarif/](../tests/export_private_sarif/)
+
+- When the inspection is complete and finds nothing, I get a SARIF 2.1.0 report with no results or warnings, and stay-safe exits 0. If my selected rules file is missing, I still get a report with no results. It warns me about the missing file, and stay-safe exits 2. `test_sarif.py::test_complete_and_gaps_only_reports_distinguish_an_empty_result_from_incomplete_inspection`
+- Each finding includes its rule ID, explanation and logical entry ID. When stay-safe knows its source revision, it links to the rule at that revision. If the revision is unknown, the finding appears without a link. `test_sarif.py::test_each_risk_keeps_its_rule_explanation_and_logical_entry_and_each_gap_is_a_warning`
+- Each agent's run contains only its own findings and unchecked items. `test_sarif.py::test_two_agents_keep_their_own_results_and_notifications`
+- The export withholds private input paths, commands, arguments, addresses and environment and header values. `test_sarif.py::test_private_inputs_stay_withheld_throughout_the_document`
+- If I run `--format sarif --save`, stay-safe tells me the options cannot be used together and exits 2. It prints no report and creates no HTML page. `test_sarif.py::test_save_rejects_sarif_before_writing_any_report`
 
 ## [track_codex_releases] I can see which new Codex releases changed the sources or configuration fields behind the report.
 Issue: https://github.com/chalkbadger/stay-safe/issues/128

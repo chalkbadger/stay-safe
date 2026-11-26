@@ -22,7 +22,7 @@ LEGACY_PROFILE_SELECTOR = (f"Codex {PROFILE_LOADER_VERSION} rejects a top-level 
 LEGACY_PROFILE_TABLES = ("Legacy profile tables do not select a profile. If this is the base user config, "
                          f"starting Codex {PROFILE_LOADER_VERSION} with a matching --profile name stops configuration "
                          f"loading. {INLINE_PROFILE_OVERRIDE}")
-INVALID_PROFILE_SELECTOR = "Codex expects a string for the top-level profile setting when it validates this configuration."
+INVALID_PROFILE_SELECTOR = "Codex expects a string for the top-level profile setting. It ignores this setting in project configuration."
 EMPTY_PROFILES = "The profiles table is empty. No profile names are defined. Startup profile selection was not checked."
 INVALID_APPROVAL = "Codex cannot load this configuration file because {label} is not one of " + ", ".join(APPROVALS) + "."
 INVALID_BOOLEAN = "Codex cannot load this configuration file because {label} is not a boolean."
@@ -484,6 +484,8 @@ class Reader:
     def profiles(self, data):
         if "profile" in data:
             self.gap(LEGACY_PROFILE_SELECTOR if isinstance(data["profile"], str) else INVALID_PROFILE_SELECTOR)
+            if "profiles" in data:
+                self.table(data["profiles"], "profiles")
         elif "profiles" in data:
             profiles = data["profiles"]
             if profiles == {}:
@@ -512,13 +514,13 @@ class Reader:
                 aws = self.table(provider.get("aws", {}), "aws")
                 for key in ("credential_export", "auth_refresh"):
                     if key in aws:
-                        self.gap(f"Model-provider setting aws.{key} was not checked for a credential command.")
+                        self.gap(f"Model-provider setting aws.{key} is for a credential command. Stay-safe did not check its value.")
                 gateway = self.table(provider.get("gateway_oauth", {}), "gateway_oauth")
                 if "credential_export" in gateway:
-                    self.gap("Model-provider setting gateway_oauth.credential_export was not checked for a credential command.")
+                    self.gap("Model-provider setting gateway_oauth.credential_export is for a credential command. Stay-safe did not check its value.")
         otel = data.get("otel")
         if isinstance(otel, dict) and "headers_helper" in otel:
-            self.gap("otel.headers_helper was not checked for a header command.")
+            self.gap("otel.headers_helper is for a command that supplies telemetry headers. Stay-safe did not check its value.")
         if "notify" in data:
             notify = data["notify"]
             if (isinstance(notify, list) and notify and all(isinstance(p, str) for p in notify)

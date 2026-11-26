@@ -30,14 +30,14 @@ HOOK_EVENTS = {"SessionStart", "Setup", "UserPromptSubmit", "UserPromptExpansion
                "TeammateIdle", "InstructionsLoaded", "ConfigChange", "CwdChanged", "DirectoryAdded", "FileChanged",
                "WorktreeCreate", "WorktreeRemove", "PreCompact", "PostCompact", "PreModelSwitch", "PostModelSwitch",
                "Elicitation", "ElicitationResult", "SessionEnd"}
-HELPER_TIMING = {
+HELPER_USE = {
+    "apiKeyHelper": "to get the credential it sends with model requests",
     "awsAuthRefresh": "when the AWS credential check fails",
     "awsCredentialExport": "at session start and on each AWS credential reload",
     "gcpAuthRefresh": "when Google Cloud credentials expire or cannot be loaded",
     "otelHeadersHelper": "at startup and periodically to generate telemetry headers",
 }
-HELPER_GAP = "{} has an empty or non-text value; its command could not be determined."
-PROGRAM_SETTINGS = {"hooks", "disableAllHooks", "allowedHttpHookUrls", *HELPER_TIMING}
+PROGRAM_SETTINGS = {"hooks", "disableAllHooks", "allowedHttpHookUrls", *HELPER_USE}
 COMMAND = "command withheld"
 DISABLED = "turned off by disableAllHooks in this file"
 UNREAD_ENABLE = ("disableAllHooks turns off the hooks found, but .claude/settings.local.json, managed settings and "
@@ -175,11 +175,15 @@ class SettingsReader(Reader):
                 self.add(name, "hook", [], facts)
 
     def commands(self, data):
-        for name in HELPER_TIMING:
+        for name in HELPER_USE:
             if name not in data:
                 continue
-            if not nonempty(data[name]):
-                self.gap(HELPER_GAP.format(name))
+            value = data[name]
+            if not isinstance(value, str):
+                self.gap(f"{name} has a non-text value. Claude Code expects a command written as text.")
+                continue
+            if not value.strip():
+                self.gap(f"{name} is blank. There is no command to check.")
                 continue
             observations = [COMMAND] + ([PROJECT] if self.scope == "project" else [])
             self.add([name], "program", observations, {"configured_program": True})
@@ -286,7 +290,7 @@ def handler_note(record):
 
 def resolve(entries, discovered):
     if discovered:
-        programs = [entry for entry in entries if entry["kind"] == "program" and entry["name"] in HELPER_TIMING]
+        programs = [entry for entry in entries if entry["kind"] == "program" and entry["name"] in HELPER_USE]
         winners = {entry["name"]: entry["source"] for entry in programs}
         for entry in programs:
             winner = winners[entry["name"]]

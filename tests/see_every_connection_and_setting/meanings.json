@@ -430,8 +430,8 @@
     "config": "approval_policy=\"on-request\"\nsandbox_mode=\"read-only\"\n[model_providers.amazon-bedrock.aws.credential_export]\ncommand=\"synthetic-export\"\n[model_providers.amazon-bedrock.aws.auth_refresh]\ncommand=\"aws\"",
     "entry": "model_providers.amazon-bedrock",
     "gaps": [
-      "Model-provider setting aws.auth_refresh was not checked for a credential command.",
-      "Model-provider setting aws.credential_export was not checked for a credential command."
+      "Model-provider setting aws.auth_refresh is for a credential command. Stay-safe did not check its value.",
+      "Model-provider setting aws.credential_export is for a credential command. Stay-safe did not check its value."
     ]
   },
   {
@@ -440,7 +440,7 @@
     "config": "approval_policy=\"on-request\"\nsandbox_mode=\"read-only\"\n[model_providers.internal.gateway_oauth.credential_export]\ncommand=\"synthetic-export\"",
     "entry": "model_providers.internal",
     "gaps": [
-      "Model-provider setting gateway_oauth.credential_export was not checked for a credential command."
+      "Model-provider setting gateway_oauth.credential_export is for a credential command. Stay-safe did not check its value."
     ]
   },
   {
@@ -450,7 +450,7 @@
     "entry": "otel",
     "gaps": [
       "Configuration contains fields outside reader coverage; their values were withheld.",
-      "otel.headers_helper was not checked for a header command."
+      "otel.headers_helper is for a command that supplies telemetry headers. Stay-safe did not check its value."
     ]
   },
   {

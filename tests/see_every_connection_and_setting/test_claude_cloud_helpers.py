@@ -36,9 +36,14 @@ class ClaudeCloudHelpersTests(ConfigCase):
         for name, value in INVALID.items():
             with self.subTest(name=name):
                 entries, gaps = self.read({name: value})
-                message = f"{name} has an empty or non-text value; its command could not be determined."
+                if name == "awsAuthRefresh":
+                    message = f"{name} is blank. There is no command to check."
+                    reason = "The value is blank. There is no command to check."
+                else:
+                    message = f"{name} has a non-text value. Claude Code expects a command written as text."
+                    reason = "The value is not text. Claude Code expects a command written as text."
                 self.assertEqual(gaps, [f"settings-1: {message}"])
                 self.assertEqual(self.programs(entries), {})
-                self.assertIn(f"**Not checked: `{name}`.** Its value is empty or isn't text", run.stdout)
-                self.assertIn(f"Set `{name}` to the command you mean, or remove it.", run.stdout)
+                self.assertIn(f"**Not checked: `{name}`.** {reason}", run.stdout)
+                self.assertIn(f"Set `{name}` to the command you want Claude Code to run, or remove the setting.", run.stdout)
                 self.assertNotIn("seed", json.dumps([entries, gaps]) + run.stdout)

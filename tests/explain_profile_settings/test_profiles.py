@@ -28,7 +28,8 @@ class ProfileTests(ConfigCase):
                     self.assertIn("Codex 0.172.0 stops if `profile` is in the configuration it uses at startup", message)
                     self.assertIn("Remove the `profile` setting.", message)
                     self.assertIn("`work.config.toml`", message)
-                    self.assertIn("Remove the old table and start Codex with `--profile work`.", message)
+                    self.assertIn("Remove the old table and start Codex with `--profile work`. Then run stay-safe with "
+                                  "`--config` and the path to that file to check its settings.", message)
                 else:
                     self.assertIn("**This file defines a profile but doesn’t select it.**", message)
                     self.assertIn("If this is your main `config.toml` and you start Codex 0.172.0 with `--profile` "
@@ -74,13 +75,36 @@ class ProfileTests(ConfigCase):
         for run in (human, machine):
             self.assertEqual((run.returncode, run.stderr), (2, INCOMPLETE))
 
+    def test_selector_does_not_hide_a_malformed_profiles_value(self):
+        checkout = copy_checkout(self.root / "checkout")
+        table = "config-1: profiles must be a table."
+        for selector, first in (('"private-name"', SELECTOR_GAP),
+                                ('false', "Codex expects a string for the top-level profile setting. "
+                                          "It ignores this setting in project configuration.")):
+            with self.subTest(selector=selector):
+                path = str(self.config(BASE + "profile=" + selector + '\nprofiles="private-value"\n'))
+                machine = run_checkout(checkout, "--config", path, "--format", "json", cwd=self.root)
+                human = run_checkout(checkout, "--config", path, "--format", "markdown", cwd=self.root)
+                self.assertEqual(json.loads(machine.stdout)["inspection_gaps"], ["config-1: " + first, table])
+                unchecked = section(human.stdout, "Not checked")
+                self.assertIn("**Not checked: your `profiles` settings.**", unchecked)
+                self.assertIn("*What to do:* Remove the malformed `profiles` value. If you want to use a profile, "
+                              "put its settings in a separate profile file in your Codex folder.", unchecked)
+                for run in (human, machine):
+                    self.assertEqual((run.returncode, run.stderr), (2, INCOMPLETE))
+                    self.assertNotIn("private-name", run.stdout)
+                    self.assertNotIn("private-value", run.stdout)
+        both = str(self.config(BASE + 'profile="private-name"\n[profiles.private-name]\n', "both.toml"))
+        valid = run_checkout(checkout, "--config", both, "--format", "json", cwd=self.root)
+        self.assertEqual(json.loads(valid.stdout)["inspection_gaps"], ["config-1: " + SELECTOR_GAP])
+
     def test_project_file_explains_why_its_selector_can_be_ignored(self):
         checkout = copy_checkout(self.root / "checkout")
         project = self.root / "project"
         folder = project / ".codex"
         folder.mkdir(parents=True)
         path = folder / "config.toml"
-        for selector, expected in (('"undisclosed"', "project configuration"), ('false', "validates")):
+        for selector, expected in (('"undisclosed"', "Codex 0.172.0"), ('false', "expects a string")):
             with self.subTest(selector=selector):
                 path.write_text(BASE + "profile=" + selector, encoding="utf-8")
                 for fmt in ("markdown", "json"):
@@ -89,5 +113,6 @@ class ProfileTests(ConfigCase):
                     message = (section(run.stdout, "Not checked") if fmt == "markdown"
                                else json.loads(run.stdout)["inspection_gaps"][0])
                     self.assertIn(expected, message)
+                    self.assertIn("gnores this setting in project configuration", message)
                     self.assertNotIn("undisclosed", run.stdout)
                     self.assertEqual((run.returncode, run.stderr), (2, INCOMPLETE))

@@ -1,5 +1,7 @@
 # Stay safe
 
+[![Checks on main](https://github.com/chalkbadger/stay-safe/actions/workflows/checks.yml/badge.svg?branch=main&event=push)](https://github.com/chalkbadger/stay-safe/actions/workflows/checks.yml?query=branch%3Amain+event%3Apush)
+
 Check your Codex settings and saved approvals with three questions in mind.
 
 - **What have I allowed Codex to do?**
@@ -117,7 +119,7 @@ or [Using and trusting the tool](docs/report.md#using-and-trusting-the-tool).
 
 Git is required for the development tests. Run `python3 check_tests.py` in a
 development virtual environment. Before the first run, install the build tools
-with `python3 -m pip install build "setuptools>=77" wheel`.
+with `python3 -m pip install build "setuptools>=77" wheel fastjsonschema==2.21.2`.
 This checks test-folder package markers before running unittest discovery.
 
 ## Contribute

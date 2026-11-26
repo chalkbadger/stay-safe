@@ -238,10 +238,11 @@ def main(argv=None):
     parser.add_argument("--rules", action="append", metavar="FILE", help="Inspect one saved-rules file independently.")
     parser.add_argument("--agent", action="append", choices=AGENTS,
                         help="Check this coding agent; repeat for both. With no files selected, inspect the agent folders found.")
-    parser.add_argument("--format", choices=("markdown", "json"))
+    parser.add_argument("--format", choices=("markdown", "json", "sarif"),
+                        help="Choose the report format.")
     parser.add_argument("--save", action="store_true",
                         help=f"Also save the report as a formatted page, {NAME}, in {SAVE_FOLDER}, and end with a command "
-                             "that opens it. Not with --format json.")
+                             "that opens it. Use --save with Markdown output only.")
     args, extra = parser.parse_known_args(argv)
     if args.save and len(extra) == 1 and not extra[0].startswith("-"):
         parser.exit(2, f"--save takes no path. It saves {NAME} in {SAVE_FOLDER}.\n")
@@ -254,8 +255,8 @@ def main(argv=None):
         parser.exit(2, "--workspace needs a directory. Use --help.\n")
     if args.rules and len(args.rules) != 1:
         parser.error("Only one rules file may be selected.")
-    if args.save and args.format == "json":
-        parser.exit(2, "--save can't be combined with --format json. Use --help.\n")
+    if args.save and args.format in ("json", "sarif"):
+        parser.exit(2, f"--save can't be combined with --format {args.format}. Use --help.\n")
     agents = list(dict.fromkeys(args.agent or []))
     if args.config and len(agents) > 1:
         parser.exit(2, "--config needs one --agent: choose codex or claude.\n")

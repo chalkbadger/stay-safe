@@ -493,8 +493,8 @@ GAPS = {
         "Codex from loading. Starting with a name this file doesn’t define does not trigger that conflict. "
         f"{INLINE_PROFILE_OVERRIDE}",
     INVALID_PROFILE_SELECTOR:
-        "**The `profile` setting has the wrong type.** Codex expects a profile name written as a string "
-        "when it validates this file.",
+        "**`profile` isn’t a quoted name.** Codex expects a string here. It ignores this setting in project "
+        "configuration.",
     EMPTY_PROFILES:
         "**Not checked: profile selection.** The `profiles` table is empty. It defines no names that could "
         "conflict with a startup profile.",
@@ -562,10 +562,11 @@ GAPS = {
     "Model-provider command-backed authentication is outside reader coverage.":
         "**Not checked: a model provider's sign-in command.** A model provider gets its credentials by running a "
         "command (`auth`), which stay-safe doesn't assess.",
-    "Model-provider setting {label} was not checked for a credential command.":
-        "**Not checked: `{label}`.** Stay-safe did not check this setting for a credential command.",
-    "otel.headers_helper was not checked for a header command.":
-        "**Not checked: `otel.headers_helper`.** Stay-safe did not check this setting for a header command.",
+    "Model-provider setting {label} is for a credential command. Stay-safe did not check its value.":
+        "**Not checked: a model provider's `{label}`.** This setting is for a credential command. Stay-safe did not check its value.",
+    "otel.headers_helper is for a command that supplies telemetry headers. Stay-safe did not check its value.":
+        "**Not checked: `otel.headers_helper`.** This setting is for a command that supplies telemetry headers. "
+        "Stay-safe did not check its value.",
     "notify is not a command list with a nonempty program.":
         "**Not checked: your `notify` setting.** It isn't a list that starts with a program name, so stay-safe "
         "can't tell whether it starts a program.",
@@ -700,7 +701,7 @@ STEPS = {
     LEGACY_PROFILE_SELECTOR:
         "Remove the `profile` setting. To use a user profile named `work`, move the settings inside "
         "`[profiles.work]` in your main config into `work.config.toml` in your Codex folder. Remove the old table and start Codex "
-        "with `--profile work`.",
+        "with `--profile work`. Then run stay-safe with `--config` and the path to that file to check its settings.",
     LEGACY_PROFILE_TABLES:
         "If you want to use one of these profiles, move its settings into a separate file in your Codex folder "
         "and remove the matching table from the main config. For example, use `work.config.toml` with "
@@ -716,6 +717,9 @@ STEPS = {
         "Set `ignore_default_excludes` to `true` or `false`.",
     "Configuration contains fields outside reader coverage; their values were withheld.":
         "Review those settings yourself; stay-safe didn't evaluate them.",
+    "profiles must be a table.":
+        "Remove the malformed `profiles` value. If you want to use a profile, put its settings in a separate "
+        "profile file in your Codex folder.",
     "{label} must be a table.": "Rewrite it as a group of settings, then run stay-safe again.",
     "{label} contains fields outside reader coverage; their values were withheld.":
         "Review the other settings under `{label}` yourself; stay-safe didn't evaluate them.",
@@ -750,8 +754,10 @@ STEPS = {
         "Set `{label}` to `true` or `false` without quotes.",
     "Model-provider command-backed authentication is outside reader coverage.":
         "Review that command yourself; stay-safe doesn't check it.",
-    "Model-provider setting {label} was not checked for a credential command.": "Review `{label}` in your config file.",
-    "otel.headers_helper was not checked for a header command.": "Review `otel.headers_helper` in your config file.",
+    "Model-provider setting {label} is for a credential command. Stay-safe did not check its value.":
+        "Find `{label}` under `[model_providers.<name>]` and review its value. If it specifies a command, check that you trust it.",
+    "otel.headers_helper is for a command that supplies telemetry headers. Stay-safe did not check its value.":
+        "Review `otel.headers_helper`. If it specifies a command, check that you trust it.",
     "notify is not a command list with a nonempty program.":
         "Write `notify` as a list that starts with the program, or remove it.",
     "hooks contains an invalid event configuration.": "Write each hook event as a list of hook groups, or remove it.",
@@ -1322,11 +1328,38 @@ def plain(report, files=None):
     return "\n".join(lines) + "\n"
 
 
+def sarif_run(report):
+    rules, results = {}, []
+    for risk in report["risks"]:
+        rule = risk["rule"]
+        if rule not in rules:
+            descriptor = {"id": rule}
+            url = source_link(report["provenance"]["source_revision"], f"docs/rules.md#{rule}")
+            if url:
+                descriptor["helpUri"] = url
+            rules[rule] = descriptor
+        results.append({"ruleId": rule, "level": "warning", "message": {"text": risk["explanation"]},
+                        "locations": [{"logicalLocations": [{"fullyQualifiedName": risk["entry"]}]}]})
+    notifications = [{"level": "warning", "message": {"text": gap}} for gap in report["inspection_gaps"]]
+    return {
+        "tool": {"driver": {"name": "stay-safe", "rules": list(rules.values())}},
+        "automationDetails": {"id": report["harness"]},
+        "invocations": [{"executionSuccessful": not notifications, "toolExecutionNotifications": notifications}],
+        "results": results,
+    }
+
+
+def sarif(reports):
+    return json.dumps({"version": "2.1.0", "runs": [sarif_run(report) for report in reports]}, indent=2) + "\n"
+
+
 def public(report):
     return {key: value for key, value in report.items() if not key.startswith("_")}
 
 
 def render(report, format_name="markdown", files=None):
+    if format_name == "sarif":
+        return sarif([report])
     if format_name == "json":
         return json.dumps(public(report), ensure_ascii=True, indent=2) + "\n"
     if format_name == "plain":
@@ -1339,6 +1372,8 @@ def render(report, format_name="markdown", files=None):
 def render_all(runs, format_name="markdown"):
     if len(runs) == 1:
         return render(runs[0][0], format_name, runs[0][1])
+    if format_name == "sarif":
+        return sarif(report for report, _ in runs)
     if format_name == "json":
         return json.dumps({"reports": [public(report) for report, _ in runs]}, ensure_ascii=True, indent=2) + "\n"
     if format_name == "html":

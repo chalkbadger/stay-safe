@@ -1,6 +1,6 @@
 import re
 
-from .claude import (AUTO_APPROVAL_UNSET, AUTO_MODE_GAP, HELPER_GAP, HELPER_TIMING, HTTP, PROJECT, UNKNOWN_EVENT, UNREAD_ENABLE, decides, read_file,
+from .claude import (AUTO_APPROVAL_UNSET, AUTO_MODE_GAP, HELPER_USE, HTTP, PROJECT, UNKNOWN_EVENT, UNREAD_ENABLE, decides, read_file,
                      resolve, runs)
 from .provenance import GAP, REPOSITORY, fingerprints, identify, source_link
 from .rules import evaluate
@@ -130,9 +130,13 @@ GAPS = {
     "hooks contains a handler that is not a valid hook; it was not evaluated.": (
         "**Not checked: a hook.** A hook isn't an object with a known `type`, or its command is empty.",
         "Review the `hooks` block yourself."),
-    **{HELPER_GAP.format(name): (
-        f"**Not checked: `{name}`.** Its value is empty or isn't text, so stay-safe can't tell what it would run.",
-        f"Set `{name}` to the command you mean, or remove it.") for name in HELPER_TIMING},
+    **{f"{name} {reason}": (
+        f"**Not checked: `{name}`.** {description}",
+        f"Set `{name}` to the command you want Claude Code to run, or remove the setting.")
+       for name in HELPER_USE for reason, description in (
+           ("is blank. There is no command to check.", "The value is blank. There is no command to check."),
+           ("has a non-text value. Claude Code expects a command written as text.",
+            "The value is not text. Claude Code expects a command written as text."))},
     "hooks contains MCP tool hooks, which call a tool on an MCP server without asking you; that server was not "
     "evaluated.": (
         "**Not checked: MCP tool hooks.** They call a tool on an MCP server without asking you, and stay-safe doesn't "
@@ -252,7 +256,7 @@ def headline(risk):
     observations = risk["configured_evidence"]
     if risk["rule"] == "configured_program":
         name = risk["entry"].partition(":")[2]
-        lead = f"`{name}` configures a command to run {HELPER_TIMING[name]}."
+        lead = f"Claude Code can run the command in `{name}` {HELPER_USE[name]}."
         if PROJECT in observations:
             lead += (" Claude Code can use this helper without a trust prompt in `claude -p` or when a parent "
                      "folder's trust extends to this folder.")
@@ -325,9 +329,9 @@ def finding(risk, path, number, details=None):
         what, change, check, why = hook_advice(rule, details, path)
     elif rule == "configured_program":
         name = risk["entry"].partition(":")[2]
-        change = f"*Change it:* remove `{name}` from {path} using a text editor."
-        check = (f"*Check:* Read the command in `{name}` in {path}. If that command runs a script, read the script "
-                 "too. Find out who wrote the command and script before you trust them.")
+        change = f"*Change it:* Remove `{name}` from {path} using a text editor."
+        check = (f"*Check:* Read the command in `{name}` in {path}. If it calls a script, read that script "
+                 "before you trust it.")
         if PROJECT in risk["configured_evidence"]:
             check += " In a git repository, `git log -p -- .claude/` shows who changed the settings and scripts there."
     elif rule == "commands_without_prompts":
@@ -394,7 +398,7 @@ def markdown(report, files=None):
         source, _, name = risk["entry"].partition(":")
         path = f"`{files[source]}`" if source in files else f"`<{source}>`"
         lead, how, step = finding(risk, path, name.rsplit(".", 1)[-1], report.get("_hooks", {}).get(risk["entry"]))
-        titles.append(f"`{name}`" if name in HELPER_TIMING else lead[2:].split("**", 1)[0])
+        titles.append(f"`{name}`" if name in HELPER_USE else lead[2:].split("**", 1)[0])
         citations = ", ".join(f"[{i}]({report['incident_links'][i]})" if i in report["incident_links"] else i
                               for i in risk["incidents"])
         rule = f"`{risk['rule']}`"
