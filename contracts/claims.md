@@ -52,6 +52,7 @@ Tests: [tests/explain_profile_settings/](../tests/explain_profile_settings/)
 - I see why the old selector stops loading or when a named table conflicts with startup selection. `test_profiles.py::test_selector_and_named_tables_report_different_loading_conditions`
 - I inspect a project file with the old selector and see how Codex treats project configuration. `test_profiles.py::test_project_file_explains_why_its_selector_can_be_ignored`
 - I can check a separate profile file for settings that could override my main config. `test_profiles.py::test_migrated_profile_can_be_inspected_separately_from_the_main_config`
+- When my file sets `profile` and a `profiles` value that isn't a table, I see both under "Not checked". `test_profiles.py::test_selector_does_not_hide_a_malformed_profiles_value`
 - I inspect two files and see each profile message and finding attached to its own file. `test_profiles.py::test_each_snapshot_keeps_its_own_profile_message_and_settings`
 
 ## [understand_inspection_limits] I can tell what the report establishes and what needs further checking.
@@ -69,7 +70,7 @@ Tests: [tests/understand_inspection_limits/](../tests/understand_inspection_limi
 - If `env` or `http_headers` has the wrong type, the report names the setting and tells me Codex expects a table of strings. It also warns me about the command configured for the other server. `test_inline_mcp.py::test_rejected_inline_maps_keep_the_other_servers_finding`
 - I give a stdio server an HTTP header helper and see why Codex rejects the setting and how to fix it. `test_status.py::test_stdio_header_helper_names_the_rejected_setting`
 - I see which AWS credential commands were left unchecked even when the provider is selected elsewhere. `test_status.py::test_aws_credentials_name_each_unchecked_command`
-- I see each unassessed gateway or telemetry helper named in the incomplete report. `test_status.py::test_gateway_and_otel_helpers_name_unchecked_commands`
+- When I set a gateway credential command or a telemetry header helper, I see each one under "Not checked". `test_status.py::test_gateway_and_otel_helpers_name_unchecked_commands`
 - I choose an AI reviewer for an App tool, and "Not checked" names the setting and explains that a policy can require a different reviewer. `test_status.py::test_app_tool_ai_reviewer_is_named_and_explains_policy_limits`
 - I let automatic review decide an app's tool calls and see that reviewer under "Not checked", while `user` or no reviewer stays clean. `test_status.py::test_app_auto_reviewer_is_named_as_unchecked`
 - I set automatic review on `apps._default` and on a named App, follow the advice and remove only the App's reviewer, and run again. The default reviewer is still under "Not checked", the run still exits 2, and the advice says the App can still inherit automatic review from `apps._default`. `test_status.py::test_removing_an_app_reviewer_can_leave_the_default_reviewer_in_place`

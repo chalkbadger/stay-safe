@@ -122,7 +122,7 @@ class CatalogTests(ConfigCase):
             ('profile="private-profile"', SELECTOR_GAP),
             (named, TABLES_GAP),
             ('profile="private-profile"\n' + named, SELECTOR_GAP),
-            ('profile=false', "Codex expects a string for the top-level profile setting when it validates this configuration."),
+            ('profile=false', "Codex expects a string for the top-level profile setting. It ignores this setting in project configuration."),
             ('profiles={}', "The profiles table is empty. No profile names are defined. Startup profile selection was not checked."),
             ('profiles=false', 'profiles must be a table.'),
             ('profiles.private-profile=false', 'profiles contains an entry that is not a table.'),
