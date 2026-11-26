@@ -113,7 +113,6 @@ class PlainFindingTests(ConfigCase):
         return run
 
     def test_unchecked_rules_put_the_startup_check_beside_each_saved_approval(self):
-        # #159: the pinned Codex app reports a rule parse error; codex exec prints it and stops.
         for unchecked in ('prefix_rule(', 'prefix_rule(pattern=["demo"], decision="prompt")'):
             with self.subTest(unchecked=unchecked):
                 rules = self.config(RULES + unchecked + '\n' +
