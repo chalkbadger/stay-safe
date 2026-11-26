@@ -562,12 +562,11 @@ GAPS = {
     "Model-provider command-backed authentication is outside reader coverage.":
         "**Not checked: a model provider's sign-in command.** A model provider gets its credentials by running a "
         "command (`auth`), which stay-safe doesn't assess.",
-    "Model-provider setting {label} names a command Codex can run for credentials; stay-safe did not read it.":
-        "**Not checked: a model provider's `{label}`.** This setting names a command Codex can run to get "
-        "credentials. stay-safe doesn't read it.",
-    "otel.headers_helper names a command Codex can run for telemetry headers; stay-safe did not read it.":
-        "**Not checked: `otel.headers_helper`.** This setting names a command Codex can run to produce telemetry "
-        "headers. stay-safe doesn't read it.",
+    "Model-provider setting {label} is for a credential command. Stay-safe did not check its value.":
+        "**Not checked: a model provider's `{label}`.** This setting is for a credential command. Stay-safe did not check its value.",
+    "otel.headers_helper is for a command that supplies telemetry headers. Stay-safe did not check its value.":
+        "**Not checked: `otel.headers_helper`.** This setting is for a command that supplies telemetry headers. "
+        "Stay-safe did not check its value.",
     "notify is not a command list with a nonempty program.":
         "**Not checked: your `notify` setting.** It isn't a list that starts with a program name, so stay-safe "
         "can't tell whether it starts a program.",
@@ -718,6 +717,9 @@ STEPS = {
         "Set `ignore_default_excludes` to `true` or `false`.",
     "Configuration contains fields outside reader coverage; their values were withheld.":
         "Review those settings yourself; stay-safe didn't evaluate them.",
+    "profiles must be a table.":
+        "Remove the malformed `profiles` value. If you want to use a profile, put its settings in a separate "
+        "profile file in your Codex folder.",
     "{label} must be a table.": "Rewrite it as a group of settings, then run stay-safe again.",
     "{label} contains fields outside reader coverage; their values were withheld.":
         "Review the other settings under `{label}` yourself; stay-safe didn't evaluate them.",
@@ -752,10 +754,10 @@ STEPS = {
         "Set `{label}` to `true` or `false` without quotes.",
     "Model-provider command-backed authentication is outside reader coverage.":
         "Review that command yourself; stay-safe doesn't check it.",
-    "Model-provider setting {label} names a command Codex can run for credentials; stay-safe did not read it.":
-        "Find `{label}` under `[model_providers.<name>]` in your config file and check that you trust the command.",
-    "otel.headers_helper names a command Codex can run for telemetry headers; stay-safe did not read it.":
-        "Check that you trust the command in `otel.headers_helper`.",
+    "Model-provider setting {label} is for a credential command. Stay-safe did not check its value.":
+        "Find `{label}` under `[model_providers.<name>]` and review its value. If it specifies a command, check that you trust it.",
+    "otel.headers_helper is for a command that supplies telemetry headers. Stay-safe did not check its value.":
+        "Review `otel.headers_helper`. If it specifies a command, check that you trust it.",
     "notify is not a command list with a nonempty program.":
         "Write `notify` as a list that starts with the program, or remove it.",
     "hooks contains an invalid event configuration.": "Write each hook event as a list of hook groups, or remove it.",

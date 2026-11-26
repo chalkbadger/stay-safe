@@ -514,13 +514,13 @@ class Reader:
                 aws = self.table(provider.get("aws", {}), "aws")
                 for key in ("credential_export", "auth_refresh"):
                     if key in aws:
-                        self.gap(f"Model-provider setting aws.{key} names a command Codex can run for credentials; stay-safe did not read it.")
+                        self.gap(f"Model-provider setting aws.{key} is for a credential command. Stay-safe did not check its value.")
                 gateway = self.table(provider.get("gateway_oauth", {}), "gateway_oauth")
                 if "credential_export" in gateway:
-                    self.gap("Model-provider setting gateway_oauth.credential_export names a command Codex can run for credentials; stay-safe did not read it.")
+                    self.gap("Model-provider setting gateway_oauth.credential_export is for a credential command. Stay-safe did not check its value.")
         otel = data.get("otel")
         if isinstance(otel, dict) and "headers_helper" in otel:
-            self.gap("otel.headers_helper names a command Codex can run for telemetry headers; stay-safe did not read it.")
+            self.gap("otel.headers_helper is for a command that supplies telemetry headers. Stay-safe did not check its value.")
         if "notify" in data:
             notify = data["notify"]
             if (isinstance(notify, list) and notify and all(isinstance(p, str) for p in notify)

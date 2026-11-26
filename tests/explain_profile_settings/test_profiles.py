@@ -86,7 +86,10 @@ class ProfileTests(ConfigCase):
                 machine = run_checkout(checkout, "--config", path, "--format", "json", cwd=self.root)
                 human = run_checkout(checkout, "--config", path, "--format", "markdown", cwd=self.root)
                 self.assertEqual(json.loads(machine.stdout)["inspection_gaps"], ["config-1: " + first, table])
-                self.assertIn("**Not checked: your `profiles` settings.**", section(human.stdout, "Not checked"))
+                unchecked = section(human.stdout, "Not checked")
+                self.assertIn("**Not checked: your `profiles` settings.**", unchecked)
+                self.assertIn("*What to do:* Remove the malformed `profiles` value. If you want to use a profile, "
+                              "put its settings in a separate profile file in your Codex folder.", unchecked)
                 for run in (human, machine):
                     self.assertEqual((run.returncode, run.stderr), (2, INCOMPLETE))
                     self.assertNotIn("private-name", run.stdout)

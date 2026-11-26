@@ -44,8 +44,8 @@ class StatusTests(ConfigCase):
     def test_gateway_and_otel_helpers_name_unchecked_commands(self):
         quiet = COMPLETE + 'shell_environment_policy={inherit="none"}\nfeatures.apps=false\nnotify=["kept-program"]\n'
         generic = "config-1: Configuration contains fields outside reader coverage; their values were withheld."
-        gateway = "Model-provider setting gateway_oauth.credential_export names a command Codex can run for credentials; stay-safe did not read it."
-        otel = "otel.headers_helper names a command Codex can run for telemetry headers; stay-safe did not read it."
+        gateway = "Model-provider setting gateway_oauth.credential_export is for a credential command. Stay-safe did not check its value."
+        otel = "otel.headers_helper is for a command that supplies telemetry headers. Stay-safe did not check its value."
         cases = (
             ("gateway_oauth.credential_export", "credential_export", "[model_providers.corp.gateway_oauth]\n", gateway),
             ("otel.headers_helper", "headers_helper", "[otel]\n", otel),
@@ -76,13 +76,13 @@ class StatusTests(ConfigCase):
                         self.assertEqual(unchecked.count("**Not checked:"), len(expected))
                         if value is not None:
                             plain = ("**Not checked: a model provider's `gateway_oauth.credential_export`.** This setting "
-                                     "names a command Codex can run to get credentials. stay-safe doesn't read it.\n\n"
+                                     "is for a credential command. Stay-safe did not check its value.\n\n"
                                      "*What to do:* Find `gateway_oauth.credential_export` under "
-                                     "`[model_providers.<name>]` in your config file and check that you trust the command."
+                                     "`[model_providers.<name>]` and review its value. If it specifies a command, check that you trust it."
                                      if label.startswith("gateway") else
-                                     "**Not checked: `otel.headers_helper`.** This setting names a command Codex can run "
-                                     "to produce telemetry headers. stay-safe doesn't read it.\n\n"
-                                     "*What to do:* Check that you trust the command in `otel.headers_helper`.")
+                                     "**Not checked: `otel.headers_helper`.** This setting is for a command that supplies "
+                                     "telemetry headers. Stay-safe did not check its value.\n\n"
+                                     "*What to do:* Review `otel.headers_helper`. If it specifies a command, check that you trust it.")
                             self.assertIn(plain + "\n\n*File `config-1`*", unchecked)
                         for output in (human, json.dumps(report)):
                             for private in ("private-helper", "private-arg", "kept-program"):
@@ -138,11 +138,11 @@ class StatusTests(ConfigCase):
                     expected = [generic] if selected else []
                     for key in settings:
                         label = f"aws.{key}"
-                        expected.append(f"config-1: Model-provider setting {label} names a command Codex can run for credentials; stay-safe did not read it.")
-                        self.assertIn(f"**Not checked: a model provider's `{label}`.** This setting names a command Codex "
-                                      "can run to get credentials. stay-safe doesn't read it.\n\n"
-                                      f"*What to do:* Find `{label}` under `[model_providers.<name>]` in your config file "
-                                      "and check that you trust the command.\n\n*File `config-1`*",
+                        expected.append(f"config-1: Model-provider setting {label} is for a credential command. Stay-safe did not check its value.")
+                        self.assertIn(f"**Not checked: a model provider's `{label}`.** This setting is for a credential command. "
+                                      "Stay-safe did not check its value.\n\n"
+                                      f"*What to do:* Find `{label}` under `[model_providers.<name>]` and review its value. "
+                                      "If it specifies a command, check that you trust it.\n\n*File `config-1`*",
                                       section(human.stdout, "Not checked"))
                     report = json.loads(machine.stdout)
                     self.assertCountEqual(report["inspection_gaps"], expected)
@@ -165,8 +165,8 @@ class StatusTests(ConfigCase):
         self.assertEqual(report.returncode, 2)
         self.assertCountEqual(json.loads(report.stdout)["inspection_gaps"], [
             "config-1: aws must be a table.",
-            "config-2: Model-provider setting aws.auth_refresh names a command Codex can run for credentials; stay-safe did not read it.",
-            "config-2: Model-provider setting aws.credential_export names a command Codex can run for credentials; stay-safe did not read it."])
+            "config-2: Model-provider setting aws.auth_refresh is for a credential command. Stay-safe did not check its value.",
+            "config-2: Model-provider setting aws.credential_export is for a credential command. Stay-safe did not check its value."])
         output = section(run_checkout(checkout, *args, cwd=self.root).stdout, "Not checked")
         self.assertIn("**Not checked: your `aws` settings.**", output)
 
