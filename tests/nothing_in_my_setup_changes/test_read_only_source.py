@@ -5,14 +5,14 @@ import unittest
 
 from tests.support import ROOT
 
-MODULES = {"argparse", "dataclasses", "errno", "hashlib", "html", "ipaddress", "json", "os", "pathlib", "re",
-           "stat", "sys", "tomllib", "urllib.parse"}
+MODULES = {"argparse", "dataclasses", "errno", "hashlib", "html", "ipaddress", "json", "os", "pathlib", "posixpath", "re",
+           "stat", "sys", "tomllib", "unicodedata", "urllib.parse"}
 OS_NAMES = {"open", "fdopen", "fstat", "environ", "listdir", "pathsep", "O_RDONLY", "O_NONBLOCK", "O_NOFOLLOW"}
 OS_READ_FLAGS = {"O_RDONLY", "O_NONBLOCK", "O_NOFOLLOW"}
 BANNED_NAMES = {"exec", "eval", "compile", "__import__", "open", "getattr", "importlib",
                 "__builtins__", "globals", "vars"}
 PATHLIB_ARGPARSE = set(dir(pathlib.Path)) | set(dir(argparse)) | set(dir(argparse.ArgumentParser))
-USED_NAMES = {"Path", "home", "resolve", "parents", "name", "is_dir", "is_file", "stat", "read_text", "read_bytes", "as_uri",
+USED_NAMES = {"Path", "absolute", "anchor", "parts", "home", "resolve", "parents", "name", "is_dir", "is_file", "stat", "read_text", "read_bytes", "as_uri",
               "ArgumentParser", "add_argument", "parse_known_args", "error", "exit"}
 WRITER = "stay_safe/save.py"
 WRITER_MODULES = {"tempfile"}

@@ -89,7 +89,7 @@ class ClaudeSettingsTests(ConfigCase):
         self.assertEqual(gaps, sorted([
             "settings-1: permissions contains fields outside reader coverage; their values were withheld.",
             "settings-1: permissions.deny contains rules that can take precedence over allow. Their matches were not checked.",
-            "settings-1: Settings outside reader coverage were not evaluated: env, hooks and other fields whose "
+            "settings-1: Settings outside reader coverage were not evaluated: env and other fields whose "
             "names were withheld.",
         ]))
         self.assertNotIn("seed-", json.dumps([entries, gaps]))

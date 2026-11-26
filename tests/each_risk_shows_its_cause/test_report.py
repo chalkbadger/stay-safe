@@ -108,7 +108,7 @@ class RiskOutputTests(ConfigCase):
                 run = subprocess.run([sys.executable, "-m", "stay_safe", "--config", str(FIXTURE),
                                       "--format", format_name], cwd=ROOT, text=True,
                                      capture_output=True, timeout=10)
-                self.assertEqual((run.returncode, run.stderr), (0, ""))
+                self.assertEqual((run.returncode, run.stderr), (2, INCOMPLETE))
                 if format_name == "json":
                     report = json.loads(run.stdout)
                     actual = [(r["rule"], r["entry"], r["incidents"]) for r in report["risks"]]

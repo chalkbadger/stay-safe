@@ -39,7 +39,7 @@ class UnlistedSettingTests(ConfigCase):
                  for value in values]
         base = ON_REQUEST + 'sandbox_mode="read-only"\n'
         app_settings = [("open_world_enabled", value) for value in ("true", "false")]
-        app_settings += [("approvals_reviewer", value) for value in ('"user"', '"auto_review"', '"guardian_subagent"', '"human"', "7")]
+        app_settings += [("approvals_reviewer", value) for value in ('"user"', '"human"', "7")]
         for key, value in app_settings:
             cases.append((base + f"[apps.files]\n{key}={value}\n", APP_CATALOG, APP_RISKS))
             cases.append((base + f"[apps._default]\n{key}={value}\n[apps.files]\n",
@@ -52,9 +52,9 @@ class UnlistedSettingTests(ConfigCase):
                 self.assertEqual(report["inspection_gaps"], [])
 
     def test_active_writable_roots_give_a_gap_and_no_entry_or_risk(self):
-        writable = ("config-1: sandbox_workspace_write.writable_roots lists extra folders that commands may write in "
-                    "workspace-write mode, some possibly outside the workspace; their paths were withheld and were "
-                    "not evaluated.")
+        writable = ("config-1: sandbox_workspace_write.writable_roots lists extra folders commands may write, "
+                    "some possibly outside the workspace. Their paths are withheld. "
+                    "No --workspace was supplied to check project .codex. The folders' other effects were not assessed.")
         invalid = "config-1: sandbox_workspace_write.writable_roots is invalid; its value was withheld."
         read_only = SANDBOX.replace('"workspace-write"', '"read-only"')
         read_only_catalog = {**SANDBOX_CATALOG, "sandbox_mode": ["read-only"],

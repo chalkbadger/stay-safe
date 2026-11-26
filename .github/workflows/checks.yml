@@ -1,6 +1,9 @@
 name: Checks
 
-on: pull_request
+on:
+  pull_request:
+  push:
+    branches: [main]
 
 permissions:
   contents: read
@@ -48,17 +51,29 @@ jobs:
     runs-on: macos-latest
     timeout-minutes: 10
     steps:
-      - name: Download the proposed source archive
+      - name: Download the source archive for this commit
         env:
-          SOURCE_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
-          SOURCE_REVISION: ${{ github.event.pull_request.head.sha }}
+          PR_HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
+          case "$GITHUB_EVENT_NAME" in
+            pull_request)
+              source_repository="${PR_HEAD_REPOSITORY:?missing pull request head repository}"
+              source_revision="${PR_HEAD_SHA:?missing pull request head SHA}"
+              ;;
+            push)
+              source_repository="$GITHUB_REPOSITORY"
+              source_revision="$GITHUB_SHA"
+              ;;
+            *) echo "Unsupported event: $GITHUB_EVENT_NAME" >&2; exit 1 ;;
+          esac
           work="$RUNNER_TEMP/stay-safe-recovery"
           mkdir "$work"
-          curl --fail --location --max-time 60 "https://github.com/$SOURCE_REPOSITORY/archive/$SOURCE_REVISION.zip" --output "$work/source.zip"
+          curl --fail --location --max-time 60 "https://github.com/$source_repository/archive/$source_revision.zip" --output "$work/source.zip"
           ditto -x -k "$work/source.zip" "$work"
-          echo "SOURCE_DIR=$work/stay-safe-$SOURCE_REVISION" >> "$GITHUB_ENV"
-          test "$(cat "$work/stay-safe-$SOURCE_REVISION/stay_safe/release.txt")" = "$SOURCE_REVISION"
+          source_dir="$work/${source_repository##*/}-$source_revision"
+          test "$(cat "$source_dir/stay_safe/release.txt")" = "$source_revision"
+          echo "SOURCE_DIR=$source_dir" >> "$GITHUB_ENV"
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0
         id: old
         with:

@@ -3,9 +3,12 @@ import json
 from pathlib import Path
 import re
 
-from .codex import APPROVALS, EXCLUDED_ACCOUNT, INVALID_APPROVAL, INVALID_BOOLEAN, read_file
+from .codex import (APP_TOOL_REVIEWER_GAP, APPROVALS, EMPTY_PROFILES, EXCLUDED_ACCOUNT, INLINE_MCP_VALUES, INLINE_PROFILE_OVERRIDE,
+                    INVALID_APPROVAL, INVALID_BOOLEAN, INVALID_MCP_MAP, INVALID_PROFILE_SELECTOR, LEGACY_PROFILE_SELECTOR,
+                    LEGACY_PROFILE_TABLES, PROFILE_LOADER_VERSION, ROOT_HOME_UNKNOWN, ROOTS_NO_WORKSPACE, ROOTS_SCOPE,
+                    WORKSPACE_HOME, WORKSPACE_HOME_UNKNOWN, WORKSPACE_UNKNOWN, read_file)
 from .codex_rules import other_files, read_file as read_rules
-from .rules import evaluate
+from .rules import SANDBOX_OFF_EXPLANATION, evaluate
 from .provenance import GAP, REPOSITORY, fingerprints, identify, source_link, resource
 
 INCIDENTS = resource("incidents.md")
@@ -28,7 +31,8 @@ SCOPE = [
     "Rules inspection lists saved-format approval candidates, one-line allow records whose syntax context "
     "and current effect are not checked; other lines, including prompt and forbidden rules that may "
     "override a candidate, make the check incomplete.",
-    "CLI flags, profile selection, trusted project layers, managed policies and runtime overrides are not inspected.",
+    "CLI flags, profile selection, trusted project layers, managed policies and runtime overrides are not inspected. "
+    "A separately selected profile file can override the main config.",
     "Connection reachability, authentication, active tools and effective permissions are not tested.",
     "Source links point to the reported commit; whether that commit exists in the published GitHub repository is not checked.",
     "The catalog contains configured entries, documented defaults and source-status observations; account, endpoint, environment, saved approval command (except a first word on stay-safe's program list) and other command and argument values are withheld.",
@@ -37,12 +41,12 @@ SCOPE = [
 ]
 
 
-def inspect(paths, *, rules_path=None, discovered=False, gaps=()):
+def inspect(paths, *, rules_path=None, discovered=False, gaps=(), workspace=None):
     entries, gaps = [], list(gaps)
     hashes = fingerprints()
     provenance = identify(hashes=hashes)
     for index, path in enumerate(paths, 1):
-        found, missing = read_file(path, f"config-{index}", discovered=discovered)
+        found, missing = read_file(path, f"config-{index}", discovered=discovered, workspace=workspace)
         entries.extend(found)
         gaps.extend(missing)
     if rules_path is not None:
@@ -103,12 +107,17 @@ FINDINGS = {
         "how": "Agents running commands without approval have run a delete command aimed at a home directory "
                "and wiped a drive. Another user reported an automatic driver update while getting help with GPU performance."},
     "unrestricted_filesystem": {
-        "headline": "Your config turns off Codex's sandbox.",
-        "why": "Commands Codex runs aren't limited to your project, so a mistaken command could damage files "
-               "elsewhere on your computer.",
+        "headline": "Your config turns off Codex’s sandbox.",
+        "why": SANDBOX_OFF_EXPLANATION,
         "how": "Agents have deleted a home directory and wiped a whole drive with one mistaken delete command. "
                "A Claude Code user reported losing SSH keys and cloud credentials when a PowerShell cleanup "
-               "deleted files in their home directory."},
+               "deleted files in their home directory. GitHub Copilot was tricked into editing its own approval "
+               "settings. Intruders changed project settings that Claude Code used at startup."},
+    "writable_project_settings": {
+        "headline": "Your config lists the project's `.codex` directory as writable.",
+        "why": "A sandboxed command could change project settings that a later trusted Codex run uses.",
+        "how": "Injected text got GitHub Copilot to change its approval settings. In another report, intruders "
+               "changed project settings that Claude Code used at startup."},
     "configured_program": {
         "headline": "{Subject} can start a program on your computer.",
         "why": PROGRAM,
@@ -287,6 +296,12 @@ ADVICE = {
         "what": "If you don't need this tool, set `enabled = false` for it.",
         "where": "under `[{table}]`",
         "ask": "Edit {file} to set `enabled = false` for the `{tool}` tool of my `{name}` app"},
+    ("writable_project_settings", "sandbox_workspace_write", 2): {
+        "what": "Remove the project's `.codex` directory from `writable_roots`. You can keep the workspace writable.",
+        "where": "under `[sandbox_workspace_write]`, remove each entry for that directory",
+        "ask": "Edit {file} to remove the selected project's `.codex` directory from `writable_roots`, "
+               "keeping the other entries",
+        "check": "Rerun stay-safe with the same `--workspace` and config selection."},
     ("network_access", "sandbox_workspace_write", 2): {
         "what": "Set `network_access = false` unless commands need the network.",
         "where": "under `[sandbox_workspace_write]`",
@@ -401,7 +416,12 @@ def note(report, files):
 
 
 WITHHELD = "The value is left out of this report."
+EXTRA_FOLDERS = "Some may be outside your workspace. Their paths are withheld."
+REVIEW_ROOTS = ("Review each folder in `writable_roots` and remove any that commands shouldn't change, "
+                "such as the Docker socket (`/var/run/docker.sock`).")
 GAPS = {
+    INLINE_MCP_VALUES: "**Not checked: inline values in `{label}`.** stay-safe did not check these entries for credentials.",
+    INVALID_MCP_MAP: "**Codex cannot load this configuration.** `{label}` must be a table of strings.",
     "Unchecked section {label}; its settings were not evaluated.":
         "**Not checked: `{label}`.** Its settings were not evaluated.",
     "projects contains {label} recognized trusted declarations; project settings were not inspected.":
@@ -439,10 +459,18 @@ GAPS = {
     "sandbox_mode is absent; the reader does not infer its effective value.":
         "**Not checked: your sandbox setting.** `sandbox_mode` isn't in your config file, so stay-safe can't tell "
         "what commands Codex runs are allowed to do.",
-    "sandbox_workspace_write.writable_roots lists extra folders that commands may write in workspace-write mode, some possibly outside the workspace; their paths were withheld and were not evaluated.":
-        "**Not checked: extra folders commands can write to.** Your config lists folders in `writable_roots` that "
-        "commands may write to in `workspace-write` mode. Some may be outside your workspace. stay-safe doesn't "
-        "check what those folders are. Their paths are left out of this report.",
+    ROOTS_NO_WORKSPACE: "**Not checked: extra writable folders.** Your config lists folders commands may write. "
+                        f"{EXTRA_FOLDERS} Supply `--workspace DIR` to check for a direct grant to the project's `.codex`.",
+    ROOTS_SCOPE: f"**Not checked: other effects of extra writable folders.** {EXTRA_FOLDERS} The project settings "
+                 "check covers a direct grant to `.codex`. It leaves other relative paths, aliases and the folders' "
+                 "contents unchecked.",
+    ROOT_HOME_UNKNOWN: "**Not checked: home-relative writable folders.** The file uses `~` or `~/`, "
+                       "but `HOME` does not give an absolute path for the comparison.",
+    WORKSPACE_UNKNOWN: "**Not checked: the project settings directory.** A path component is a symlink, "
+                       "is not a directory, or could not be checked.",
+    WORKSPACE_HOME_UNKNOWN: "**Not checked: the project settings directory.** The user Codex home is unknown "
+                            "or has an unresolved path or alias.",
+    WORKSPACE_HOME: "**Not checked: user Codex home.** Codex treats this folder as its user configuration folder.",
     "sandbox_workspace_write.writable_roots is invalid; its value was withheld.":
         "**Not checked: extra folders commands can write to.** Your `writable_roots` isn't a list of folder "
         f"paths, so stay-safe can't tell where commands can write. {WITHHELD}",
@@ -455,9 +483,21 @@ GAPS = {
     "default_permissions and sandbox_mode conflict; effective sandbox selection is unknown.":
         "**Not checked: which sandbox Codex uses.** Your config file sets both `default_permissions` and "
         "`sandbox_mode`, so stay-safe can't tell which one Codex uses.",
-    "Profiles are outside reader coverage; a selected profile can override the reported settings.":
-        "**Not checked: your profiles.** Your config file has profiles, which stay-safe doesn't read. A profile "
-        "Codex uses can override the settings in this report.",
+    LEGACY_PROFILE_SELECTOR:
+        f"**This file uses an old way to select a profile.** Codex {PROFILE_LOADER_VERSION} stops if "
+        "`profile` is in the configuration it uses at startup. It ignores this setting in project configuration. "
+        f"{INLINE_PROFILE_OVERRIDE}",
+    LEGACY_PROFILE_TABLES:
+        "**This file defines a profile but doesn’t select it.** If this is your main `config.toml` and you "
+        f"start Codex {PROFILE_LOADER_VERSION} with `--profile` and a name defined here, the matching table stops "
+        "Codex from loading. Starting with a name this file doesn’t define does not trigger that conflict. "
+        f"{INLINE_PROFILE_OVERRIDE}",
+    INVALID_PROFILE_SELECTOR:
+        "**`profile` isn’t a quoted name.** Codex expects a string here. It ignores this setting in project "
+        "configuration.",
+    EMPTY_PROFILES:
+        "**Not checked: profile selection.** The `profiles` table is empty. It defines no names that could "
+        "conflict with a startup profile.",
     "shell_environment_policy.inherit is unsupported or invalid; its value was withheld.":
         "**Not checked: whether commands get your environment variables.** Your "
         f"`shell_environment_policy.inherit` value isn't one stay-safe supports. {WITHHELD}",
@@ -506,6 +546,15 @@ GAPS = {
     "Per-account app policy is not evaluated; account identifiers were withheld.":
         "**Not checked: per-account app settings.** An app has per-account settings (`links`), which stay-safe "
         "doesn't assess. Account identifiers are left out of this report.",
+    "App approvals_reviewer is not evaluated; Codex may let a reviewer decide an app's tool calls instead of asking you.":
+        "**Not checked: an app's approval reviewer.** An app sets `approvals_reviewer` (in `[apps.<name>]` or "
+        "`[apps._default]`), which can let a reviewer such as automatic review decide its tool calls instead of "
+        "asking you. stay-safe doesn't assess it.",
+    APP_TOOL_REVIEWER_GAP:
+        "**Not checked: `{label}`.** If this tool needs approval, your file asks Codex to have an AI reviewer "
+        "approve or deny the request. Your organization can limit who may review requests. For example, if its "
+        "policy allows only human review, Codex may ask you to decide. Stay-safe can’t tell from this file "
+        "which policy applies to your run.",
     INVALID_APPROVAL: f"**{INVALID_APPROVAL}** Findings for other entries describe settings written in the file.",
     INVALID_BOOLEAN:
         "**Codex cannot load this configuration file.** `{label}` must be `true` or `false` without quotes. "
@@ -513,8 +562,11 @@ GAPS = {
     "Model-provider command-backed authentication is outside reader coverage.":
         "**Not checked: a model provider's sign-in command.** A model provider gets its credentials by running a "
         "command (`auth`), which stay-safe doesn't assess.",
-    "Model-provider setting {label} was not checked for a credential command.":
-        "**Not checked: `{label}`.** Stay-safe did not check this setting for a credential command.",
+    "Model-provider setting {label} is for a credential command. Stay-safe did not check its value.":
+        "**Not checked: a model provider's `{label}`.** This setting is for a credential command. Stay-safe did not check its value.",
+    "otel.headers_helper is for a command that supplies telemetry headers. Stay-safe did not check its value.":
+        "**Not checked: `otel.headers_helper`.** This setting is for a command that supplies telemetry headers. "
+        "Stay-safe did not check its value.",
     "notify is not a command list with a nonempty program.":
         "**Not checked: your `notify` setting.** It isn't a list that starts with a program name, so stay-safe "
         "can't tell whether it starts a program.",
@@ -600,6 +652,8 @@ ABSENT = {
         "commands Codex runs are allowed to do.",
 }
 STEPS = {
+    INLINE_MCP_VALUES: "Review the entries for credentials in your own configuration file.",
+    INVALID_MCP_MAP: "Give each entry in `{label}` a quoted string value, or remove the setting.",
     "Unchecked section {label}; its settings were not evaluated.":
         "Review the `{label}` section in your selected file yourself.",
     "projects contains {label} recognized trusted declarations; project settings were not inspected.":
@@ -630,9 +684,13 @@ STEPS = {
     "sandbox_mode is absent; the reader does not infer its effective value.":
         "Check the sandbox setting wherever you run Codex (the app or the command line). To set it in a file, add "
         "`sandbox_mode = \"workspace-write\"` or `\"read-only\"` to your config file.",
-    "sandbox_workspace_write.writable_roots lists extra folders that commands may write in workspace-write mode, some possibly outside the workspace; their paths were withheld and were not evaluated.":
-        "Review each folder in `writable_roots` yourself, and remove any that commands shouldn't change, such as "
-        "the Docker socket (`/var/run/docker.sock`).",
+    ROOTS_NO_WORKSPACE: REVIEW_ROOTS,
+    ROOTS_SCOPE: REVIEW_ROOTS,
+    ROOT_HOME_UNKNOWN: "Check these entries locally or rerun with `HOME` set to the absolute path of the "
+                       "intended user's home.",
+    WORKSPACE_UNKNOWN: "Use the project's direct directory path and check the listed roots locally.",
+    WORKSPACE_HOME_UNKNOWN: "Check the path to your Codex home and the workspace locally.",
+    WORKSPACE_HOME: "Select the project directory with `--workspace` to check its settings.",
     "sandbox_workspace_write.writable_roots is invalid; its value was withheld.": "Make `writable_roots` a list of folder paths, or remove it.",
     "sandbox_mode is unsupported or invalid; its value was withheld.":
         "Set it to `\"read-only\"`, `\"workspace-write\"` or `\"danger-full-access\"`.",
@@ -640,14 +698,28 @@ STEPS = {
         "Review your permission profiles yourself; findings about this file's sandbox may not apply.",
     "default_permissions and sandbox_mode conflict; effective sandbox selection is unknown.":
         "Keep only one of `default_permissions` and `sandbox_mode`, then run stay-safe again.",
-    "Profiles are outside reader coverage; a selected profile can override the reported settings.":
-        "Review your profiles yourself, especially their approval and sandbox settings.",
+    LEGACY_PROFILE_SELECTOR:
+        "Remove the `profile` setting. To use a user profile named `work`, move the settings inside "
+        "`[profiles.work]` in your main config into `work.config.toml` in your Codex folder. Remove the old table and start Codex "
+        "with `--profile work`. Then run stay-safe with `--config` and the path to that file to check its settings.",
+    LEGACY_PROFILE_TABLES:
+        "If you want to use one of these profiles, move its settings into a separate file in your Codex folder "
+        "and remove the matching table from the main config. For example, use `work.config.toml` with "
+        "`--profile work`.",
+    INVALID_PROFILE_SELECTOR:
+        "Remove the `profile` setting. To choose a profile, use a separate profile file and select it with "
+        "`--profile`.",
+    EMPTY_PROFILES:
+        "If you start Codex with `--profile`, review the separate profile file you select.",
     "shell_environment_policy.inherit is unsupported or invalid; its value was withheld.":
         "Set `inherit` to `\"all\"`, `\"core\"` or `\"none\"`.",
     "shell_environment_policy.ignore_default_excludes has an invalid boolean; its behavior is unknown.":
         "Set `ignore_default_excludes` to `true` or `false`.",
     "Configuration contains fields outside reader coverage; their values were withheld.":
         "Review those settings yourself; stay-safe didn't evaluate them.",
+    "profiles must be a table.":
+        "Remove the malformed `profiles` value. If you want to use a profile, put its settings in a separate "
+        "profile file in your Codex folder.",
     "{label} must be a table.": "Rewrite it as a group of settings, then run stay-safe again.",
     "{label} contains fields outside reader coverage; their values were withheld.":
         "Review the other settings under `{label}` yourself; stay-safe didn't evaluate them.",
@@ -670,12 +742,22 @@ STEPS = {
         "To keep using stdio, remove `http_headers_helper` from this server's settings.",
     "Per-account app policy is not evaluated; account identifiers were withheld.":
         "Review those per-account settings yourself.",
+    "App approvals_reviewer is not evaluated; Codex may let a reviewer decide an app's tool calls instead of asking you.":
+        "Check the tool and linked account first. "
+        "Check the reviewer on the App and on `apps._default`. If you remove the App's override, the App can still "
+        "inherit automatic review from `apps._default`.",
+    APP_TOOL_REVIEWER_GAP:
+        "Codex added this tool setting in 0.172.0. Check which reviewers your organization allows and whether "
+        "it requires AI review for your model.",
     INVALID_APPROVAL: f"Set `{{label}}` to {APPROVAL_OPTIONS}.",
     INVALID_BOOLEAN:
         "Set `{label}` to `true` or `false` without quotes.",
     "Model-provider command-backed authentication is outside reader coverage.":
         "Review that command yourself; stay-safe doesn't check it.",
-    "Model-provider setting {label} was not checked for a credential command.": "Review `{label}` in your config file.",
+    "Model-provider setting {label} is for a credential command. Stay-safe did not check its value.":
+        "Find `{label}` under `[model_providers.<name>]` and review its value. If it specifies a command, check that you trust it.",
+    "otel.headers_helper is for a command that supplies telemetry headers. Stay-safe did not check its value.":
+        "Review `otel.headers_helper`. If it specifies a command, check that you trust it.",
     "notify is not a command list with a nonempty program.":
         "Write `notify` as a list that starts with the program, or remove it.",
     "hooks contains an invalid event configuration.": "Write each hook event as a list of hook groups, or remove it.",
@@ -803,6 +885,7 @@ def gap(text, absent, files, contexts=None):
 
 SETUP_LABELS = {("approval_policy",): "Approval", ("sandbox_mode",): "Sandbox",
                 ("sandbox_workspace_write", "network_access"): "Network access for commands",
+                ("sandbox_workspace_write", "writable_roots"): "Extra writable folders",
                 ("shell_environment_policy",): "Environment for commands", ("web_search",): "Web search",
                 ("notify",): "Notifications", ("apps", "_default"): "Defaults for all apps (`_default`)",
                 ("features", "apps"): "ChatGPT Apps connection"}
@@ -958,7 +1041,7 @@ GROUPS = (
     ("Based on Codex's source code and not yet seen in a live run, so stay-safe has no basis to rank these. "
      "That does not make them minor.",
      ("rests on Codex's source code alone", "rest on Codex's source code alone"),
-     ("self_described_tools",)),
+     ("self_described_tools", "writable_project_settings")),
 )
 PLACE = {rule: (group, position) for group, (_, _, rules) in enumerate(GROUPS) for position, rule in enumerate(rules)}
 NUMBERS = ("one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten")
@@ -1117,9 +1200,10 @@ def markdown(report, files=None):
                       f"- [What each Codex setting means, with official evidence]({meanings}) (`harnesses/codex.md`)"]
     revision = report["provenance"]["source_revision"]
     lines += ["", "## What this report can't see", "",
-              "- Settings chosen in the app or with command-line flags, and which profile Codex uses: these can "
-              "override the files listed under Your setup, and stay-safe can't see them. Check them where you start "
-              "Codex, and the `profile` setting in your config file.",
+              "- Settings you choose in the app or with command-line flags can override your config. "
+              "Check how you start Codex. If you select a separate profile file with `--profile`, "
+              "that file can override your main config. Run stay-safe with `--config` and the path "
+              "to that file to inspect it separately.",
               "- Whether connections work, or what Codex actually allows when it runs: stay-safe only reads files; it "
               "doesn't start Codex or contact any service. Watch what Codex asks before it acts.",
               "- Private values such as commands, addresses and tokens are left out, but names like `github` are "
@@ -1269,11 +1353,15 @@ def sarif(reports):
     return json.dumps({"version": "2.1.0", "runs": [sarif_run(report) for report in reports]}, indent=2) + "\n"
 
 
+def public(report):
+    return {key: value for key, value in report.items() if not key.startswith("_")}
+
+
 def render(report, format_name="markdown", files=None):
     if format_name == "sarif":
         return sarif([report])
     if format_name == "json":
-        return json.dumps(report, ensure_ascii=True, indent=2) + "\n"
+        return json.dumps(public(report), ensure_ascii=True, indent=2) + "\n"
     if format_name == "plain":
         return plain(report, files)
     if format_name == "html":
@@ -1287,7 +1375,7 @@ def render_all(runs, format_name="markdown"):
     if format_name == "sarif":
         return sarif(report for report, _ in runs)
     if format_name == "json":
-        return json.dumps({"reports": [report for report, _ in runs]}, ensure_ascii=True, indent=2) + "\n"
+        return json.dumps({"reports": [public(report) for report, _ in runs]}, ensure_ascii=True, indent=2) + "\n"
     if format_name == "html":
         text = "\n".join(markdown(report, files) for report, files in runs)
         return page(None, text=text, title=" and ".join(report["harness"] for report, _ in runs)

@@ -5,6 +5,7 @@ import subprocess
 import sys
 
 from stay_safe.report import inspect, render
+from tests.support import SELECTOR_GAP
 from tests.support import without_rule_links
 from tests.support import INCOMPLETE, REPORT, ROOT, ConfigCase, copy_checkout, run_checkout, section
 
@@ -17,7 +18,7 @@ LEAD_IN = "Here are the findings for you to review, with actionable advice."
 NO_FINDINGS = ("None of stay-safe's rules matched your settings. That doesn't mean your setup is safe: "
                "see what stay-safe didn't check and what this report can't see, below.")
 
-SANDBOX_OFF = "Your config turns off Codex's sandbox."
+SANDBOX_OFF = "Your config turns off Codex’s sandbox."
 
 QUIET = 'approval_policy = "on-request"\nsandbox_mode = "read-only"\nshell_environment_policy = { inherit = "none" }\n'
 EVERY_GROUP = """approval_policy = "never"
@@ -240,7 +241,7 @@ class OverviewTests(ConfigCase):
         markdown = render(report, "markdown")
         self.assertIn(NO_FINDINGS, section(markdown, "Findings"))
         self.assertIn("1 thing not checked", "\n".join(overview(markdown)))
-        self.assertIn("Not checked: your profiles", section(markdown, "Not checked"))
+        self.assertIn("This file uses an old way to select a profile.", section(markdown, "Not checked"))
         self.assertEqual(listed(markdown), [])
         self.assertNotIn("#finding", markdown)
         plain = render(report, "plain")
@@ -331,4 +332,4 @@ class UnchangedTests(ConfigCase):
                                   ("commands_without_prompts", "config-1:approval_policy"),
                                   ("configured_program", "config-1:notify")])
                 self.assertEqual(report["inspection_gaps"], [] if status == 0 else [
-                    "config-1: Profiles are outside reader coverage; a selected profile can override the reported settings."])
+                    "config-1: " + SELECTOR_GAP])

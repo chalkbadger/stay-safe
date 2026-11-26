@@ -28,10 +28,10 @@ class InspectedSetupTests(ConfigCase):
         env = {"HOME": str(home)}
         self.require_no_system_folder()
         cases = [
-            ("explicit config", ["--config", str(config)], [config], 0, "\n- MCP server `lookup`: on,"),
+            ("explicit config", ["--config", str(config)], [config], 2, "\n- MCP server `lookup`: on,"),
             ("rules file", ["--rules", str(rules)], [rules], 0, "rules-1:prefix_rule.1"),
             ("absent default", [], [], 2, "\n- Config file: none found,"),
-            ("explicit config, saved", ["--config", str(config), "--save"], [config], 0, "\nSaved the formatted report. Open it with: "),
+            ("explicit config, saved", ["--config", str(config), "--save"], [config], 2, "\nSaved the formatted report. Open it with: "),
             ("rules file, saved", ["--rules", str(rules), "--save"], [rules], 0, "\nSaved the formatted report. Open it with: "),
             ("absent default, saved", ["--save"], [], 2, "\nSaved the formatted report. Open it with: "),
         ]

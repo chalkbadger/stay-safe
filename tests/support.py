@@ -11,6 +11,13 @@ from unittest.mock import patch
 
 FEEDBACK = "Report a problem or suggest an idea: https://github.com/chalkbadger/stay-safe/issues/new/choose\n"
 
+INLINE_OVERRIDE = ("On versions that support inline profiles, settings in the selected table can override "
+                   "your top-level settings.")
+SELECTOR_GAP = ("Codex 0.172.0 rejects a top-level profile selector in the configuration it uses at startup. "
+                f"It ignores this setting in project configuration. {INLINE_OVERRIDE}")
+TABLES_GAP = ("Legacy profile tables do not select a profile. If this is the base user config, "
+              f"starting Codex 0.172.0 with a matching --profile name stops configuration loading. {INLINE_OVERRIDE}")
+
 ROOT = Path(__file__).resolve().parents[1]
 _TEST_HOME = tempfile.TemporaryDirectory()
 os.environ["HOME"] = _TEST_HOME.name
@@ -188,6 +195,8 @@ SEEDS = {
     "MCP host": "seed-mcp-host.example",
     "command": "seed-command-<&>",
     "args": "seed-args-'&'",
+    "env key": "PrivateInlineEnvKey",
+    "header key": "PrivateInlineHeaderKey",
     "env": "seed-env-<'&'>",
     "headers": "seed-headers-<&>",
     "URL credentials": "seed-url-user",
@@ -207,16 +216,16 @@ notify = ["{SEEDS['notify']}", "{SEEDS['notify args']}"]
 [mcp_servers.local]
 command = "{SEEDS['command']}"
 args = ["{SEEDS['args']}"]
-env = {{ TOKEN = "{SEEDS['env']}" }}
+env = {{ {SEEDS['env key']} = "{SEEDS['env']}" }}
 
 [mcp_servers.remote]
 url = "https://{SEEDS['URL credentials']}@{SEEDS['MCP host']}/mcp?token={SEEDS['URL query']}"
-http_headers = {{ Authorization = "{SEEDS['headers']}" }}
+http_headers = {{ {SEEDS['header key']} = "{SEEDS['headers']}" }}
 
 [mcp_servers.disabled]
 url = "https://{SEEDS['disabled server URL']}/mcp"
 enabled = false
-http_headers = {{ Authorization = "{SEEDS['disabled server headers']}" }}
+http_headers = {{ {SEEDS['header key']} = "{SEEDS['disabled server headers']}" }}
 
 [model_providers.internal]
 name = "{SEEDS['provider name']}"

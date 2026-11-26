@@ -20,7 +20,9 @@ HOW = {
                                 "directory and wiped a drive. Another user reported an automatic driver update while getting help with GPU performance.",
     "unrestricted_filesystem": "Agents have deleted a home directory and wiped a whole drive with one mistaken delete "
                                "command. A Claude Code user reported losing SSH keys and cloud credentials when a "
-                               "PowerShell cleanup deleted files in their home directory.",
+                               "PowerShell cleanup deleted files in their home directory. GitHub Copilot was tricked into "
+                               "editing its own approval settings. Intruders changed project settings that Claude Code "
+                               "used at startup.",
     "configured_program": "Flaws in other agents let repository settings run commands on collaborators' machines, "
                           "and a worm wrote itself into an agent's settings so its code ran at every start. "
                           "Google reported that intruders changed project settings so Claude Code would download a "
@@ -82,8 +84,10 @@ EXPECTED = {
     ("configured_program", "config-1:notify"):
         f"**Your `notify` setting can start a program on your computer.** {PROGRAM}",
     ("unrestricted_filesystem", "config-1:sandbox_mode"):
-        "**Your config turns off Codex's sandbox.** Commands Codex runs aren't limited to your project, so a "
-        "mistaken command could damage files elsewhere on your computer.",
+        "**Your config turns off Codex’s sandbox.** A mistaken command could damage files outside your project. "
+        "A command could also change Codex’s own settings, saved approvals, or instructions if your account can "
+        "edit those files. A later Codex run could then follow different instructions or run a command it would "
+        "otherwise ask you to approve.",
     ("environment_inheritance", "config-1:shell_environment_policy"):
         "**With these settings, commands Codex runs get your environment variables.** They start with the "
         "environment Codex was launched with, apart from a few Codex launch variables. Credentials in it could be "

@@ -1,0 +1,6 @@
+approval_policy = "on-request"
+sandbox_mode = "read-only"
+
+[mcp_servers."team.api"]
+command = "synthetic-server"
+default_tools_approval_mode = "approve"

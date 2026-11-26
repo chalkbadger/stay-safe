@@ -2,20 +2,53 @@ import errno
 import json
 import os
 from pathlib import Path
+from posixpath import normpath
 import re
 import stat
 import tomllib
+import unicodedata
 
 MAX_BYTES = 1024 * 1024
 NAME = re.compile(r"[A-Za-z0-9_][A-Za-z0-9_.-]{0,79}\Z")
 APPROVALS = ("auto", "prompt", "writes", "approve")
+AUTO_REVIEW_VALUES = ("auto_review", "guardian_subagent")
+APP_TOOL_REVIEWER_GAP = ("{label} requests AI review if this tool needs approval. "
+                         "A policy can require human review. The effective reviewer was not checked.")
+PROFILE_LOADER_VERSION = "0.172.0"
+INLINE_PROFILE_OVERRIDE = ("On versions that support inline profiles, settings in the selected table can override "
+                           "your top-level settings.")
+LEGACY_PROFILE_SELECTOR = (f"Codex {PROFILE_LOADER_VERSION} rejects a top-level profile selector in the configuration "
+                           f"it uses at startup. It ignores this setting in project configuration. {INLINE_PROFILE_OVERRIDE}")
+LEGACY_PROFILE_TABLES = ("Legacy profile tables do not select a profile. If this is the base user config, "
+                         f"starting Codex {PROFILE_LOADER_VERSION} with a matching --profile name stops configuration "
+                         f"loading. {INLINE_PROFILE_OVERRIDE}")
+INVALID_PROFILE_SELECTOR = "Codex expects a string for the top-level profile setting. It ignores this setting in project configuration."
+EMPTY_PROFILES = "The profiles table is empty. No profile names are defined. Startup profile selection was not checked."
 INVALID_APPROVAL = "Codex cannot load this configuration file because {label} is not one of " + ", ".join(APPROVALS) + "."
 INVALID_BOOLEAN = "Codex cannot load this configuration file because {label} is not a boolean."
+INLINE_MCP_VALUES = "{label} contains inline values. Check the entries for credentials."
+INVALID_MCP_MAP = "Codex cannot load this configuration because {label} must be a table of strings."
+MCP_OTHER_TRANSPORT = {
+    "env": {"http_headers", "http_headers_helper", "env_http_headers", "bearer_token_env_var", "oauth", "oauth_resource", "auth", "bearer_token"},
+    "http_headers": {"args", "env", "env_vars", "cwd", "bearer_token"},
+}
 SANDBOXES = {"read-only", "workspace-write", "danger-full-access"}
 HOOKS = {"SessionStart", "SessionEnd", "PreToolUse", "PostToolUse", "UserPromptSubmit",
          "Stop", "SubagentStart", "SubagentStop", "PreCompact", "PostCompact",
          "PreModelRequest", "PostModelRequest", "PermissionRequest", "Interrupt"}
 UNKNOWN = object()
+EXTRA_ROOTS = ("sandbox_workspace_write.writable_roots lists extra folders commands may write, "
+               "some possibly outside the workspace. Their paths are withheld. ")
+ROOTS_NO_WORKSPACE = EXTRA_ROOTS + ("No --workspace was supplied to check project .codex. "
+                                   "The folders' other effects were not assessed.")
+ROOTS_SCOPE = EXTRA_ROOTS + ("Only a direct grant to project .codex is checked. "
+                             "Aliases and other effects of extra folders are unassessed.")
+ROOT_HOME_UNKNOWN = ("sandbox_workspace_write.writable_roots contains a home-relative path but HOME is missing "
+                     "or is not absolute. The home-relative roots could not be compared with project .codex.")
+WORKSPACE_UNKNOWN = ("The project .codex comparison depends on an unresolved path, symlink or directory "
+                     "that could not be checked.")
+WORKSPACE_HOME = "The selected workspace's .codex is the user Codex home, outside the project settings check."
+WORKSPACE_HOME_UNKNOWN = "The project settings directory could not be distinguished from the user Codex home."
 PREFERENCES = {"model", "review_model", "model_reasoning_effort", "model_reasoning_summary",
                "model_verbosity", "service_tier", "personality", "tui", "notice", "history",
                "check_for_update_on_startup", "disable_paste_burst", "hide_agent_reasoning",
@@ -53,9 +86,43 @@ def app_tool_setting(table, path, key, default, errors):
     return UNKNOWN
 
 
+def configured_root(value):
+    if value == "~" or value.startswith("~/"):
+        home = os.environ.get("HOME")
+        if not home or not home.startswith("/"):
+            return UNKNOWN
+        value = str(Path(home) / value[1:].lstrip("/"))
+    if not value.startswith("/"):
+        return None
+    return Path(normpath("/" + value.lstrip("/")))
+
+
+def directory_identity(path):
+    if path.anchor != "/" or ".." in path.parts:
+        return UNKNOWN
+    ancestor = None
+    for index, component in enumerate((*reversed(path.parents), path)):
+        try:
+            info = component.stat(follow_symlinks=False)
+        except FileNotFoundError:
+            return (ancestor, "/".join(path.parts[index:])) if ancestor is not None else UNKNOWN
+        except (OSError, ValueError):
+            return UNKNOWN
+        if not stat.S_ISDIR(info.st_mode):
+            return UNKNOWN
+        ancestor = (info.st_dev, info.st_ino)
+    return ancestor, ""
+
+
+def unresolved_home_alias(target, home):
+    return (target[0] == home[0] and
+            unicodedata.normalize("NFD", target[1].casefold()) == unicodedata.normalize("NFD", home[1].casefold()))
+
+
 class Reader:
-    def __init__(self, source):
+    def __init__(self, source, workspace=None):
         self.source = source
+        self.workspace = workspace
         self.entries = []
         self.gaps = set()
 
@@ -113,6 +180,38 @@ class Reader:
         else:
             self.gap("approval_policy is unsupported or invalid; its value was withheld.")
 
+    def writable_roots(self, roots, selected_profile):
+        if self.workspace is None:
+            self.gap(ROOTS_NO_WORKSPACE)
+            return
+        self.gap(ROOTS_SCOPE)
+        if selected_profile:
+            return
+        normalized = {configured_root(root) for root in roots}
+        if UNKNOWN in normalized:
+            self.gap(ROOT_HOME_UNKNOWN)
+        target = Path(self.workspace).absolute() / ".codex"
+        target_id = directory_identity(target)
+        if target_id is UNKNOWN:
+            self.gap(WORKSPACE_UNKNOWN)
+            return
+        if target not in normalized:
+            return
+        home = os.environ.get("CODEX_HOME")
+        if not home and os.environ.get("HOME"):
+            home = Path(os.environ["HOME"]) / ".codex"
+        home = Path(home).absolute() if home else None
+        home_id = directory_identity(home) if home is not None else UNKNOWN
+        if home == target or target_id == home_id:
+            self.gap(WORKSPACE_HOME)
+            return
+        if home_id is UNKNOWN or unresolved_home_alias(target_id, home_id):
+            self.gap(WORKSPACE_HOME_UNKNOWN)
+            return
+        self.add(["sandbox_workspace_write", "writable_roots"], "permission",
+                 ["selected workspace's .codex directory explicitly listed"],
+                 {"writable_project_settings": True})
+
     def sandbox(self, data):
         profile = "default_permissions" in data
         if profile or "permissions" in data:
@@ -136,9 +235,7 @@ class Reader:
                 if not (isinstance(roots, list) and all(isinstance(r, str) for r in roots)):
                     self.gap("sandbox_workspace_write.writable_roots is invalid; its value was withheld.")
                 elif roots and active:
-                    self.gap("sandbox_workspace_write.writable_roots lists extra folders that commands may write in "
-                             "workspace-write mode, some possibly outside the workspace; their paths were withheld "
-                             "and were not evaluated.")
+                    self.writable_roots(roots, "profile" in data)
             if "network_access" in table:
                 value = self.boolean(table, "network_access", False, "sandbox_workspace_write")
                 if value is not None:
@@ -175,10 +272,10 @@ class Reader:
         if isinstance(mode, str) and mode in APPROVALS:
             return ([f"tool approval: {mode}" + (" (default)" if default else "")],
                     {"automatic_tools": applies and mode == "approve",
-                     "self_described_tools": applies and mode in {"auto", "writes"}})
+                     "self_described_tools": applies and mode in {"auto", "writes"}}, True)
         if mode is not UNKNOWN and report_invalid:
             self.gap(f"A {label} approval mode is unsupported or invalid; its value was withheld.")
-        return [], {}
+        return [], {}, False
 
     def tool(self, parts, name, override, mode, available, destructive, off_reason=None):
         own = override is not None
@@ -186,8 +283,9 @@ class Reader:
         if destructive:
             obs.append("enabled even if destructive")
         effective = override if own else ("auto" if mode is None else mode)
-        approval, facts = self.tool_approval(effective, own and available, "per-tool", report_invalid=own)
+        approval, facts, mode_valid = self.tool_approval(effective, own and available, "per-tool", report_invalid=own)
         self.add(parts + ["tools", name], "tool policy", obs + approval, facts | {"destructive_tools": destructive})
+        return mode_valid
 
     def mcp_tools(self, server, parts, enabled):
         valid = True
@@ -209,12 +307,15 @@ class Reader:
             return valid and (allow is None or name in allow) and name not in deny
         mode, configs = server.get("default_tools_approval_mode"), tool_tables(server)
         applies = valid and (allow is None or any(permitted(n) and "approval_mode" not in configs.get(n, {}) for n in allow))
-        observations, facts = self.tool_approval(mode, enabled is True and applies, "tool")
+        observations, facts, mode_valid = self.tool_approval(mode, enabled is True and applies, "tool")
+        policy_valid = valid and mode_valid
         if "tools" in server:
+            policy_valid = policy_valid and isinstance(server["tools"], dict) and len(configs) == len(server["tools"])
             for name, config in self.named(self.table(server["tools"], "tools"), "tools"):
                 self.unknown(config, {"approval_mode", "output_token_limit"}, "tools")
-                self.tool(parts, name, config.get("approval_mode"), mode, enabled is True and permitted(name), False)
-        return observations, facts
+                override_valid = self.tool(parts, name, config.get("approval_mode"), mode, enabled is True and permitted(name), False)
+                policy_valid = policy_valid and override_valid
+        return observations, facts, policy_valid
 
     def mcp(self, data):
         servers = self.table(data.get("mcp_servers", {}), "mcp_servers")
@@ -232,18 +333,27 @@ class Reader:
             stdio = isinstance(command, str) and url is None
             http = isinstance(url, str) and command is None
             helper = server.get("http_headers_helper")
+            valid_helper = isinstance(helper, str) and bool(helper.strip())
+            field = "env" if stdio else "http_headers"
+            values = server.get(field, {})
             valid = (stdio and bool(command.strip())) or http
             if stdio and helper is not None:
                 valid = False
                 obs.append("Codex rejects this stdio configuration")
                 self.gap(f"Codex cannot load this configuration because stdio MCP server {name} sets http_headers_helper.")
+            elif valid and not (isinstance(values, dict) and all(isinstance(v, str) for v in values.values())):
+                valid = False
+                obs.append("Codex rejects this configuration")
+                self.gap(INVALID_MCP_MAP.format(label=config_name(parts + [field])))
             elif valid:
                 obs.append("stdio; command withheld" if stdio else "HTTP; endpoint withheld")
             else:
                 obs.append("transport unknown")
                 self.gap("An MCP transport is missing, conflicting or invalid.")
-            policy, facts = self.mcp_tools(server, parts, enabled is True and valid)
-            valid_helper = isinstance(helper, str) and bool(helper.strip())
+            policy, facts, policy_valid = self.mcp_tools(server, parts, enabled is True and valid)
+            if (enabled is True and valid and policy_valid and values and MCP_OTHER_TRANSPORT[field].isdisjoint(server)
+                    and (helper is None or valid_helper)):
+                self.gap(INLINE_MCP_VALUES.format(label=config_name(parts + [field])))
             if helper is not None and not stdio and not valid_helper:
                 self.gap("An MCP header-helper command is invalid; its value was withheld.")
             facts["configured_program"] = enabled is True and valid and (stdio or valid_helper)
@@ -254,8 +364,14 @@ class Reader:
             label = path + ".tools." + (config_name([tool]) if tool is not None else "*")
             enabled = app_tool_setting(config, label, "enabled", tools_enabled, errors)
             mode = app_tool_setting(config, label, "approval_mode", None, errors)
+            known = {"approval_mode", "enabled"}
+            reviewer = config.get("approvals_reviewer")
+            if reviewer in ("user", *AUTO_REVIEW_VALUES):
+                known.add("approvals_reviewer")
+            if reviewer in AUTO_REVIEW_VALUES:
+                self.gap(APP_TOOL_REVIEWER_GAP.format(label=f"{label}.approvals_reviewer"))
             if tool is not None:
-                self.unknown(config, {"approval_mode", "enabled"}, "tools")
+                self.unknown(config, known, "tools")
             yield tool, enabled, mode, config.get("enabled") is True
 
     def apps(self, data, apps_off):
@@ -298,7 +414,7 @@ class Reader:
             if tools_enabled is not True:
                 obs.append("default tools disabled or unknown")
             applies = tools_enabled is True or any(own and override is None for _, _, override, own in tools)
-            policy, facts = self.tool_approval(mode, enabled is True and applies, "tool")
+            policy, facts, _ = self.tool_approval(mode, enabled is True and applies, "tool")
             for tool, tool_enabled, override, explicitly_enabled in tools:
                 if tool is not None:
                     available = tool_enabled is True and enabled is True
@@ -315,6 +431,8 @@ class Reader:
                 facts["destructive_tools"] = destructive
             if "links" in app:
                 self.gap("Per-account app policy is not evaluated; account identifiers were withheld.")
+            if app.get("approvals_reviewer") in AUTO_REVIEW_VALUES:
+                self.gap("App approvals_reviewer is not evaluated; Codex may let a reviewer decide an app's tool calls instead of asking you.")
             if enabled is False and not template:
                 self.gaps = before
             for error in load_errors:
@@ -363,14 +481,25 @@ class Reader:
         if incomplete:
             self.gap("projects contains malformed or unsupported data; its declarations could not be fully assessed.")
 
+    def profiles(self, data):
+        if "profile" in data:
+            self.gap(LEGACY_PROFILE_SELECTOR if isinstance(data["profile"], str) else INVALID_PROFILE_SELECTOR)
+            if "profiles" in data:
+                self.table(data["profiles"], "profiles")
+        elif "profiles" in data:
+            profiles = data["profiles"]
+            if profiles == {}:
+                self.gap(EMPTY_PROFILES)
+            for value in self.table(profiles, "profiles").values():
+                self.gap(LEGACY_PROFILE_TABLES if isinstance(value, dict) else "profiles contains an entry that is not a table.")
+
     def read(self, data):
         unchecked = {"plugins", "marketplaces", "desktop"}
         for section in unchecked & data.keys():
             self.gap(f"Unchecked section {section}; its settings were not evaluated.")
         if "projects" in data:
             self.projects(data["projects"])
-        if "profile" in data or "profiles" in data:
-            self.gap("Profiles are outside reader coverage; a selected profile can override the reported settings.")
+        self.profiles(data)
         self.approval(data)
         self.sandbox(data)
         approval = next((e for e in self.entries if e["name"] == "approval_policy"), None)
@@ -385,7 +514,13 @@ class Reader:
                 aws = self.table(provider.get("aws", {}), "aws")
                 for key in ("credential_export", "auth_refresh"):
                     if key in aws:
-                        self.gap(f"Model-provider setting aws.{key} was not checked for a credential command.")
+                        self.gap(f"Model-provider setting aws.{key} is for a credential command. Stay-safe did not check its value.")
+                gateway = self.table(provider.get("gateway_oauth", {}), "gateway_oauth")
+                if "credential_export" in gateway:
+                    self.gap("Model-provider setting gateway_oauth.credential_export is for a credential command. Stay-safe did not check its value.")
+        otel = data.get("otel")
+        if isinstance(otel, dict) and "headers_helper" in otel:
+            self.gap("otel.headers_helper is for a command that supplies telemetry headers. Stay-safe did not check its value.")
         if "notify" in data:
             notify = data["notify"]
             if (isinstance(notify, list) and notify and all(isinstance(p, str) for p in notify)
@@ -463,8 +598,8 @@ def open_input(path):
 
 
 @exclude_account_files
-def read_file(path: Path, source: str, *, discovered=False):
-    reader = Reader(source)
+def read_file(path: Path, source: str, *, discovered=False, workspace=None):
+    reader = Reader(source, workspace)
     try:
         try:
             fd = open_input(path)

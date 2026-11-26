@@ -3,6 +3,7 @@ import subprocess
 import sys
 
 from stay_safe.report import inspect, markdown
+from tests.support import INLINE_OVERRIDE, SELECTOR_GAP, TABLES_GAP
 from tests.support import ConfigCase, ROOT, items, section, gap_items
 
 WITHHELD = "The value is left out of this report."
@@ -47,10 +48,10 @@ PLAIN = {
     "sandbox_mode is absent; the reader does not infer its effective value.":
         "**Not checked: your sandbox setting.** `sandbox_mode` isn't in your config file, so stay-safe can't tell "
         "what commands Codex runs are allowed to do.",
-    "sandbox_workspace_write.writable_roots lists extra folders that commands may write in workspace-write mode, some possibly outside the workspace; their paths were withheld and were not evaluated.":
-        "**Not checked: extra folders commands can write to.** Your config lists folders in `writable_roots` that "
-        "commands may write to in `workspace-write` mode. Some may be outside your workspace. stay-safe doesn't "
-        "check what those folders are. Their paths are left out of this report.",
+    "sandbox_workspace_write.writable_roots lists extra folders commands may write, some possibly outside the workspace. Their paths are withheld. No --workspace was supplied to check project .codex. The folders' other effects were not assessed.":
+        "**Not checked: extra writable folders.** Your config lists folders commands may write. "
+        "Some may be outside your workspace. Their paths are withheld. Supply `--workspace DIR` to check for a "
+        "direct grant to the project's `.codex`.",
     "sandbox_workspace_write.writable_roots is invalid; its value was withheld.":
         "**Not checked: extra folders commands can write to.** Your `writable_roots` isn't a list of folder "
         f"paths, so stay-safe can't tell where commands can write. {WITHHELD}",
@@ -63,9 +64,20 @@ PLAIN = {
     "default_permissions and sandbox_mode conflict; effective sandbox selection is unknown.":
         "**Not checked: which sandbox Codex uses.** Your config file sets both `default_permissions` and "
         "`sandbox_mode`, so stay-safe can't tell which one Codex uses.",
-    "Profiles are outside reader coverage; a selected profile can override the reported settings.":
-        "**Not checked: your profiles.** Your config file has profiles, which stay-safe doesn't read. A profile "
-        "Codex uses can override the settings in this report.",
+    SELECTOR_GAP:
+        "**This file uses an old way to select a profile.** Codex 0.172.0 stops if "
+        "`profile` is in the configuration it uses at startup. It ignores this setting in project configuration. "
+        f"{INLINE_OVERRIDE}",
+    TABLES_GAP:
+        "**This file defines a profile but doesn’t select it.** If this is your main `config.toml` and you "
+        "start Codex 0.172.0 with `--profile` and a name defined here, the matching table stops Codex from loading. "
+        f"Starting with a name this file doesn’t define does not trigger that conflict. {INLINE_OVERRIDE}",
+    "Codex expects a string for the top-level profile setting. It ignores this setting in project configuration.":
+        "**`profile` isn’t a quoted name.** Codex expects a string here. It ignores this setting in project "
+        "configuration.",
+    "The profiles table is empty. No profile names are defined. Startup profile selection was not checked.":
+        "**Not checked: profile selection.** The `profiles` table is empty. It defines no names that could "
+        "conflict with a startup profile.",
     "shell_environment_policy.inherit is unsupported or invalid; its value was withheld.":
         "**Not checked: whether commands get your environment variables.** Your "
         f"`shell_environment_policy.inherit` value isn't one stay-safe supports. {WITHHELD}",
@@ -121,6 +133,10 @@ PLAIN = {
     "Per-account app policy is not evaluated; account identifiers were withheld.":
         "**Not checked: per-account app settings.** An app has per-account settings (`links`), which stay-safe "
         "doesn't assess. Account identifiers are left out of this report.",
+    "App approvals_reviewer is not evaluated; Codex may let a reviewer decide an app's tool calls instead of asking you.":
+        "**Not checked: an app's approval reviewer.** An app sets `approvals_reviewer` (in `[apps.<name>]` or "
+        "`[apps._default]`), which can let a reviewer such as automatic review decide its tool calls instead of "
+        "asking you. stay-safe doesn't assess it.",
     "Model-provider command-backed authentication is outside reader coverage.":
         "**Not checked: a model provider's sign-in command.** A model provider gets its credentials by running a "
         "command (`auth`), which stay-safe doesn't assess.",
@@ -233,8 +249,8 @@ STEPS = {
     "sandbox_mode is absent; the reader does not infer its effective value.":
         "Check the sandbox setting wherever you run Codex (the app or the command line). To set it in a file, add "
         "`sandbox_mode = \"workspace-write\"` or `\"read-only\"` to your config file.",
-    "sandbox_workspace_write.writable_roots lists extra folders that commands may write in workspace-write mode, some possibly outside the workspace; their paths were withheld and were not evaluated.":
-        "Review each folder in `writable_roots` yourself, and remove any that commands shouldn't change, such as "
+    "sandbox_workspace_write.writable_roots lists extra folders commands may write, some possibly outside the workspace. Their paths are withheld. No --workspace was supplied to check project .codex. The folders' other effects were not assessed.":
+        "Review each folder in `writable_roots` and remove any that commands shouldn't change, such as "
         "the Docker socket (`/var/run/docker.sock`).",
     "sandbox_workspace_write.writable_roots is invalid; its value was withheld.": "Make `writable_roots` a list of folder paths, or remove it.",
     "sandbox_mode is unsupported or invalid; its value was withheld.":
@@ -243,8 +259,19 @@ STEPS = {
         "Review your permission profiles yourself; findings about this file's sandbox may not apply.",
     "default_permissions and sandbox_mode conflict; effective sandbox selection is unknown.":
         "Keep only one of `default_permissions` and `sandbox_mode`, then run stay-safe again.",
-    "Profiles are outside reader coverage; a selected profile can override the reported settings.":
-        "Review your profiles yourself, especially their approval and sandbox settings.",
+    SELECTOR_GAP:
+        "Remove the `profile` setting. To use a user profile named `work`, move the settings inside "
+        "`[profiles.work]` in your main config into `work.config.toml` in your Codex folder. Remove the old table and start Codex "
+        "with `--profile work`. Then run stay-safe with `--config` and the path to that file to check its settings.",
+    TABLES_GAP:
+        "If you want to use one of these profiles, move its settings into a separate file in your Codex folder "
+        "and remove the matching table from the main config. For example, use `work.config.toml` with "
+        "`--profile work`.",
+    "Codex expects a string for the top-level profile setting. It ignores this setting in project configuration.":
+        "Remove the `profile` setting. To choose a profile, use a separate profile file and select it with "
+        "`--profile`.",
+    "The profiles table is empty. No profile names are defined. Startup profile selection was not checked.":
+        "If you start Codex with `--profile`, review the separate profile file you select.",
     "shell_environment_policy.inherit is unsupported or invalid; its value was withheld.":
         "Set `inherit` to `\"all\"`, `\"core\"` or `\"none\"`.",
     "shell_environment_policy.ignore_default_excludes has an invalid boolean; its behavior is unknown.":
@@ -277,6 +304,10 @@ STEPS = {
         "Set `apps.team.destructive_enabled` to `true` or `false` without quotes.",
     "Per-account app policy is not evaluated; account identifiers were withheld.":
         "Review those per-account settings yourself.",
+    "App approvals_reviewer is not evaluated; Codex may let a reviewer decide an app's tool calls instead of asking you.":
+        "Check the tool and linked account first. "
+        "Check the reviewer on the App and on `apps._default`. If you remove the App's override, the App can still "
+        "inherit automatic review from `apps._default`.",
     "Model-provider command-backed authentication is outside reader coverage.":
         "Review that command yourself; stay-safe doesn't check it.",
     "notify is not a command list with a nonempty program.":

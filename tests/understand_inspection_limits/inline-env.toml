@@ -1,0 +1,10 @@
+approval_policy = "on-request"
+sandbox_mode = "read-only"
+shell_environment_policy = { inherit = "none" }
+[features]
+apps = false
+[mcp_servers.example]
+command = "example-server"
+default_tools_approval_mode = "prompt"
+[mcp_servers.example.env]
+EXAMPLE_TOKEN = "synthetic-value-not-a-real-credential"

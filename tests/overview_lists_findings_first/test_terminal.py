@@ -56,8 +56,8 @@ class TerminalTests(ConfigCase):
         path = self.config(SEEDED)
         checkout = copy_checkout(self.root / 'checkout')
         status, output, errors = self.terminal('--config', str(path), cwd=checkout)
-        self.assertEqual(status, 0)
-        self.assertEqual(errors, HINT)
+        self.assertEqual(status, 2)
+        self.assertEqual(errors, HINT + INCOMPLETE)
         self.assertTrue(output.startswith('Codex configuration diagnostic\n\n'))
         headings = ['Findings', 'Not checked', 'Your setup', 'Sources', "What this report can't see"]
         positions = [output.index('\n' + heading + '\n') for heading in headings]

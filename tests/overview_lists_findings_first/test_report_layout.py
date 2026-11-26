@@ -13,9 +13,10 @@ EMPTY_GAPS = ("stay-safe checked every setting it supports in the files it read.
               "still applies.")
 HEADINGS = ["## Findings", "## Not checked", "## Your setup", "## Sources", "## What this report can't see"]
 CANT_SEE = [
-    "- Settings chosen in the app or with command-line flags, and which profile Codex uses: these can override the "
-    "files listed under Your setup, and stay-safe can't see them. Check them where you start Codex, and the "
-    "`profile` setting in your config file.",
+    "- Settings you choose in the app or with command-line flags can override your config. "
+    "Check how you start Codex. If you select a separate profile file with `--profile`, "
+    "that file can override your main config. Run stay-safe with `--config` and the path "
+    "to that file to inspect it separately.",
     "- Whether connections work, or what Codex actually allows when it runs: stay-safe only reads files; it doesn't "
     "start Codex or contact any service. Watch what Codex asks before it acts.",
     "- Private values such as commands, addresses and tokens are left out, but names like `github` are shown as "

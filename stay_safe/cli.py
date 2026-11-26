@@ -166,36 +166,75 @@ def claude_home(chosen):
     return home, label, status
 
 
-def claude_run(home, label, status):
-    if status != "directory":
+def claude_project(home):
+    folder = Path(".claude")
+    unchecked = "The project's .claude folder could not be checked; its settings were not inspected."
+    try:
+        names = os.listdir(folder)
+    except (FileNotFoundError, NotADirectoryError):
+        return None, None
+    except OSError:
+        return None, unchecked
+    if "settings.json" not in names:
+        return None, None
+    if home is not None:
+        try:
+            here, user = folder.stat(), home.stat()
+        except (FileNotFoundError, NotADirectoryError):
+            return folder / "settings.json", None
+        except OSError:
+            return None, unchecked
+        if (here.st_dev, here.st_ino) == (user.st_dev, user.st_ino):
+            return None, None
+    return folder / "settings.json", None
+
+
+def claude_run(home, label, status, project, required):
+    paths, scopes, files, gaps = [], [], {}, []
+    path, project_gap = project
+    if status == "directory":
+        paths, scopes, files = [home / "settings.json"], ["user"], {"settings-1": f"{label}/settings.json"}
+    elif required:
         reason = {"missing": "was not found", "not a directory": "is not a directory",
                   "unreadable": "could not be checked"}[status]
-        return claude_report.inspect([], gaps=[
-            f"Claude Code home: {label} {reason}; no Claude Code files were inspected."]), {}
-    return claude_report.inspect([home / "settings.json"], discovered=True), {"settings-1": f"{label}/settings.json"}
+        inspected = ("only the project's .claude/settings.json was inspected" if path
+                     else "no Claude Code files were inspected")
+        gaps.append(f"Claude Code home: {label} {reason}; {inspected}.")
+    if path is not None:
+        paths.append(path)
+        scopes.append("project")
+        files[f"settings-{len(paths)}"] = ".claude/settings.json"
+    if project_gap:
+        gaps.append(project_gap)
+    return claude_report.inspect(paths, discovered=True, scopes=scopes, gaps=gaps), files
 
 
 def discover_runs(args, agents):
     if agents == ["codex"]:
         return [codex_run(args)]
     home, label, status = claude_home(chosen=bool(agents))
+    project = claude_project(home if status == "directory" else None)
+    configured = bool(os.environ.get("CLAUDE_CONFIG_DIR"))
     if agents:
         include_claude, include_codex = "claude" in agents, "codex" in agents
     else:
-        include_claude = status != "missing" or bool(os.environ.get("CLAUDE_CONFIG_DIR"))
+        include_claude = status != "missing" or configured or project != (None, None)
         include_codex = True
-        if status == "directory" and not os.environ.get("CODEX_HOME"):
+        if (status == "directory" or project[0] is not None) and not os.environ.get("CODEX_HOME"):
             codex, _ = codex_home()
             include_codex = codex is not None and directory_status(codex) != "missing"
     runs = [codex_run(args)] if include_codex else []
     if include_claude:
-        runs.append(claude_run(home, label, status))
+        required = bool(agents) or configured or status != "missing"
+        runs.append(claude_run(home, label, status, project, required))
     return runs
 
 
 def main(argv=None):
     parser = Parser(prog=PROG, description="Read Codex and Claude Code settings and print a shareable report.")
     parser.add_argument("--config", action="append", metavar="FILE", help="Inspect this file independently; repeat for more files.")
+    parser.add_argument("--workspace", action="append", metavar="DIR",
+                        help="Compare Codex extra writable folders with this project's .codex directory.")
     parser.add_argument("--rules", action="append", metavar="FILE", help="Inspect one saved-rules file independently.")
     parser.add_argument("--agent", action="append", choices=AGENTS,
                         help="Check this coding agent; repeat for both. With no files selected, inspect the agent folders found.")
@@ -209,6 +248,11 @@ def main(argv=None):
         parser.exit(2, f"--save takes no path. It saves {NAME} in {SAVE_FOLDER}.\n")
     if extra:
         parser.error("Unexpected arguments.")
+    if args.workspace and len(args.workspace) > 1:
+        parser.exit(2, "Select only one directory with --workspace.\n")
+    args.workspace = args.workspace[0] if args.workspace else None
+    if args.workspace == "":
+        parser.exit(2, "--workspace needs a directory. Use --help.\n")
     if args.rules and len(args.rules) != 1:
         parser.error("Only one rules file may be selected.")
     if args.save and args.format in ("json", "sarif"):
@@ -216,6 +260,8 @@ def main(argv=None):
     agents = list(dict.fromkeys(args.agent or []))
     if args.config and len(agents) > 1:
         parser.exit(2, "--config needs one --agent: choose codex or claude.\n")
+    if args.workspace is not None and agents == ["claude"]:
+        parser.exit(2, "--workspace checks Codex settings only.\n")
     if args.rules and "claude" in agents:
         parser.exit(2, "--rules reads Codex files only.\n")
     if args.config or args.rules:
@@ -267,4 +313,4 @@ def codex_run(args):
             gaps.extend(gap for gap in (skills(home), environments_toml(home)) if gap)
             if system_config():
                 gaps.append("System config folder: /etc/codex holds Codex configuration that was not inspected.")
-    return inspect(paths, rules_path=rules, discovered=defaults, gaps=gaps), files
+    return inspect(paths, rules_path=rules, discovered=defaults, gaps=gaps, workspace=args.workspace), files

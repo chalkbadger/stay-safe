@@ -1,4 +1,7 @@
-from stay_safe.report import inspect
+import json
+from unittest.mock import patch
+
+from stay_safe.report import inspect, render
 from tests.support import CHATGPT_APPS, ConfigCase
 
 
@@ -43,6 +46,35 @@ class ConfiguredConditionTests(ConfigCase):
         self.assert_silent('approval_policy="on-request"\nsandbox_mode="danger-full-access"\ndefault_permissions=":read-only"', {
             'sandbox_mode': ['danger-full-access', 'permission-profile selection is uninspected'],
         }, PROFILE_GAPS)
+
+    def test_sandbox_off_explains_changes_to_settings_saved_approvals_and_instructions(self):
+        why = ("A mistaken command could damage files outside your project. "
+               "A command could also change Codex’s own settings, saved approvals, or instructions if your account "
+               "can edit those files. A later Codex run could then follow different instructions or run a command "
+               "it would otherwise ask you to approve.")
+        workspace = self.root.resolve() / "private-project"
+        target = workspace / ".codex"
+        target.mkdir(parents=True)
+        roots = "sandbox_workspace_write.writable_roots = " + json.dumps([str(target)])
+        for mode, extra, sandbox_off, direct_grant in [
+            ("danger-full-access", "", True, False),
+            ("danger-full-access", roots, True, False),
+            ("workspace-write", roots, False, True),
+            ("read-only", roots, False, False),
+            ("danger-full-access", 'default_permissions = ":read-only"', False, False),
+            ("danger-full-access", "[permissions.example]", True, False),
+        ]:
+            with self.subTest(mode=mode, extra=extra), patch.dict("os.environ", {"CODEX_HOME": str(self.root.resolve())}):
+                path = self.config(f'approval_policy="on-request"\nsandbox_mode="{mode}"\n{extra}\n')
+                report = inspect([path], workspace=workspace)
+                risks = json.loads(render(report, "json"))["risks"]
+                self.assertEqual([r["explanation"] for r in risks if r["rule"] == "unrestricted_filesystem"],
+                                 [why] if sandbox_off else [])
+                self.assertEqual(any(r["rule"] == "writable_project_settings" for r in risks), direct_grant)
+                markdown = render(report, "markdown")
+                self.assertEqual(markdown.count(why), int(sandbox_off))
+                self.assertNotIn(str(workspace), markdown)
+                self.assertNotIn(str(workspace), json.dumps(report))
 
     def test_full_access_lets_on_request_commands_and_never_tool_calls_run_without_asking(self):
         commands = "with danger-full-access, ordinary commands can run without asking"

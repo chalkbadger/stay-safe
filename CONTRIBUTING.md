@@ -25,6 +25,12 @@ for scope readiness, claims, and evidence, and
 [development and review](#development-and-review) for the check commands and
 published-revision verification record.
 
+Keep the README focused on the questions stay-safe answers, one example, and how
+to run it. Change it when a first-time reader would otherwise misunderstand the
+tool or take the wrong next step. Put advice about a finding in the report,
+file and platform details in [Usage](docs/usage.md), and version-specific
+behavior with its sources in the [Codex meanings table](harnesses/codex.md).
+
 An addition stay-safe would maintain, such as a diagnostic for another coding agent,
 [names its supported scope, how it was checked, and who maintains it](https://github.com/chalkbadger/wirth/blob/main/docs/participation.md#propose-bounded-changes).
 

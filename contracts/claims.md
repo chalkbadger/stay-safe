@@ -7,9 +7,10 @@ Tests: [tests/see_every_connection_and_setting/](../tests/see_every_connection_a
 - I inspect known settings and see the expected entries and findings. `test_config.py::test_known_configuration_has_exact_named_catalog_and_risks`
 - I turn Apps off in one file and see why its named apps give no warnings, while another file keeps its own warnings. `test_config.py::test_named_apps_respect_the_apps_switch_in_each_file`
 - I inspect several files and each keeps its own settings and identities. `test_config.py::test_files_remain_independent_and_identity_preserves_dotted_name`
+- I follow the saved scanner example and see the flagged server and its default approval for the configuration I selected. `test_saved_scan_example.py::test_published_example_pairs_the_flag_with_the_selected_snapshot`
 - I have no default config file and see the assessed defaults and remaining gaps. `test_defaults.py::test_both_formats_report_cited_defaults_and_retained_gaps`
 - I inspect saved approvals and see each supported record identified separately. `test_saved_rules.py::test_saved_lines_keep_line_numbers_part_counts_and_broad_labels`
-- I let commands in `workspace-write` mode write to extra folders and see that setting under "Not checked", without the folders' paths. `test_unlisted_settings.py::test_active_writable_roots_give_a_gap_and_no_entry_or_risk`
+- I omit the workspace while allowing commands to write to extra folders and see the missing workspace under "Not checked" with the folder paths withheld. `test_unlisted_settings.py::test_active_writable_roots_give_a_gap_and_no_entry_or_risk`
 - I see on the ChatGPT Apps connection whether apps my file doesn't name are off and where their `destructive_enabled` comes from. `test_chatgpt_apps.py::test_chatgpt_apps_connection_says_whether_apps_not_named_can_change_data`
 - My Codex folder has skills in `skills` and an `environments.toml` file, and I see each under "Not checked" without their contents. `test_skills_and_environments.py::test_skills_and_environments_toml_each_give_their_own_gap`
 - My Codex folder reaches a skill folder by a short route and by a longer link, and I still see the skills under "Not checked". `test_skills_and_environments.py::test_a_skill_in_the_skills_folder_gives_the_gap_and_exits_2`
@@ -35,6 +36,24 @@ Tests: [tests/see_every_connection_and_setting/](../tests/see_every_connection_a
 - I supply a malformed Claude permission or sandbox field and see the field named as a gap. `test_claude_settings.py::test_malformed_permission_lists_and_sandbox_fields_name_the_field`
 - I turn on sandboxing and see whether the file sets automatic Bash approval or leaves it to a version-dependent default. `test_claude_settings.py::test_sandbox_approval_is_version_dependent_only_when_enabled_and_unset`
 - I configure only an ask rule and see that its matches were not checked. `test_claude_settings.py::test_ask_only_rules_name_the_unchecked_list_without_a_finding`
+- I set a Claude Code command hook on any event in the work loop and see it listed without its command. `test_claude_programs.py::test_a_command_hook_on_any_event_is_listed_with_its_command_withheld`
+- I add HTTP or MCP tool hooks and see each kind in its own entry, listed by event and position: the HTTP hook as network access with its address withheld, the MCP tool hook with its server and tool withheld. `test_claude_programs.py::test_http_and_mcp_hooks_are_labelled_by_kind_and_event`
+- I set an `if` rule, an exec-form hook or a misspelled event, and see the hook listed as not running, the `args` noted, or the event named as a gap with its name withheld. `test_claude_programs.py::test_if_filters_and_exec_form_are_noted_and_unknown_events_are_gaps`
+- I see hooks from the project's Claude Code settings marked as project settings, with the mode left to my other settings. `test_claude_programs.py::test_project_settings_mark_hooks_and_take_the_mode_from_other_files`
+- I set `disableAllHooks` and see my hooks listed as turned off in that file. `test_claude_programs.py::test_disable_all_hooks_turns_off_hooks_in_the_same_file`
+- I supply a malformed Claude Code hook and see it named as a gap. `test_claude_programs.py::test_malformed_hooks_name_the_field`
+- I run stay-safe in a project folder and see its `.claude/settings.json` read once beside my user settings. `test_claude_programs.py::test_discovery_reads_the_project_file_in_the_current_folder_once`
+- I run in a project whose `.claude` folder can't be checked and see it named as a gap. `test_claude_programs.py::test_unreadable_project_folder_is_a_named_gap`
+
+## [explain_profile_settings] I can tell when a profile setting in my file would stop Codex from loading it and when that depends on how I start Codex.
+Issue: https://github.com/chalkbadger/stay-safe/issues/21
+Tests: [tests/explain_profile_settings/](../tests/explain_profile_settings/)
+
+- I see why the old selector stops loading or when a named table conflicts with startup selection. `test_profiles.py::test_selector_and_named_tables_report_different_loading_conditions`
+- I inspect a project file with the old selector and see how Codex treats project configuration. `test_profiles.py::test_project_file_explains_why_its_selector_can_be_ignored`
+- I can check a separate profile file for settings that could override my main config. `test_profiles.py::test_migrated_profile_can_be_inspected_separately_from_the_main_config`
+- When my file sets `profile` and a `profiles` value that isn't a table, I see both under "Not checked". `test_profiles.py::test_selector_does_not_hide_a_malformed_profiles_value`
+- I inspect two files and see each profile message and finding attached to its own file. `test_profiles.py::test_each_snapshot_keeps_its_own_profile_message_and_settings`
 
 ## [understand_inspection_limits] I can tell what the report establishes and what needs further checking.
 Issue: https://github.com/chalkbadger/stay-safe/issues/97
@@ -44,14 +63,44 @@ Tests: [tests/understand_inspection_limits/](../tests/understand_inspection_limi
 - I follow the report's scope link and see its limits on live connections, effective permissions and other unverified behavior. `test_scope.py::test_the_full_scope_holds_every_scope_line`
 - I supply an unreadable file beside a readable one and see the failure without losing valid findings. `test_selected_config_failures.py::test_each_failure_has_a_distinct_private_safe_reason_and_action_in_both_formats`
 - I get an incomplete report and an explanation of exit status 2. `test_status.py::test_reports_with_gaps_explain_exit_two_on_stderr_only`
+- The report warns me about the server's configured command whether I set values in `env` or list variable names in `env_vars`. It asks me to check for credentials only when I write the values directly in `env`. `test_inline_mcp.py::test_inline_env_and_reference_control_keep_the_program_finding`
+- If two files configure the same server, each reminder tells me which file, server and table to check. The report lists each table once per file, even when it contains several entries. `test_inline_mcp.py::test_each_populated_field_names_its_snapshot_and_server_once`
+- The report skips the credential reminder if I disable the server, leave the table empty or refer to environment variables by name. It also skips the reminder when I use a setting Codex rejects for that connection, such as `http_headers` on a stdio server. `test_inline_mcp.py::test_only_enabled_compatible_populated_tables_get_the_credentials_advice`
+- If one MCP server has an invalid tool setting, the report explains the error and asks me to check only the other server's inline environment variables for credentials. `test_inline_mcp.py::test_rejected_tool_settings_keep_their_diagnostic_without_credentials_advice`
+- If `env` or `http_headers` has the wrong type, the report names the setting and tells me Codex expects a table of strings. It also warns me about the command configured for the other server. `test_inline_mcp.py::test_rejected_inline_maps_keep_the_other_servers_finding`
 - I give a stdio server an HTTP header helper and see why Codex rejects the setting and how to fix it. `test_status.py::test_stdio_header_helper_names_the_rejected_setting`
 - I see which AWS credential commands were left unchecked even when the provider is selected elsewhere. `test_status.py::test_aws_credentials_name_each_unchecked_command`
+- When I set a gateway credential command or a telemetry header helper, I see each one under "Not checked". `test_status.py::test_gateway_and_otel_helpers_name_unchecked_commands`
+- I choose an AI reviewer for an App tool, and "Not checked" names the setting and explains that a policy can require a different reviewer. `test_status.py::test_app_tool_ai_reviewer_is_named_and_explains_policy_limits`
+- I let automatic review decide an app's tool calls and see that reviewer under "Not checked", while `user` or no reviewer stays clean. `test_status.py::test_app_auto_reviewer_is_named_as_unchecked`
+- I set automatic review on `apps._default` and on a named App, follow the advice and remove only the App's reviewer, and run again. The default reviewer is still under "Not checked", the run still exits 2, and the advice says the App can still inherit automatic review from `apps._default`. `test_status.py::test_removing_an_app_reviewer_can_leave_the_default_reviewer_in_place`
+
+## [check_workspace_settings] I name my Codex workspace and see when my settings grant commands write access to its project settings directory.
+Issue: https://github.com/chalkbadger/stay-safe/issues/35
+Tests: [tests/check_workspace_settings/](../tests/check_workspace_settings/)
+
+- I list the project settings directory twice and see one finding tied to its setting with the other effects of extra folders still unchecked. `test_workspace.py::test_direct_grant_warns_once_and_keeps_the_unchecked_effects_visible`
+- I spell the root with my home directory or parent components and see a warning only when Codex's path names the project settings directory. `test_workspace.py::test_equivalent_home_and_parent_spellings_identify_only_direct_grants`
+- I list a home-relative folder without an absolute home path and see which comparison is missing while an independent direct grant still gives its warning. `test_workspace.py::test_home_relative_root_with_unknown_home_keeps_independent_direct_grants`
+- I select a symlink or file as the workspace and see the missing project comparison when my settings list active roots. `test_workspace.py::test_unusable_workspace_names_the_gap_even_with_a_differently_spelled_root`
+- I select two workspaces and see a usage error that withholds both paths. `test_workspace.py::test_repeated_workspace_is_rejected_without_disclosing_either_directory`
+- I list extra writable folders and see that they may reach outside the workspace while their paths stay private. `test_workspace.py::test_extra_folder_gap_explains_outside_access_and_withheld_paths`
+- I remove the direct grant and the finding disappears while the other listed folders still need review. `test_workspace.py::test_removing_direct_grant_leaves_parent_sibling_lookalike_and_narrower_roots_without_a_warning`
+- I select two settings files and see a finding only on the file that both selects workspace writes and lists the directory. `test_workspace.py::test_mode_and_roots_must_appear_in_the_same_selected_snapshot`
+- I use empty, inactive or invalid roots or select a profile and see no warning from the legacy list, with unsupported inputs still named. `test_workspace.py::test_inactive_empty_invalid_and_profile_cases`
+- I omit the workspace or supply an unresolved alias and see the missing comparison in the report. `test_workspace.py::test_missing_workspace_and_unresolved_aliases_name_the_boundary`
+- I list the exact project settings path through a directory symlink and see the unresolved project path named without a write warning. `test_workspace.py::test_direct_grant_through_a_target_or_workspace_symlink_names_the_unresolved_path`
+- I select a workspace whose settings directory is my Codex home and see why the project check does not apply. `test_workspace.py::test_user_codex_home_is_outside_the_project_settings_check`
+- I spell the Codex home path differently and see the project warning only when it identifies a different directory. `test_workspace.py::test_different_home_spellings_use_directory_identity`
+- I allow writes to a project settings directory that does not yet exist and see a finding only when I can distinguish it from my Codex home. `test_workspace.py::test_missing_settings_directory_preserves_the_existing_parent_identity`
+- I check normally discovered settings with a workspace and see its finding without opening or listing project contents. `test_workspace.py::test_workspace_compares_discovered_settings_without_opening_project_contents`
 
 ## [each_risk_shows_its_cause] Each warning identifies the setting and evidence behind it.
 Issue: https://github.com/chalkbadger/stay-safe/issues/13
 Tests: [tests/each_risk_shows_its_cause/](../tests/each_risk_shows_its_cause/)
 
 - I see the expected warnings tied to their settings and reported incidents. `test_report.py::test_cli_risks_have_expected_entries_incidents_and_status_in_both_formats`
+- I turn the sandbox off and see that commands could change Codex's own configuration, saved approvals and instructions. `test_conditions.py::test_sandbox_off_explains_changes_to_settings_saved_approvals_and_instructions`
 - I change command or sandbox settings and get warnings only when their conditions apply. `test_conditions.py::test_command_prompt_and_filesystem_rules_have_independent_positive_and_negative_cases`
 - I set a hook whose only command is its Windows command and see that it can start a program. `test_hooks.py::test_windows_command_alone_reports_program`
 - I combine `danger-full-access` with `on-request` or `never` and see that ordinary commands, or MCP and app tool calls, can run without asking. `test_conditions.py::test_full_access_lets_on_request_commands_and_never_tool_calls_run_without_asking`
@@ -60,6 +109,25 @@ Tests: [tests/each_risk_shows_its_cause/](../tests/each_risk_shows_its_cause/)
 - I set Claude Code's `bypassPermissions`, or allow every shell command or web fetch, and see each warning tied to its setting and incidents. `test_claude_risks.py::test_each_claude_code_warning_names_its_rule_setting_and_incidents`
 - I see which Claude Code versions and file scopes limit the bypass setting in both JSON and Markdown. `test_claude_risks.py::test_bypass_finding_explains_file_scope_and_version_in_json_and_markdown`
 - I see competing ask or deny rules beside the allowance in the overview, details and JSON. `test_claude_risks.py::test_competing_permission_rules_are_visible_on_each_affected_finding`
+- A project's `.claude/settings.json` holds a hook and I see a program finding tied to that file, with the command withheld. `test_claude_program_risks.py::test_project_only_hook_is_reported_from_the_project_file_with_its_command_withheld`
+- The same hook in my user settings gives the finding tied to my user file. `test_claude_program_risks.py::test_the_same_hook_in_user_settings_is_tied_to_the_user_file`
+- I add a hook on `PreToolUse` and the finding says it can approve tool calls and change what they do. `test_claude_program_risks.py::test_a_hook_that_can_approve_tool_calls_says_so_in_the_finding`
+- A project's HTTP hook gives a network finding with advice and its address withheld. `test_claude_program_risks.py::test_an_http_hook_is_a_network_finding_with_its_address_withheld`
+- I have no Claude Code or Codex folder and a plain run shows one Claude Code report with the project's hook, no gaps and exit 0. `test_claude_program_risks.py::test_a_project_hook_is_reported_without_a_claude_home`
+- With no agent folders and no project file, a plain run still falls back to Codex; with a Codex folder, both reports appear. `test_claude_program_risks.py::test_without_agent_homes_or_a_project_file_the_codex_fallback_still_runs`
+- A hook whose `type` is a list or an object is a named gap, and the valid hook beside it is still reported. `test_claude_program_risks.py::test_a_handler_with_a_list_or_object_type_is_a_gap_beside_the_valid_hook`
+- My user settings define a command hook and set `disableAllHooks` to `true`, and the project sets it to `false`. I see one Claude Code report with one program finding from my user file, no gaps, exit 0 and empty stderr. My user file's `disableAllHooks` is listed as overridden by the project file. `test_claude_program_risks.py::test_a_project_false_reenables_a_user_hook`
+- My user settings define a command hook and the project sets `disableAllHooks` to `true`. I see the hook still listed from my user file, marked as turned off by the project file, with no active finding. One gap says `.claude/settings.local.json`, managed settings and `--settings` weren't read and could turn it back on. Exit 2, and stderr has only the incomplete-inspection line. `test_claude_program_risks.py::test_a_project_true_disables_a_user_hook_and_names_unread_overrides`
+- The project sets `disableAllHooks` to `"yes"` and my user file sets `true` with a command hook. I see one Claude Code report with the user hook as an active finding from my user file. The only gap is the invalid project value, exit 2. `test_claude_program_risks.py::test_an_invalid_project_flag_is_a_gap_and_the_hooks_still_count`
+- A `PreToolUse` command hook with `async` or `asyncRewake` set to `true` gives one program finding that says it runs in the background and can't block, approve or rewrite the call, with no gaps and exit 0. A synchronous one says it can approve and change tool calls. `test_claude_program_risks.py::test_a_background_pre_tool_use_command_cannot_decide`
+- A prompt or agent hook on `PreToolUse` or `PermissionRequest` gives one Claude Code report with no program or network finding, no gaps and exit 0, and the catalog names its kind, event and effect. `test_claude_program_risks.py::test_prompt_and_agent_hooks_on_decision_events_state_their_effect`
+- Files passed with `--config` keep their own `disableAllHooks`. `test_claude_program_risks.py::test_explicit_files_keep_their_own_disable_flag`
+- An HTTP hook's finding says when `allowedHttpHookUrls` is set and its match wasn't checked. `test_claude_program_risks.py::test_an_http_hook_names_the_allowlist_it_did_not_check`
+- An MCP tool hook is a gap only while it can run; one that `disableAllHooks` turns off is listed as off. `test_claude_program_risks.py::test_an_mcp_tool_hook_is_a_gap_only_while_it_can_run`
+- A hook whose `if` rule means it never runs gives no finding or gap, even when another file sets `disableAllHooks`. `test_claude_program_risks.py::test_hooks_that_never_run_give_no_finding_or_gap`
+- With two command hooks in one file, I follow the advice to remove one and rerun stay-safe. The other hook is still reported, and the removed one is gone from the catalog and the finding. `test_claude_program_risks.py::test_removing_one_of_two_command_hooks_keeps_the_other`
+- My user settings turn hooks off and the project turns them back on. Setting `disableAllHooks` to `true` again in my user file leaves the finding in place, because the project file still wins. Changing the project file removes it. `test_claude_program_risks.py::test_turning_hooks_off_in_user_settings_does_not_override_the_project`
+- An exec-form hook's Check tells me to look at its `args` as well as its `command`. `test_claude_program_risks.py::test_an_exec_form_hook_points_to_its_args`
 
 ## [findings_say_what_to_do] Each finding explains what is wrong and what I can do.
 Issue: https://github.com/chalkbadger/stay-safe/issues/12
@@ -79,6 +147,7 @@ Tests: [tests/findings_say_what_to_do/](../tests/findings_say_what_to_do/)
 - I read the advice for leaving auto mode and see which sandboxed Bash commands can still run without a prompt. `test_claude_advice.py::test_auto_mode_advice_identifies_bash_auto_approval_that_survives_the_edit`
 - I see that the auto-mode edit applies to user settings when I select a Claude Code settings file. `test_claude_advice.py::test_auto_mode_edit_is_conditional_on_user_settings`
 - I run the environment Check with a variable whose value spans several lines and see only variable names. `test_what_to_do.py::test_environment_check_lists_variable_names_without_values`
+- I get advice for a Claude Code hook finding, naming the setting to remove and, for a project file, how to see who changed it. `test_claude_advice.py::test_program_settings_say_how_to_remove_them_and_where_to_look`
 
 ## [runs_without_a_coding_agent] I can run stay-safe without an agent and get guidance if my Python is too old.
 Issue: https://github.com/chalkbadger/stay-safe/issues/3
@@ -109,6 +178,7 @@ Tests: [tests/share_without_exposing_secrets/](../tests/share_without_exposing_s
 - I use names containing markup and the saved page shows text, not executable content or unintended links. `test_page.py::test_names_with_html_characters_are_shown_as_written_not_as_markup`
 - I inspect Claude Code settings containing commands, domains and environment values, and none appear in the report. `test_claude_report.py::test_claude_code_report_excludes_private_values`
 - The program names my report may show from a saved approval are exactly the list in the Codex meanings document. `test_rules_file.py::test_shown_program_names_are_the_list_in_the_meanings_document`
+- A project's Claude Code settings hold hooks of every kind, an allowlist and an undocumented event, and none of their commands, URLs, prompts, matchers, `if` rules, `args` or event names appear in the terminal, Markdown, saved page or JSON; the JSON has no internal facts. `test_claude_report.py::test_project_program_commands_stay_withheld_in_every_format`
 
 ## [nothing_in_my_setup_changes] Running stay-safe leaves my setup unchanged; saving writes only the report.
 Issue: https://github.com/chalkbadger/stay-safe/issues/1
@@ -172,3 +242,22 @@ Tests: [tests/export_private_sarif/](../tests/export_private_sarif/)
 - Each agent's run contains only its own findings and unchecked items. `test_sarif.py::test_two_agents_keep_their_own_results_and_notifications`
 - The export withholds private input paths, commands, arguments, addresses and environment and header values. `test_sarif.py::test_private_inputs_stay_withheld_throughout_the_document`
 - Combining SARIF with saving exits 2 before emitting a report or creating a file. `test_sarif.py::test_save_rejects_sarif_before_writing_any_report`
+
+## [track_codex_releases] I can see which new Codex releases changed the sources or configuration fields behind the report.
+Issue: https://github.com/chalkbadger/stay-safe/issues/128
+Tests: [tests/track_codex_releases/](../tests/track_codex_releases/)
+
+- I compare releases and see each stable version's changed cited ranges and configuration fields. `test_drift.py::test_each_stable_release_reports_only_changed_citations_and_schema_differences`
+- I change a schema field's alternatives or array structure and see that field reported as changed. `test_drift.py::test_schema_branch_and_array_structure_changes_are_reported`
+- I cite a whole file or a range that is later deleted and still see its changes. `test_drift.py::test_whole_file_and_deleted_citations_remain_visible`
+- I supply missing or invalid scan inputs and get an explicit failure. `test_drift.py::test_missing_refs_files_and_invalid_inputs_fail_instead_of_returning_clean_results`
+- I run the checker and get a complete scan or a failing exit status without advancing the saved progress. `test_drift.py::test_cli_reports_complete_scan_or_explicit_failure_without_advancing_state`
+
+## [read_codex_release_review] I can follow a release review to see which changes affect my report and which settings stay-safe leaves unchecked.
+Issue: https://github.com/chalkbadger/stay-safe/issues/232
+Tests: [tests/read_codex_release_review/](../tests/read_codex_release_review/)
+
+- I can open each release listed in the scan record and find its pinned Codex sources. `test_review.py::test_each_indexed_release_leads_to_its_review_and_pinned_sources`
+- I follow the scan record to a reviewed release and see how the report treats each group beside its source. `test_review.py::test_scan_record_links_to_field_dispositions_and_pinned_sources`
+- I run each published example and see its explanation in both Markdown and JSON. `test_review.py::test_published_example_reports_match_the_cli`
+- I inspect settings from the reviewed groups and get the documented gaps and exit status. `test_review.py::test_field_groups_give_the_documented_gaps_and_exit_status`

@@ -1,5 +1,7 @@
 import json
+import os
 import re
+from unittest.mock import patch
 
 from stay_safe.report import inspect
 from tests.support import ConfigCase, ROOT
@@ -33,7 +35,10 @@ class PublishedMeaningTests(ConfigCase):
         for case in fixtures:
             key = (case["setting"], case["value"])
             with self.subTest(setting=key[0], value=key[1]):
-                report = inspect([self.config(case["config"])])
+                workspace = self.root.resolve() if case.get("workspace") else None
+                config = case["config"].replace("{workspace}", str(workspace)) if workspace else case["config"]
+                with patch.dict(os.environ, {"CODEX_HOME": str(self.root.resolve() / "user-settings")}):
+                    report = inspect([self.config(config)], workspace=workspace)
                 catalog = {e["name"]: e["observations"] for e in report["catalog"]}
 
                 def assert_entry(name, row):

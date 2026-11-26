@@ -151,3 +151,36 @@ class ClaudeAdviceTests(ConfigCase):
         self.assertEqual(report["inspection_gaps"], [])
         self.assertIn(("sandbox.autoAllowBashIfSandboxed", ["true"]),
                       [(entry["name"], entry["observations"]) for entry in report["catalog"]])
+
+    def test_program_settings_say_how_to_remove_them_and_where_to_look(self):
+        home = agent_home(self.root, claude='{"permissions": {"defaultMode": "default"}, "hooks": {"PostToolUse": '
+                                            '[{"matcher": "Edit", "hooks": [{"type": "command", "command": "seed-fmt"}]}]}}')
+        project = self.root / "repo"
+        (project / ".claude").mkdir(parents=True)
+        (project / ".claude" / "settings.json").write_text(
+            '{"hooks": {"Stop": [{"hooks": [{"type": "command", "command": "seed-hook"}]}]}}')
+        run = run_home(home, "--agent", "claude", cwd=project)
+        self.assertEqual(run.returncode, 0, run.stderr)
+        found = items(section(run.stdout, "Claude Code findings").split("\n\n", 1)[1])
+        steps = [[p for p in item.split("\n\n") if p.startswith(("*What to do:*", "*Change it:*", "*Check:*"))]
+                 for item in found]
+        keep = ("*What to do:* Keep it if you trust the command it runs. Stricter: remove the setting if you don't "
+                "use it.")
+        script = ("If it runs a script file, check that file too: changes to the script don't show in {}. Find out who "
+                  "wrote them before you trust them.")
+        user = "hook 1 of matcher group 1 under `hooks.PostToolUse`"
+        project = "hook 1 of matcher group 1 under `hooks.Stop`"
+        self.assertEqual(steps, [
+            [keep,
+             f"*Change it:* in `~/.claude/settings.json`, remove {user}, or ask Claude Code: \"Show me {user} in "
+             "`~/.claude/settings.json` and remove only that hook; show only what you change.\"",
+             "*Check:* In `~/.claude/settings.json`, this hook's `command` is what it runs. "
+             + script.format("`~/.claude/settings.json`")],
+            [keep,
+             f"*Change it:* in `.claude/settings.json`, remove {project}, or ask Claude Code: \"Show me {project} in "
+             "`.claude/settings.json` and remove only that hook; show only what you change.\"",
+             "*Check:* In `.claude/settings.json`, this hook's `command` is what it runs. "
+             + script.format("`.claude/settings.json`")
+             + " In a git repository, `git log -p -- .claude/` shows who changed the settings and scripts there."],
+        ])
+        self.assertNotIn("seed", run.stdout)

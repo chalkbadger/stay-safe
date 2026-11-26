@@ -1,10 +1,10 @@
 from tests.support import without_rule_links
 """Independent expectations for the saved prefix_rule format and its declared meaning.
 
-Writer: openai/codex@086ccc833bc9cf01024ad2dd6af7dbd421b6bf9a,
+Writer: openai/codex@3d86e43b075adeba2193ec5c22ac92f55afd82e6,
 codex-rs/execpolicy/src/amend.rs::blocking_append_allow_prefix_rule.
 Decision precedence: execpolicy/src/policy.rs::Evaluation::from_matches.
-Sandbox bypass: core/src/exec_policy.rs::create_exec_approval_requirement_for_command_platform.
+Sandbox bypass: core/src/exec_policy.rs::create_exec_approval_requirement_for_parsed_commands.
 """
 
 from contextlib import redirect_stderr, redirect_stdout

@@ -10,12 +10,12 @@ from tests.support import ConfigCase, ROOT
 
 REPO = 'https://github.com/chalkbadger/stay-safe'
 REVISION = '1234567890abcdef1234567890abcdef12345678'
-CODEX = '/openai/codex/blob/086ccc833bc9cf01024ad2dd6af7dbd421b6bf9a/codex-rs/'
+CODEX = '/openai/codex/blob/3d86e43b075adeba2193ec5c22ac92f55afd82e6/codex-rs/'
 NOTES = {
     'network_access': {'rules': ['unrestricted_filesystem'], 'incidents': ['I15', 'I21'], 'external': []},
     'commands_without_prompts': {'rules': [], 'incidents': ['I2', 'I3'], 'external': [
         ('/chalkbadger/stay-safe/issues/141', ''),
-        (CODEX + 'core/src/exec_policy.rs', 'L857-L864'),
+        (CODEX + 'core/src/exec_policy.rs', 'L897-L925'),
         (CODEX + 'shell-command/src/command_safety/is_dangerous_command.rs', '')]},
 }
 FIELDS = ('- Settings:', '- Incidents:', '- Citations support:', '- Challenges:', '- [Challenge this rule](')

@@ -2,6 +2,7 @@ from pathlib import Path
 import unittest
 
 from stay_safe.report import inspect, markdown
+from tests.support import SELECTOR_GAP, TABLES_GAP
 from tests.support import CHATGPT_APPS, ConfigCase, section
 
 
@@ -102,8 +103,9 @@ class CatalogTests(ConfigCase):
             ("configured_program", "config-1:notify", ["I13", "I14", "I19", "I33"]),
             ("environment_inheritance", "config-1:shell_environment_policy", ["I23"]),
         ])
-        self.assertEqual(report["inspection_gaps"], [])
-        self.assertEqual(report["file_inspection"], "complete for supported fields")
+        self.assertEqual(report["inspection_gaps"], [
+            "config-1: mcp_servers.git.env contains inline values. Check the entries for credentials."])
+        self.assertEqual(report["file_inspection"], "incomplete")
         self.assertIn("runtime overrides are not inspected", " ".join(report["scope"]))
 
     def test_files_remain_independent_and_identity_preserves_dotted_name(self):
@@ -114,18 +116,21 @@ class CatalogTests(ConfigCase):
                          [("config-1:approval_policy", ["never"]), ("config-2:approval_policy", ["on-request"])])
         self.assertIn('config-1:mcp_servers."a.b"', [e["id"] for e in report["catalog"]])
 
-    def test_profiles_warn_that_reported_settings_can_be_overridden(self):
-        for profile in (
-            'profile="private-profile"',
-            '[profiles.private-profile.shell_environment_policy]\ninherit="none"',
-            'profile="private-profile"\n[profiles.private-profile.shell_environment_policy]\ninherit="none"',
-            'profile=false',
-            'profiles={}',
+    def test_profiles_keep_other_settings_visible_and_their_values_private(self):
+        named = '[profiles.private-profile.shell_environment_policy]\ninherit="none"'
+        for profile, expected in (
+            ('profile="private-profile"', SELECTOR_GAP),
+            (named, TABLES_GAP),
+            ('profile="private-profile"\n' + named, SELECTOR_GAP),
+            ('profile=false', "Codex expects a string for the top-level profile setting. It ignores this setting in project configuration."),
+            ('profiles={}', "The profiles table is empty. No profile names are defined. Startup profile selection was not checked."),
+            ('profiles=false', 'profiles must be a table.'),
+            ('profiles.private-profile=false', 'profiles contains an entry that is not a table.'),
         ):
             with self.subTest(profile=profile):
                 report = inspect([self.config('approval_policy="on-request"\nsandbox_mode="read-only"\n' + profile)])
                 self.assertEqual(report['inspection_gaps'], [
-                    'config-1: Profiles are outside reader coverage; a selected profile can override the reported settings.',
+                    'config-1: ' + expected,
                 ])
                 self.assertEqual(report['file_inspection'], 'incomplete')
                 self.assertEqual([(r['rule'], r['entry']) for r in report['risks']],

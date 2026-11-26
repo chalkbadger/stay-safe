@@ -1,0 +1,17 @@
+{
+  "scan_path_responses": [{
+    "path": "approve.toml",
+    "server_risks": [{
+      "name": "team.api",
+      "entities": [{"name": "list_items", "type": "tool"}],
+      "risk_indexes": {
+        "prompt_injection_tool_desc": {
+          "score": 1000,
+          "evidence": "The synthetic tool description contains an instruction.",
+          "affected_tools": [0]
+        }
+      }
+    }],
+    "skill_risks": []
+  }]
+}

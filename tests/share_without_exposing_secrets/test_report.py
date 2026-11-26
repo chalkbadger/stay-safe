@@ -19,7 +19,7 @@ class ShareableTests(ReportRuns, ConfigCase):
         for format_name in ("markdown", "json"):
             with self.subTest(format=format_name):
                 one = self.run_cli("--config", str(path), "--format", format_name)
-                self.assertEqual((one.returncode, one.stderr), (0, ""))
+                self.assertEqual((one.returncode, one.stderr), (2, INCOMPLETE))
                 for field, seed in SEEDS.items():
                     for form in (seed, escape(seed, quote=True)):
                         self.assertNotIn(form, one.stdout, field)
@@ -37,7 +37,7 @@ class ShareableTests(ReportRuns, ConfigCase):
                 self.assertNotIn("No risks found", one.stdout)
         checkout = copy_checkout(self.root / "checkout")
         run = run_checkout(checkout, "--config", str(path), "--save", cwd=self.root)
-        self.assertEqual((run.returncode, run.stderr), (0, ""))
+        self.assertEqual((run.returncode, run.stderr), (2, INCOMPLETE))
         output_text, page = run.stdout, (checkout / REPORT).read_text(encoding="utf-8")
         self.assertTrue(output_text.splitlines()[-1].startswith("Saved the formatted report. Open it with: "))
         self.assertIn("**Your `local` MCP server can start a program on your computer.**", output_text)

@@ -20,6 +20,43 @@ NAMED = {"additionalDirectories", "agent", "allowedMcpServers", "apiKeyHelper", 
          "enableAllProjectMcpServers", "enabledMcpjsonServers", "enabledPlugins", "env", "extraKnownMarketplaces",
          "gcpAuthRefresh", "hooks", "otelHeadersHelper", "pluginConfigs", "processWrapper", "skipAutoPermissionPrompt",
          "skipDangerousModePermissionPrompt", "sshConfigs", "sshHostCommands", "statusLine", "worktree"}
+HOOK_FIELDS = {"command": ("command",), "http": ("url",), "mcp_tool": ("server", "tool"), "prompt": ("prompt",),
+               "agent": ("prompt",)}
+DECISION_EVENTS = {"PreToolUse", "PermissionRequest"}
+TOOL_EVENTS = {"PreToolUse", "PostToolUse", "PostToolUseFailure", "PermissionRequest", "PermissionDenied"}
+HOOK_EVENTS = {"SessionStart", "Setup", "UserPromptSubmit", "UserPromptExpansion", "PreToolUse", "PermissionRequest",
+               "PermissionDenied", "PostToolUse", "PostToolUseFailure", "PostToolBatch", "Notification",
+               "MessageDisplay", "SubagentStart", "SubagentStop", "TaskCreated", "TaskCompleted", "Stop", "StopFailure",
+               "TeammateIdle", "InstructionsLoaded", "ConfigChange", "CwdChanged", "DirectoryAdded", "FileChanged",
+               "WorktreeCreate", "WorktreeRemove", "PreCompact", "PostCompact", "PreModelSwitch", "PostModelSwitch",
+               "Elicitation", "ElicitationResult", "SessionEnd"}
+PROGRAM_SETTINGS = {"hooks", "disableAllHooks", "allowedHttpHookUrls"}
+COMMAND = "command withheld"
+DISABLED = "turned off by disableAllHooks in this file"
+UNREAD_ENABLE = ("disableAllHooks turns off the hooks found, but .claude/settings.local.json, managed settings and "
+                 "--settings were not read and could turn them back on.")
+PROJECT = "project settings"
+HTTP = "HTTP hook"
+ADDRESS = "address withheld"
+HEADS = {"command": [COMMAND], "http": [HTTP, ADDRESS], "prompt": ["prompt hook; prompt withheld"],
+         "agent": ["agent hook; prompt withheld"], "mcp_tool": ["MCP tool hook; server and tool withheld"]}
+KINDS = ("command", "http", "prompt", "agent", "mcp_tool")
+FACTS = {"command": "configured_program", "http": "network_access"}
+DECIDES = "can approve or change tool calls"
+EXEC = "exec form; arguments withheld"
+FILTERED = "runs only for matching tool calls; if rule withheld"
+NEVER = "never runs: if is set on an event without tool calls"
+BACKGROUND = "runs in the background; can't approve or block"
+BLOCKS = "can block the call or let it continue"
+READS = "can read and search files"
+NORMAL_FLOW = "leaves the decision to the normal flow"
+SKIPPED = "skipped: Claude Code doesn't run agent hooks on PermissionRequest"
+ALLOWLIST = "allowedHttpHookUrls is set; whether this address matches was not checked"
+INVALID_FLAG = "not true or false"
+MCP_GAP = ("hooks contains MCP tool hooks, which call a tool on an MCP server without asking you; that server was not "
+           "evaluated.")
+UNKNOWN_EVENT = ("hooks contains an event Claude Code doesn't document; its name was withheld and its hooks were not "
+                 "evaluated.")
 RULE = re.compile(r"([A-Za-z][A-Za-z0-9_]*)(?:\((.*)\))?", re.DOTALL)
 UNREADABLE = "Settings file is missing, unreadable, a symlink, or not a JSON object; raw errors were withheld."
 
@@ -31,10 +68,14 @@ AUTO_APPROVAL_UNSET = ("sandbox.autoAllowBashIfSandboxed is unset. Its default c
 
 
 class SettingsReader(Reader):
+    scope = None
+
     def read(self, data):
         self.permissions(data.get("permissions", {}))
         self.sandbox(data.get("sandbox", {}))
-        others = set(data) - {"permissions", "sandbox"} - PREFERENCES
+        self.programs(data)
+        resolve(self.entries, False)
+        others = set(data) - {"permissions", "sandbox"} - PREFERENCES - PROGRAM_SETTINGS
         if others:
             names = sorted(others & NAMED)
             if others - NAMED:
@@ -48,8 +89,9 @@ class SettingsReader(Reader):
         self.unknown(table, PERMISSIONS, "permissions")
         mode = table.get("defaultMode")
         if "defaultMode" not in table:
-            self.gap("permissions.defaultMode is absent; Claude Code's built-in mode depends on how it starts and its "
-                     "version, so it was not inferred.")
+            if self.scope != "project":
+                self.gap("permissions.defaultMode is absent; Claude Code's built-in mode depends on how it starts "
+                         "and its version, so it was not inferred.")
         elif not isinstance(mode, str) or mode not in MODES:
             self.gap("permissions.defaultMode is unsupported or invalid; its value was withheld.")
         else:
@@ -101,13 +143,60 @@ class SettingsReader(Reader):
         else:
             self.gap("permissions.allow contains rules for tools outside reader coverage; they were not evaluated.")
 
+    def programs(self, data):
+        if "disableAllHooks" in data:
+            value = self.boolean(data, "disableAllHooks", False, "disableAllHooks")
+            flag = "invalid" if value is None else value
+            self.add(["disableAllHooks"], "setting", [], {"disable_all_hooks": flag})
+        if "allowedHttpHookUrls" in data:
+            patterns = data["allowedHttpHookUrls"]
+            if isinstance(patterns, list) and all(isinstance(item, str) for item in patterns):
+                self.add(["allowedHttpHookUrls"], "setting", ["set; patterns withheld"], {"http_allowlist": True})
+            else:
+                self.gap("allowedHttpHookUrls is not a list of URL patterns; it was not evaluated.")
+        if "hooks" not in data:
+            return
+        records = self.handlers(data["hooks"])
+        for kind in KINDS:
+            found = [record for record in records if record["kind"] == kind]
+            if found:
+                name = ["hooks"] if kind == "command" else ["hooks", kind]
+                facts = {"kind": kind, "handlers": found, "project": self.scope == "project"}
+                if kind in FACTS:
+                    facts[FACTS[kind]] = False
+                self.add(name, "hook", [], facts)
+
+    def handlers(self, value):
+        if not isinstance(value, dict):
+            self.gap("hooks is not an object of hook events; its hooks were not evaluated.")
+            return []
+        found = []
+        for event, groups in value.items():
+            if event not in HOOK_EVENTS:
+                self.gap(UNKNOWN_EVENT)
+                continue
+            if not isinstance(groups, list):
+                self.gap("hooks contains an event that is not a list of matcher groups; it was not evaluated.")
+                continue
+            for group, entry in enumerate(groups, 1):
+                handlers = entry.get("hooks") if isinstance(entry, dict) else None
+                if not isinstance(handlers, list):
+                    self.gap("hooks contains a matcher group without a list of handlers; it was not evaluated.")
+                    continue
+                for position, handler in enumerate(handlers, 1):
+                    if valid_handler(handler):
+                        found.append(handler_record(event, group, position, handler))
+                    else:
+                        self.gap("hooks contains a handler that is not a valid hook; it was not evaluated.")
+        return found
+
     def sandbox(self, value):
         if not isinstance(value, dict):
             self.gap("sandbox must be a table.")
             return
         self.unknown(value, SANDBOX, "sandbox")
         enabled = self.boolean(value, "enabled", False, "sandbox.enabled")
-        if enabled is not None:
+        if enabled is not None and ("enabled" in value or self.scope != "project"):
             label = str(enabled).lower() if "enabled" in value else "false (default)"
             self.add(["sandbox", "enabled"], "setting", [label])
         key = "autoAllowBashIfSandboxed"
@@ -119,13 +208,103 @@ class SettingsReader(Reader):
             self.gap(AUTO_APPROVAL_UNSET)
 
 
+def nonempty(value):
+    return isinstance(value, str) and bool(value.strip())
+
+
 def invalid_json_constant(token):
     raise ValueError("Invalid JSON number")
 
 
+def valid_handler(handler):
+    kind = handler.get("type") if isinstance(handler, dict) else None
+    field = HOOK_FIELDS.get(kind) if isinstance(kind, str) else None
+    if field is None or not all(nonempty(handler.get(name)) for name in field):
+        return False
+    if "if" in handler and not nonempty(handler["if"]):
+        return False
+    if "args" not in handler:
+        return True
+    args = handler["args"]
+    return kind == "command" and isinstance(args, list) and all(isinstance(item, str) for item in args)
+
+
+def handler_record(event, group, position, handler):
+    kind = handler["type"]
+    if "if" not in handler:
+        condition = "none"
+    else:
+        condition = "filters" if event in TOOL_EVENTS else "never_runs"
+    background = kind == "command" and (handler.get("async") is True or handler.get("asyncRewake") is True)
+    return {"event": event, "group": group, "position": position, "kind": kind, "background": background,
+            "if_state": condition, "exec": "args" in handler}
+
+
+def runs(record):
+    return record["if_state"] != "never_runs" and not (record["kind"] == "agent"
+                                                       and record["event"] == "PermissionRequest")
+
+
+def decides(record):
+    return (runs(record) and record["kind"] in FACTS and not record["background"]
+            and record["event"] in DECISION_EVENTS)
+
+
+def handler_note(record):
+    notes = [f"{record['event']}: matcher group {record['group']}, hook {record['position']}"]
+    notes += [EXEC] if record["exec"] else []
+    notes += {"filters": [FILTERED], "never_runs": [NEVER]}.get(record["if_state"], [])
+    notes += [BACKGROUND] if record["background"] else []
+    notes += [DECIDES] if decides(record) else []
+    if record["kind"] in ("prompt", "agent"):
+        if record["event"] == "PermissionRequest":
+            notes.append(SKIPPED if record["kind"] == "agent" else NORMAL_FLOW)
+        elif record["event"] == "PreToolUse":
+            notes.append(BLOCKS)
+        if record["kind"] == "agent" and runs(record):
+            notes.append(READS)
+    return "; ".join(notes)
+
+
+def resolve(entries, discovered):
+    flags = [entry for entry in entries if "disable_all_hooks" in entry["facts"]]
+    lists = {entry["source"] for entry in entries if entry["facts"].get("http_allowlist")}
+    for flag in flags:
+        value = flag["facts"]["disable_all_hooks"]
+        flag["observations"] = [INVALID_FLAG if value == "invalid" else str(value).lower()]
+        if discovered and flag is not flags[-1] and value != flags[-1]["facts"]["disable_all_hooks"]:
+            flag["observations"].append(f"overridden by {flags[-1]['source']}")
+    gaps, disabled_any = [], False
+    for entry in entries:
+        facts = entry["facts"]
+        if "handlers" not in facts:
+            continue
+        scoped = flags if discovered else [flag for flag in flags if flag["source"] == entry["source"]]
+        winner = scoped[-1] if scoped else None
+        disabled = winner is not None and winner["facts"]["disable_all_hooks"] is True
+        active = not disabled and any(runs(record) for record in facts["handlers"])
+        if facts["kind"] in FACTS:
+            facts[FACTS[facts["kind"]]] = active
+        facts["allowlist"] = facts["kind"] == "http" and bool(entry["source"] in lists or discovered and lists)
+        observations = list(HEADS[facts["kind"]]) + ([ALLOWLIST] if facts["allowlist"] else [])
+        observations += [handler_note(record) for record in facts["handlers"]]
+        if disabled:
+            disabled_any = True
+            observations.append(DISABLED if winner["source"] == entry["source"]
+                                else f"turned off by disableAllHooks in {winner['source']}")
+        observations += [PROJECT] if facts["project"] else []
+        entry["observations"] = observations
+        if facts["kind"] == "mcp_tool" and active:
+            gaps.append(f"{entry['source']}: {MCP_GAP}")
+    if discovered and disabled_any:
+        gaps.append(UNREAD_ENABLE)
+    return gaps
+
+
 @exclude_account_files
-def read_file(path, source, *, discovered=False, sources_read=None):
+def read_file(path, source, *, discovered=False, sources_read=None, scope=None):
     reader = SettingsReader(source)
+    reader.scope = scope
     try:
         fd = open_input(path)
         with os.fdopen(fd, "rb") as stream:
