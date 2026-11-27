@@ -80,7 +80,7 @@ See the [Codex meanings](../harnesses/codex.md) for the configured boundary.
 For a Codex report with no file arguments, the reader opens `config.toml` and `rules/default.rules`
 under `$CODEX_HOME`, falling back to `~/.codex` when it is unset or empty, as
 Codex does. Other `.rules` files in that `rules/` directory are not read; their
-presence, or a `rules/` directory that cannot be listed, is an inspection gap.
+presence, or a `rules/` directory that cannot be listed, is an [inspection gap](../contracts/claims.md#see_every_connection_and_setting-i-see-supported-settings-and-saved-approvals-from-my-files-with-defaults-identified).
 So are a `hooks.json` file, plugins in `plugins/cache`, skills in `skills` and an
 `environments.toml` file, which are not read, an `environments.toml` that is not a
 file, and a failure to check the last three. The default scan looks for visible user
