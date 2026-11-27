@@ -1,0 +1,37 @@
+name: Verify issue 206 on the synthetic settings file
+on:
+  push:
+    branches: [evidence/206-code-scanning]
+permissions:
+  contents: read
+  security-events: write
+jobs:
+  upload:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Export the committed synthetic finding
+        run: |
+          python3 -m stay_safe --config tests/runs_without_a_coding_agent/sample.toml --format sarif --sarif-repo-locations > "$RUNNER_TEMP/sample.sarif"
+          jq -e '.runs[0].results | length == 1' "$RUNNER_TEMP/sample.sarif"
+          jq -e '.runs[0].results[0].locations[0].physicalLocation == {"artifactLocation":{"uri":"tests/runs_without_a_coding_agent/sample.toml"},"region":{"startLine":2}}' "$RUNNER_TEMP/sample.sarif"
+      - uses: github/codeql-action/upload-sarif@915412ff23e8b7659517e607487dbeae018f2934
+        with:
+          sarif_file: ${{ runner.temp }}/sample.sarif
+          category: stay-safe-issue-206
+          wait-for-processing: true
+      - name: Record the alert GitHub displayed for this commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for attempt in {1..8}; do
+            gh api --method GET "repos/$GITHUB_REPOSITORY/code-scanning/alerts" -f ref="$GITHUB_REF" -f tool_name=stay-safe > "$RUNNER_TEMP/alerts.json"
+            if jq -e --arg sha "$GITHUB_SHA" 'length == 1 and .[0].state == "open" and .[0].rule.id == "commands_without_prompts" and .[0].most_recent_instance.commit_sha == $sha and .[0].most_recent_instance.location.path == "tests/runs_without_a_coding_agent/sample.toml" and .[0].most_recent_instance.location.start_line == 2' "$RUNNER_TEMP/alerts.json"; then
+              jq '.[] | {number,html_url,rule:.rule.id,instance:.most_recent_instance}' "$RUNNER_TEMP/alerts.json"
+              exit 0
+            fi
+            sleep 5
+          done
+          exit 1
