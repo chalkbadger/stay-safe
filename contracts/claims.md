@@ -74,6 +74,7 @@ Tests: [tests/understand_inspection_limits/](../tests/understand_inspection_limi
 
 - I pass a cleared file to `--rules` and the introduction names it and confirms it contains no saved approvals. `test_scope.py::test_selected_rules_file_is_named_when_it_has_no_saved_approvals`
 - I follow the report's scope link and see its limits on live connections, effective permissions and other unverified behavior. `test_scope.py::test_the_full_scope_holds_every_scope_line`
+- When I review an enabled named App, I see the same tool findings whether its account map is absent or empty. When the map is populated or malformed, I see an inspection gap that withholds account identifiers. `test_account_links.py::test_only_an_empty_account_map_clears_the_account_gap`
 - I supply an unreadable file beside a readable one and see the failure without losing valid findings. `test_selected_config_failures.py::test_each_failure_has_a_distinct_private_safe_reason_and_action_in_both_formats`
 - I get an incomplete report and an explanation of exit status 2. `test_status.py::test_reports_with_gaps_explain_exit_two_on_stderr_only`
 - The report warns me about the server's configured command whether I set values in `env` or list variable names in `env_vars`. It asks me to check for credentials only when I write the values directly in `env`. `test_inline_mcp.py::test_inline_env_and_reference_control_keep_the_program_finding`
