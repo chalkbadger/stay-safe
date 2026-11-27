@@ -64,13 +64,23 @@ def read_file(path, source, *, discovered=False):
 
 
 def other_files(path, source):
+    directory = path.parents[0]
     try:
-        names = os.listdir(path.parents[0])
+        names = os.listdir(directory)
     except FileNotFoundError:
         return []
     except OSError:
         return [f'{source}: The rules directory cannot be listed; '
                 'other rules files may exist and were not inspected.']
-    if any(name.endswith('.rules') and name != 'default.rules' for name in names):
-        return [f'{source}: Other rules files exist and were not inspected.']
-    return []
+    gaps = set()
+    for name in names:
+        if name in ('.rules', 'default.rules') or not name.endswith('.rules'):
+            continue
+        try:
+            mode = (directory / name).stat(follow_symlinks=False).st_mode
+        except OSError:
+            gaps.add(f'{source}: A rules entry could not be checked to determine whether it is a file.')
+        else:
+            if stat.S_ISREG(mode):
+                gaps.add(f'{source}: Other rules files exist and were not inspected.')
+    return sorted(gaps)

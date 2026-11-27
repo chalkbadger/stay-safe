@@ -10,6 +10,10 @@ Tests: [tests/see_every_connection_and_setting/](../tests/see_every_connection_a
 - I follow the saved scanner example and see the flagged server and its default approval for the configuration I selected. `test_saved_scan_example.py::test_published_example_pairs_the_flag_with_the_selected_snapshot`
 - I have no default config file and see the assessed defaults and remaining gaps. `test_defaults.py::test_both_formats_report_cited_defaults_and_retained_gaps`
 - I inspect saved approvals and see each supported record identified separately. `test_saved_rules.py::test_saved_lines_keep_line_numbers_part_counts_and_broad_labels`
+- I see my saved approval and get the extra-file warning for a sibling rules file, while a sibling directory with the same name adds no warning. `test_other_rules_files.py::test_rules_named_directory_adds_no_gap_and_the_saved_approval_stays_visible`
+- I see my saved approval beside a file named `.rules` and get the extra-file warning when I rename it to `team.rules`. `test_other_rules_files.py::test_only_a_rules_extension_adds_a_gap`
+- Links and pipes beside my saved approval leave its report unchanged. `test_other_rules_files.py::test_symlinks_and_pipes_add_no_rules_gap_and_preserve_the_approval`
+- I see that a rules entry could not be checked and can still review my saved approval. `test_other_rules_files.py::test_an_uninspectable_sibling_reports_an_incomplete_check_and_preserves_the_approval`
 - I omit the workspace while allowing commands to write to extra folders and see the missing workspace under "Not checked" with the folder paths withheld. `test_unlisted_settings.py::test_active_writable_roots_give_a_gap_and_no_entry_or_risk`
 - I see on the ChatGPT Apps connection whether apps my file doesn't name are off and where their `destructive_enabled` comes from. `test_chatgpt_apps.py::test_chatgpt_apps_connection_says_whether_apps_not_named_can_change_data`
 - My Codex folder has skills in `skills` and an `environments.toml` file, and I see each under "Not checked" without their contents. `test_skills_and_environments.py::test_skills_and_environments_toml_each_give_their_own_gap`

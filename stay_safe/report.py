@@ -598,6 +598,8 @@ GAPS = {
     "The rules directory cannot be listed; other rules files may exist and were not inspected.":
         "**Not checked: other rules files.** stay-safe couldn't list your `rules` folder, so there may be rules "
         "files it didn't read.",
+    "A rules entry could not be checked to determine whether it is a file.":
+        "**Not checked: other rules files.** stay-safe couldn't tell whether an entry in your `rules` folder is a file.",
     "Other rules files exist and were not inspected.":
         "**Not checked: other rules files.** Your `rules` folder has other `.rules` files besides "
         "`default.rules`. Codex reads them too, but stay-safe doesn't.",
@@ -776,6 +778,8 @@ STEPS = {
         "Review the other lines in your rules file yourself, especially rules that ask first or forbid a command.",
     "The rules directory cannot be listed; other rules files may exist and were not inspected.":
         "Check that `rules` in your Codex folder is a folder you can read, then run stay-safe again.",
+    "A rules entry could not be checked to determine whether it is a file.":
+        "Check that you can inspect the entries in your Codex `rules` folder, then run stay-safe again.",
     "Other rules files exist and were not inspected.":
         "Review the other `.rules` files yourself, or check one with `--rules`.",
     "Codex home: CODEX_HOME is set but is missing, not a directory or cannot be checked; "
