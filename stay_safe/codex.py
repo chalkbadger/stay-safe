@@ -5,6 +5,7 @@ from pathlib import Path
 from posixpath import normpath
 import re
 import stat
+import sys
 import tomllib
 import unicodedata
 
@@ -53,6 +54,17 @@ PREFERENCES = {"model", "review_model", "model_reasoning_effort", "model_reasoni
                "model_verbosity", "service_tier", "personality", "tui", "notice", "history",
                "check_for_update_on_startup", "disable_paste_burst", "hide_agent_reasoning",
                "show_raw_agent_reasoning", "suppress_unstable_features_warning"}
+
+
+def codex_home_override():
+    value = os.environ.get("CODEX_HOME", "")
+    try:
+        if sys.platform == "win32":
+            return value.encode("utf-16-le", "surrogatepass").decode("utf-16-le")
+        value.encode(sys.getfilesystemencoding(), "surrogateescape").decode("utf-8")
+    except UnicodeError:
+        return ""
+    return value
 
 
 def config_name(parts):
@@ -197,7 +209,7 @@ class Reader:
             return
         if target not in normalized:
             return
-        home = os.environ.get("CODEX_HOME")
+        home = codex_home_override()
         if not home and os.environ.get("HOME"):
             home = Path(os.environ["HOME"]) / ".codex"
         home = Path(home).absolute() if home else None

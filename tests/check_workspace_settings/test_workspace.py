@@ -232,6 +232,13 @@ class WorkspaceSettingsTests(ConfigCase):
         self.assertEqual(report["risks"], [])
         self.assertIn("Codex home", " ".join(report["inspection_gaps"]))
 
+    def test_invalid_codex_home_keeps_the_default_home_out_of_project_findings(self):
+        path = self.settings([str(self.target)])
+        with patch.dict(os.environ, {"HOME": str(self.workspace), "CODEX_HOME": os.fsdecode(b"invalid-\xff")}):
+            report = self.run_report(path)
+        self.assertEqual(report["risks"], [])
+        self.assertIn("is the user Codex home", " ".join(report["inspection_gaps"]))
+
     def test_different_home_spellings_use_directory_identity(self):
         candidate = self.workspace / ".CODEX"
         candidate.mkdir(exist_ok=True)

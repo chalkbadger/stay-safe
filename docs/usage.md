@@ -78,7 +78,8 @@ See the [Codex meanings](../harnesses/codex.md) for the configured boundary.
 ## How files are found
 
 For a Codex report with no file arguments, the reader opens `config.toml` and `rules/default.rules`
-under `$CODEX_HOME`, falling back to `~/.codex` when it is unset or empty, as
+under `$CODEX_HOME`. If the variable is unset or empty, the reader falls back to `~/.codex`.
+It uses the same fallback for invalid UTF-8 on Unix or an unpaired UTF-16 surrogate on Windows, as
 Codex does. Other `.rules` files in that `rules/` directory are not read; their
 presence, or a `rules/` directory that cannot be listed, is an inspection gap.
 So are a `hooks.json` file, plugins in `plugins/cache`, skills in `skills` and an
@@ -98,8 +99,8 @@ settings remain unknown, so this assessment still exits `2`. See the
 
 With no file or agent selected, stay-safe checks each agent whose settings folder it
 finds. A Claude-only home gets a Claude Code report. If neither folder exists, you
-get the usual Codex default assessment. A nonempty `CODEX_HOME` or `CLAUDE_CONFIG_DIR`
-selects that folder even when it cannot be inspected. That report names the gap and
+get the usual Codex default assessment. A nonempty, decodable `CODEX_HOME` or a nonempty
+`CLAUDE_CONFIG_DIR` selects that folder even when it cannot be inspected. That report names the gap and
 the command exits 2, alongside any findings for the other agent.
 
 With `--format json`, a single report is an object with a `harness` field. For two
