@@ -113,7 +113,8 @@ class SarifTests(ConfigCase):
         project.mkdir()
         path = project / "sample.toml"
         path.write_text(QUIET.replace("on-request", "never"))
-        for args in (("init", "-q"), ("add", "--", path.name)):
+        for args in (("init", "-q"), ("add", "--", path.name),
+                     ("-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid", "commit", "-qm", "Fixture")):
             subprocess.run(["git", *args], cwd=project, check=True)
         result = run_checkout(self.checkout, "--config", path.name, "--format", "sarif", "--sarif-repo-locations",
                               cwd=project)

@@ -6,7 +6,7 @@ import unittest
 from tests.support import ROOT
 
 MODULES = {"argparse", "bisect", "dataclasses", "errno", "hashlib", "html", "ipaddress", "json", "os", "pathlib", "posixpath", "re",
-           "stat", "sys", "tomllib", "unicodedata", "urllib.parse"}
+           "stat", "sys", "tomllib", "unicodedata", "urllib.parse", "zlib"}
 OS_NAMES = {"open", "fdopen", "fstat", "environ", "listdir", "pathsep", "fsencode", "fsdecode", "O_RDONLY", "O_NONBLOCK", "O_NOFOLLOW"}
 OS_READ_FLAGS = {"O_RDONLY", "O_NONBLOCK", "O_NOFOLLOW"}
 BANNED_NAMES = {"exec", "eval", "compile", "__import__", "open", "getattr", "importlib",

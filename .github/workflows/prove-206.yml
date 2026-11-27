@@ -15,8 +15,10 @@ jobs:
       - name: Export the committed synthetic finding
         run: |
           config=tests/runs_without_a_coding_agent/sample.toml
-          git cat-file -e "HEAD:$config"
-          git diff --cached --quiet HEAD -- "$config"
+          cp "$config" staged-only.toml
+          git add -- staged-only.toml
+          python3 -m stay_safe --config "$config" --config staged-only.toml --format sarif --sarif-repo-locations > "$RUNNER_TEMP/mixed.sarif"
+          jq -e '.runs[0] | (.results | length == 2) and (.results[0].locations[0].physicalLocation.region.startLine == 2) and (.results[1].locations[0] | has("physicalLocation") | not) and (.invocations[0].toolExecutionNotifications | length == 1 and .[0].descriptor.id == "partial-repository-locations" and .[0].properties.unlocatedFindings == [{"ruleId":"commands_without_prompts","logicalId":"config-2:approval_policy"}])' "$RUNNER_TEMP/mixed.sarif"
           python3 -m stay_safe --config "$config" --format sarif --sarif-repo-locations > "$RUNNER_TEMP/sample.sarif"
           jq -e '.runs[0].results | length == 1' "$RUNNER_TEMP/sample.sarif"
           jq -e '.runs[0].results[0].locations[0].physicalLocation == {"artifactLocation":{"uri":"tests/runs_without_a_coding_agent/sample.toml"},"region":{"startLine":2}}' "$RUNNER_TEMP/sample.sarif"

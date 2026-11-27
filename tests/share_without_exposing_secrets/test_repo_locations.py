@@ -22,10 +22,13 @@ class RepoLocationTests(ConfigCase):
         self.sample.write_text('# approval_policy = "never"\napproval_policy="never"\n'
                                'sandbox_mode="read-only"\nnotify=["PRIVATE_COMMAND"]\n')
         self.git("add", "--", self.sample.name)
-        self.git("-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid", "commit", "-qm", "Sample")
+        self.commit()
 
     def git(self, *args):
         subprocess.run(["git", *args], cwd=self.repo, check=True, capture_output=True)
+
+    def commit(self):
+        self.git("-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid", "commit", "-qm", "Fixture")
 
     def run_export(self, *args, opt=True, cwd=None, env=None):
         flags = ["--sarif-repo-locations"] if opt else []
@@ -131,15 +134,101 @@ class RepoLocationTests(ConfigCase):
         self.sample.write_bytes(clean)
         self.assertEqual(self.export("--config", self.sample)[APPROVAL], LOCATION)
 
-    def test_warnings_apply_only_to_runs_with_findings_and_no_verified_lines(self):
-        outside = self.root / "private.toml"
-        outside.write_bytes(self.sample.read_bytes())
-        mixed, _ = self.run_export("--config", outside, "--config", self.sample)
-        self.assertNotIn("no-repository-locations", mixed.stdout)
-        outside.write_text('approval_policy="on-request"\nsandbox_mode="read-only"\nshell_environment_policy={inherit="none"}')
-        clean, run = self.run_export("--config", outside)
+    def test_one_of_two_findings_without_a_line_is_identified_in_the_warning(self):
+        self.sample.write_text('approval_policy="never"\nsandbox_mode="read-only"\n')
+        self.git("add", "--", self.sample.name)
+        self.commit()
+        result, run = self.run_export("--config", self.sample)
+        self.assertEqual((result.returncode, result.stderr), (0, ""))
+        self.assertEqual(len(run["results"]), 2)
+        invocation, = run["invocations"]
+        self.assertTrue(invocation["executionSuccessful"])
+        warning, = invocation["toolExecutionNotifications"]
+        self.assertEqual(warning["descriptor"]["id"], "partial-repository-locations")
+        self.assertIn("1 of 2 findings", warning["message"]["text"])
+        self.assertEqual(warning["properties"]["unlocatedFindings"],
+                         [{"ruleId": "environment_inheritance", "logicalId": "config-1:shell_environment_policy"}])
+        locations = self.export("--config", self.sample)
+        self.assertEqual(locations[APPROVAL]["region"]["startLine"], 1)
+        self.assertIsNone(locations["config-1:shell_environment_policy/environment_inheritance"])
+
+    def test_location_warning_is_absent_for_default_fully_located_and_empty_runs(self):
+        default, _ = self.run_export("--config", self.sample, opt=False)
+        self.assertNotIn("repository-locations", default.stdout)
+        self.sample.write_text('approval_policy="never"\nsandbox_mode="read-only"\nshell_environment_policy={inherit="none"}')
+        self.git("add", "--", self.sample.name)
+        self.commit()
+        located, run = self.run_export("--config", self.sample)
+        self.assertIn("physicalLocation", located.stdout)
+        self.assertEqual(run["invocations"][0]["toolExecutionNotifications"], [])
+        quiet = self.root / "private.toml"
+        quiet.write_text('approval_policy="on-request"\nsandbox_mode="read-only"\nshell_environment_policy={inherit="none"}')
+        _, run = self.run_export("--config", quiet)
         self.assertEqual(run["results"], [])
-        self.assertNotIn("no-repository-locations", clean.stdout)
+        self.assertEqual(run["invocations"][0]["toolExecutionNotifications"], [])
+
+    def test_head_verification_is_per_path_and_rejects_staged_additions_and_edits(self):
+        same_blob = self.repo / "staged-only.toml"
+        same_blob.write_bytes(self.sample.read_bytes())
+        self.git("add", "--", same_blob.name)
+        result, run = self.run_export("--config", same_blob, "--config", self.sample)
+        locations = {r["locations"][0]["logicalLocations"][0]["fullyQualifiedName"]: r["locations"][0]
+                     for r in run["results"]}
+        self.assertNotIn("physicalLocation", locations["config-1:approval_policy"])
+        self.assertEqual(locations["config-2:approval_policy"]["physicalLocation"], LOCATION)
+        self.assertNotIn(same_blob.name, result.stdout)
+        self.sample.write_bytes(b"\n" + self.sample.read_bytes())
+        self.git("add", "--", self.sample.name)
+        self.assertIsNone(self.export("--config", self.sample)[APPROVAL])
+        self.commit()
+        self.assertEqual(self.export("--config", self.sample)[APPROVAL]["region"]["startLine"], 3)
+        self.assertEqual(self.export("--config", same_blob)[APPROVAL]["artifactLocation"], {"uri": same_blob.name})
+
+    def test_unborn_missing_and_unverifiable_head_keep_finding_paths_private(self):
+        head = self.repo / ".git" / "HEAD"
+        for value in ("ref: refs/heads/unborn\n", "1" * 40 + "\n", "invalid ref\n"):
+            with self.subTest(head=value):
+                head.write_text(value)
+                result, run = self.run_export("--config", self.sample)
+                self.assertNotIn("physicalLocation", result.stdout)
+                self.assertNotIn("team%20", result.stdout)
+                self.assertTrue(run["results"])
+
+    def test_linked_worktree_checks_its_own_detached_head_in_packed_history(self):
+        folder = self.repo / "settings"
+        folder.mkdir()
+        for number in range(32):
+            (folder / f"part{number}").write_text("fixture")
+        path = folder / "config.toml"
+        for number in range(6):
+            path.write_bytes(b"\n" * number + self.sample.read_bytes())
+            self.git("add", "--", "settings")
+            self.commit()
+        linked = self.root.resolve() / "linked"
+        self.git("worktree", "add", "--quiet", "--detach", str(linked), "HEAD~3")
+        for offsets in ("true", "false"):
+            with self.subTest(delta_base_offsets=offsets):
+                self.git("-c", "repack.useDeltaBaseOffset=" + offsets, "repack", "-adf")
+                self.git("prune-packed")
+                locations = self.export("--config", "settings/config.toml", cwd=linked)
+                self.assertEqual(locations[APPROVAL], {"artifactLocation": {"uri": "settings/config.toml"},
+                                                       "region": {"startLine": 4}})
+        (linked / "settings/config.toml").write_bytes(path.read_bytes())
+        subprocess.run(["git", "add", "--", "settings/config.toml"], cwd=linked, check=True)
+        self.assertIsNone(self.export("--config", "settings/config.toml", cwd=linked)[APPROVAL])
+
+    def test_corrupt_commit_object_keeps_findings_without_disclosing_the_path(self):
+        oid = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=self.repo).decode().strip()
+        commit = self.repo / ".git" / "objects" / oid[:2] / oid[2:]
+        commit.unlink()
+        commit.write_bytes(b"invalid compressed commit")
+        result, run = self.run_export("--config", self.sample)
+        self.assertEqual(result.returncode, 0)
+        self.assertNotIn("physicalLocation", result.stdout)
+        self.assertNotIn("team%20", result.stdout)
+        self.assertTrue(run["results"])
+        self.assertEqual(run["invocations"][0]["toolExecutionNotifications"][0]["descriptor"]["id"],
+                         "no-repository-locations")
 
     def test_git_overrides_and_omitted_checksums_fall_back_without_disclosing_paths(self):
         for key in ("GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE", "GIT_COMMON_DIR"):
@@ -172,6 +261,7 @@ class RepoLocationTests(ConfigCase):
                 '''[mcp_servers."demo.server"]\ncommand="PRIVATE_COMMAND"\n''')
         self.sample.write_text(body)
         self.git("add", "--", self.sample.name)
+        self.commit()
         loc = self.export("--config", self.sample)
         self.assertIsNone(loc["config-1:approval_policy/commands_without_prompts"])
         for key, expected in [("sandbox_mode/unrestricted_filesystem", 5),
@@ -180,6 +270,7 @@ class RepoLocationTests(ConfigCase):
             self.assertEqual(loc["config-1:" + key]["region"]["startLine"], expected)
         self.sample.write_text('shell_environment_policy = {inherit = "all"} # inline\n')
         self.git("add", "--", self.sample.name)
+        self.commit()
         self.assertEqual(self.export("--config", self.sample)["config-1:shell_environment_policy/environment_inheritance"]
                          ["region"]["startLine"], 1)
 
@@ -189,6 +280,7 @@ class RepoLocationTests(ConfigCase):
                         '"allow": [\n"Bash(*)",\n"WebFetch(domain:*)"\n]},\n'
                         '"apiKeyHelper": "PRIVATE_COMMAND"\n}')
         self.git("add", "--", path.name)
+        self.commit()
         loc = self.export("--agent", "claude", "--config", path)
         for key, expected in [("permissions.defaultMode/commands_without_prompts", 3),
                               ("permissions.allow.1/saved_approval", 5),
@@ -196,6 +288,7 @@ class RepoLocationTests(ConfigCase):
             self.assertEqual(loc["settings-1:" + key]["region"]["startLine"], expected)
         path.write_text('{"permissions":{"defaultMode":"default",\n"defaultMode":"bypassPermissions"}}')
         self.git("add", "--", path.name)
+        self.commit()
         self.assertIsNone(self.export("--agent", "claude", "--config", path)
                           ["settings-1:permissions.defaultMode/commands_without_prompts"])
 
@@ -218,11 +311,13 @@ class RepoLocationTests(ConfigCase):
             path.write_text(json.dumps({"hooks": {"PreToolUse": [{"hooks": handlers}]}}, indent=2))
         write([hook])
         self.git("add", "--", path.name)
+        self.commit()
         key = "settings-1:hooks/configured_program"
         line = next(i for i, text in enumerate(path.read_text().splitlines(), 1) if '"command":' in text)
         self.assertEqual(self.export("--agent", "claude", "--config", path)[key]["region"]["startLine"], line)
         write([hook, hook])
         self.git("add", "--", path.name)
+        self.commit()
         self.assertIsNone(self.export("--agent", "claude", "--config", path)[key])
 
     def test_location_flag_requires_sarif_before_reading_config(self):

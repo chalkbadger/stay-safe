@@ -243,7 +243,7 @@ def main(argv=None):
     parser.add_argument("--format", choices=("markdown", "json", "sarif"),
                         help="Choose the report format.")
     parser.add_argument("--sarif-repo-locations", action="store_true",
-                        help="Include tracked repository paths and setting lines for explicitly selected configs in SARIF.")
+                        help="Include verified HEAD paths and setting lines for explicitly selected configs in SARIF.")
     parser.add_argument("--save", action="store_true",
                         help=f"Also save the report as a formatted page, {NAME}, in {SAVE_FOLDER}, and end with a command "
                              "that opens it. Use --save with Markdown output only.")
