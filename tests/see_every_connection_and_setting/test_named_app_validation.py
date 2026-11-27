@@ -120,7 +120,7 @@ class NamedAppValidationTests(ConfigCase):
                                                   f"{label} must be `true` or `false` without quotes.", run.stdout)
                                     self.assertIn(f"Set {label} to `true` or `false` without quotes.", run.stdout)
                                 else:
-                                    self.assertIn(message, run.stdout)
+                                    self.assertIn(f'{label} must be `"auto"`, `"prompt"`, `"writes"` or `"approve"`.', run.stdout)
                                     self.assertIn(f'Set {label} to `"auto"`, `"prompt"`, `"writes"` or `"approve"`.',
                                                   run.stdout)
                                 continue
@@ -185,7 +185,7 @@ class NamedAppValidationTests(ConfigCase):
                             if reason == "is not a boolean":
                                 self.assertIn(f"`{app}.tools.*.{field}` must be `true` or `false` without quotes.", run.stdout)
                             else:
-                                self.assertIn(message, run.stdout)
+                                self.assertIn(f'`{app}.tools.*.{field}` must be `"auto"`, `"prompt"`, `"writes"` or `"approve"`.', run.stdout)
 
 
     def test_withheld_invalid_tool_marks_all_public_tools_unloadable_unless_apps_are_off(self):

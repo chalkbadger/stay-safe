@@ -13,8 +13,10 @@ APP_ENABLED_GAP = "Codex cannot load this configuration file because apps.exampl
 TOOL_ENABLED_GAP = "Codex cannot load this configuration file because apps.example.tools.lookup.enabled is not a boolean."
 
 PLAIN = {
-    **{gap: f"**{gap}** Findings for other entries describe settings written in the file."
-       for gap in (APP_MODE_GAP, TOOL_MODE_GAP)},
+    **{gap: f'**Codex cannot load this configuration file.** `{field}` must be `"auto"`, `"prompt"`, `"writes"` or `"approve"`. '
+            "Findings for other entries describe settings written in the file."
+       for gap, field in ((APP_MODE_GAP, "apps.example.default_tools_approval_mode"),
+                          (TOOL_MODE_GAP, "apps.example.tools.lookup.approval_mode"))},
     **{gap: f"**Codex cannot load this configuration file.** `{field}` must be `true` or `false` without quotes. "
             "Findings for other entries describe settings written in the file."
        for gap, field in ((APP_ENABLED_GAP, "apps.example.default_tools_enabled"),

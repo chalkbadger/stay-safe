@@ -4,7 +4,7 @@ from pathlib import Path
 import re
 
 from .codex import (APP_TOOL_REVIEWER_GAP, APPROVALS, EMPTY_PROFILES, EXCLUDED_ACCOUNT, INLINE_MCP_VALUES, INLINE_PROFILE_OVERRIDE,
-                    INVALID_APPROVAL, INVALID_BOOLEAN, INVALID_MCP_MAP, INVALID_PROFILE_SELECTOR, LEGACY_PROFILE_SELECTOR,
+                    INVALID_APPROVAL, INVALID_BOOLEAN, INVALID_MCP_MAP, INVALID_PROFILE_SELECTOR, MCP_HTTP_AUTH_FIELDS, LEGACY_PROFILE_SELECTOR,
                     LEGACY_PROFILE_TABLES, PROFILE_LOADER_VERSION, ROOT_HOME_UNKNOWN, ROOTS_NO_WORKSPACE, ROOTS_SCOPE,
                     WORKSPACE_HOME, WORKSPACE_HOME_UNKNOWN, WORKSPACE_UNKNOWN, read_file)
 from .codex_rules import UNCHECKED_RULE_LINES, other_files, read_file as read_rules
@@ -541,6 +541,12 @@ GAPS = {
     "An MCP header-helper command is invalid; its value was withheld.":
         "**Not checked: an MCP header-helper command.** An `http_headers_helper` value isn't a valid command, so "
         f"stay-safe didn't assess it. {WITHHELD}",
+    **{f"Codex cannot load this configuration because stdio MCP server {{label}} sets {field}.":
+        "**Codex can't load this configuration.** The `{label}` server uses `command` (stdio). "
+        f"The `{field}` setting applies to HTTP servers." for field in MCP_HTTP_AUTH_FIELDS},
+    "Codex cannot load this configuration because MCP server {label} sets bearer_token.":
+        "**Codex can't load this configuration.** The `{label}` server sets `bearer_token`, "
+        "which Codex rejects on both stdio and HTTP servers.",
     "Codex cannot load this configuration because stdio MCP server {label} sets http_headers_helper.":
         "**Codex can't load this configuration.** The `{label}` server uses `command` (stdio). "
         "Codex accepts `http_headers_helper` only on HTTP servers.",
@@ -556,7 +562,9 @@ GAPS = {
         "approve or deny the request. Your organization can limit who may review requests. For example, if its "
         "policy allows only human review, Codex may ask you to decide. Stay-safe can’t tell from this file "
         "which policy applies to your run.",
-    INVALID_APPROVAL: f"**{INVALID_APPROVAL}** Findings for other entries describe settings written in the file.",
+    INVALID_APPROVAL:
+        f"**Codex cannot load this configuration file.** `{{label}}` must be {APPROVAL_OPTIONS}. "
+        "Findings for other entries describe settings written in the file.",
     INVALID_BOOLEAN:
         "**Codex cannot load this configuration file.** `{label}` must be `true` or `false` without quotes. "
         "Findings for other entries describe settings written in the file.",
@@ -739,6 +747,11 @@ STEPS = {
     "An MCP transport is missing, conflicting or invalid.": "Give the server either a `command` or a `url`, not both.",
     "An MCP header-helper command is invalid; its value was withheld.":
         "Set `http_headers_helper` to the command you mean to run, or remove it.",
+    **{f"Codex cannot load this configuration because stdio MCP server {{label}} sets {field}.":
+        f"To keep using stdio, remove `{field}` from this server's settings." for field in MCP_HTTP_AUTH_FIELDS},
+    "Codex cannot load this configuration because MCP server {label} sets bearer_token.":
+        "Remove `bearer_token` from this server's settings. For HTTP bearer authentication, "
+        "use `bearer_token_env_var` to name the environment variable.",
     "Codex cannot load this configuration because stdio MCP server {label} sets http_headers_helper.":
         "To keep using stdio, remove `http_headers_helper` from this server's settings.",
     "Per-account app policy is not evaluated; account identifiers were withheld.":
