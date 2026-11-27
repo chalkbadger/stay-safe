@@ -1,13 +1,15 @@
+import errno
 import io
 import json
 import os
 from pathlib import Path
 import subprocess
 import sys
+import unittest
 from contextlib import redirect_stdout
 from unittest.mock import patch
 
-from stay_safe.cli import main
+from stay_safe.cli import codex_home, main
 from tests.support import INCOMPLETE
 from tests.support import ConfigCase, ROOT
 
@@ -49,6 +51,68 @@ class CodexHomeTests(ConfigCase):
 
     def observations(self, report):
         return {e['id']: e['observations'] for e in report['catalog']}
+
+    @unittest.skipUnless(os.supports_bytes_environ, 'Unix byte-valued environment')
+    def test_non_unicode_override_reads_and_labels_the_default_codex_files(self):
+        (self.home / '.codex' / 'config.toml').write_text(
+            'approval_policy="never"\nsandbox_mode="read-only"\nshell_environment_policy.inherit="none"\n')
+        invalid = os.fsdecode(os.fsencode(self.root) + b'/missing-\xff')
+        existing = Path(os.fsdecode(os.fsencode(self.root) + b'/present-\xff'))
+        for override in ({}, {'CODEX_HOME': invalid}, {'CODEX_HOME': str(existing)}):
+            with self.subTest(override=override), patch.dict(os.environ, {'HOME': str(self.home), **override}, clear=True):
+                if override.get('CODEX_HOME') == str(existing):
+                    try:
+                        existing.mkdir()
+                    except OSError as error:
+                        if error.errno == errno.EILSEQ:
+                            self.skipTest('filesystem requires UTF-8 directory names')
+                        raise
+                    (existing / 'config.toml').write_text('approval_policy="on-request"\n')
+                with redirect_stdout(io.StringIO()) as output:
+                    status = main(['--agent', 'codex', '--format', 'json'])
+                report = json.loads(output.getvalue())
+                self.assertEqual((status, report['inspection_gaps']), (0, []))
+                self.assertIn('commands_without_prompts', [risk['rule'] for risk in report['risks']])
+                with redirect_stdout(io.StringIO()) as output:
+                    self.assertEqual(main(['--agent', 'codex', '--format', 'markdown']), 0)
+                self.assertIn('**Config file `~/.codex/config.toml`**', output.getvalue())
+                self.assertIn('**Rules file `~/.codex/rules/default.rules`**', output.getvalue())
+
+    @unittest.skipUnless(os.supports_bytes_environ, 'Unix byte-valued environment')
+    def test_non_unicode_override_does_not_select_codex_in_a_claude_only_home(self):
+        home = self.root / 'claude-only'
+        (home / '.claude').mkdir(parents=True)
+        (home / '.claude' / 'settings.json').write_text('{"permissions":{"defaultMode":"default"}}')
+        invalid = os.fsdecode(os.fsencode(self.root) + b'/missing-\xff')
+        with patch.dict(os.environ, {'HOME': str(home), 'CODEX_HOME': invalid}, clear=True), \
+                redirect_stdout(io.StringIO()) as output:
+            status = main(['--format', 'json'])
+        report = json.loads(output.getvalue())
+        self.assertEqual(status, 0)
+        self.assertEqual(report['harness'], 'Claude Code')
+
+    @unittest.skipUnless(os.supports_bytes_environ, 'Unix byte-valued environment')
+    def test_valid_utf8_override_keeps_its_original_filesystem_path(self):
+        override = Path(os.fsdecode(os.fsencode(self.root) + b'/home-\xc3\xa9'))
+        override.mkdir()
+        (override / 'config.toml').write_text('approval_policy="never"\n')
+        run = subprocess.run(
+            [sys.executable, '-B', '-m', 'stay_safe', '--agent', 'codex', '--format', 'json'], cwd=ROOT,
+            env={'LC_ALL': 'C', 'PYTHONCOERCECLOCALE': '0', 'PYTHONUTF8': '0', 'PYTHONIOENCODING': 'utf-8',
+                 'HOME': str(self.home), 'CODEX_HOME': str(override)},
+            capture_output=True, encoding='utf-8', timeout=10)
+        self.assertIn('commands_without_prompts', [risk['rule'] for risk in json.loads(run.stdout)['risks']])
+
+    def test_windows_home_lookup_accepts_paired_surrogates_and_ignores_unpaired_ones(self):
+        override = self.root / 'home-\U00010437'
+        override.mkdir()
+        default = self.home / '.codex'
+        for suffix, selected in (('\ud801', default), ('\udc37', default),
+                                 ('\ud801\udc37', override), ('\U00010437', override)):
+            with self.subTest(suffix=ascii(suffix)), patch.object(sys, 'platform', 'win32'), \
+                    patch.object(os, 'supports_bytes_environ', False), patch.object(Path, 'home', return_value=self.home), \
+                    patch.object(os, 'environ', {'CODEX_HOME': str(self.root / ('home-' + suffix))}):
+                self.assertEqual(codex_home(), (selected, None))
 
     def test_empty_or_unset_codex_home_reads_home_dot_codex_not_the_working_directory(self):
         for name, env in [('empty', {'CODEX_HOME': ''}), ('unset', {})]:
