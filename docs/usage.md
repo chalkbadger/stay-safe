@@ -154,8 +154,9 @@ python3 -m stay_safe --config tests/runs_without_a_coding_agent/sample.toml \
 
 Check out the same revision in CI and pass the SARIF file to GitHub’s
 [`upload-sarif` action](https://github.com/github/codeql-action/tree/v4/upload-sarif).
-Give the workflow `contents: read` and `security-events: write`. Keep the category
-and file path consistent across uploads so GitHub can fingerprint the result.
+Give the workflow `contents: read` and `security-events: write`. Use the same workflow and
+file path on repeat uploads. The action uses the checked-out source to fingerprint
+the finding.
 Review the relative filenames before sharing the file.
 
 Discovery, `--rules`, untracked or outside files, and symlink paths keep their
