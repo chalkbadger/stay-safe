@@ -7,7 +7,7 @@ import sys
 from . import claude_report
 from .codex import codex_home_override
 from .report import inspect, render_all
-from .repo_locations import selected_uris
+from .repo_locations import selected_files
 from .save import NAME, save
 from .provenance import INSTALLED
 
@@ -272,11 +272,11 @@ def main(argv=None):
         parser.exit(2, "--rules reads Codex files only.\n")
     if args.config or args.rules:
         paths = [Path(p) for p in args.config or []]
-        uris = selected_uris(paths) if args.sarif_repo_locations else {}
+        selected = selected_files(paths) if args.sarif_repo_locations else {}
         if "claude" in agents:
-            runs = [(claude_report.inspect(paths, repo_uris=uris), {})]
+            runs = [(claude_report.inspect(paths, repo_files=selected), {})]
         else:
-            runs = [codex_run(args, repo_uris=uris)]
+            runs = [codex_run(args, repo_files=selected)]
     else:
         runs = discover_runs(args, agents)
     status = 2 if any(result["inspection_gaps"] for result, _ in runs) else 0
@@ -297,7 +297,7 @@ def main(argv=None):
     return status
 
 
-def codex_run(args, repo_uris=None):
+def codex_run(args, repo_files=None):
     paths = [Path(p) for p in args.config or []]
     rules = Path(args.rules[0]) if args.rules else None
     defaults = not args.config and not args.rules
@@ -322,4 +322,4 @@ def codex_run(args, repo_uris=None):
             gaps.extend(gap for gap in (skills(home), environments_toml(home)) if gap)
             if system_config():
                 gaps.append("System config folder: /etc/codex holds Codex configuration that was not inspected.")
-    return inspect(paths, rules_path=rules, discovered=defaults, gaps=gaps, workspace=args.workspace, repo_uris=repo_uris), files
+    return inspect(paths, rules_path=rules, discovered=defaults, gaps=gaps, workspace=args.workspace, repo_files=repo_files), files

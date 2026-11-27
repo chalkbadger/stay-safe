@@ -44,17 +44,17 @@ SCOPE = [
 ]
 
 
-def inspect(paths, *, rules_path=None, discovered=False, gaps=(), workspace=None, repo_uris=None):
+def inspect(paths, *, rules_path=None, discovered=False, gaps=(), workspace=None, repo_files=None):
     entries, gaps = [], list(gaps)
     hashes = fingerprints()
     provenance = identify(hashes=hashes)
     repo_locations = {}
     for index, path in enumerate(paths, 1):
         source = f"config-{index}"
-        lines = {} if repo_uris and path in repo_uris else None
-        found, missing = read_file(path, source, discovered=discovered, workspace=workspace, lines=lines)
-        if lines:
-            repo_locations[source] = (repo_uris[path], lines)
+        selected = (repo_files or {}).get(path)
+        found, missing = read_file(path, source, discovered=discovered, workspace=workspace, location=selected)
+        if selected and selected.lines:
+            repo_locations[source] = (selected.uri, selected.lines)
         entries.extend(found)
         gaps.extend(missing)
     if rules_path is not None:
@@ -1387,7 +1387,7 @@ def sarif_run(report):
         source, name = risk["entry"].split(":", 1)
         if source in report.get("_repo_locations", {}):
             uri, lines = report["_repo_locations"][source]
-            line = setting_line(risk, tuple(parts(name)), lines, report["harness"])
+            line = setting_line(risk, tuple(parts(name)), lines, report)
             if line is not None:
                 location["physicalLocation"] = {"artifactLocation": {"uri": uri}, "region": {"startLine": line}}
         results.append({"ruleId": rule, "level": "warning", "message": {"text": risk["explanation"]},

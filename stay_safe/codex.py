@@ -622,7 +622,7 @@ def open_input(path):
 
 
 @exclude_account_files
-def read_file(path: Path, source: str, *, discovered=False, workspace=None, lines=None):
+def read_file(path: Path, source: str, *, discovered=False, workspace=None, location=None):
     reader = Reader(source, workspace)
     try:
         try:
@@ -658,7 +658,6 @@ def read_file(path: Path, source: str, *, discovered=False, workspace=None, line
         else:
             reader.gap("Input is missing, unreadable, a symlink, or invalid UTF-8 TOML; raw errors were withheld.")
         return [], sorted(reader.gaps)
-    if lines is not None:
-        from .repo_locations import setting_lines
-        lines.update(setting_lines(content, "Codex"))
+    if location:
+        location.capture(info, content, "Codex")
     return reader.read(data)

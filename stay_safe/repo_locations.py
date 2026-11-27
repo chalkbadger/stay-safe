@@ -1,4 +1,5 @@
 from bisect import bisect_left
+from dataclasses import dataclass, field
 import hashlib
 import json
 import os
@@ -22,7 +23,7 @@ def metadata(path, limit):
         return data
 
 
-def tracked_files(index):
+def tracked_files(index, wanted):
     version = int.from_bytes(index[4:8], "big")
     if index[:4] != b"DIRC" or version not in (2, 3, 4):
         return set()
@@ -57,11 +58,13 @@ def tracked_files(index):
                 raise ValueError
             prefix = previous[:len(previous) - remove]
         nul = index.index(0, pos, end)
+        if len(prefix) + nul - pos > 4096:
+            return set()
         previous = prefix + index[pos:nul]
         pos = nul + 1
         if version < 4:
             pos += (start - pos) % 8
-        if mode in (0o100644, 0o100755) and not flags & 0x3000 and not extended & 0x2000:
+        if previous in wanted and mode in (0o100644, 0o100755) and not flags & 0x3000 and not extended & 0x2000:
             tracked.add(previous)
     while pos < end:
         extension = index[pos:pos + 4]
@@ -71,7 +74,20 @@ def tracked_files(index):
     return tracked if pos == end else set()
 
 
-def selected_uris(paths):
+@dataclass
+class SelectedFile:
+    uri: str
+    device: int
+    inode: int
+    lines: dict = field(default_factory=dict)
+
+    def capture(self, info, content, harness):
+        self.lines = {}
+        if (info.st_dev, info.st_ino) == (self.device, self.inode):
+            self.lines = setting_lines(content, harness)
+
+
+def selected_files(paths):
     if not paths:
         return {}
     try:
@@ -89,13 +105,12 @@ def selected_uris(paths):
                 gitdir = root / pointer[8:]
             elif not stat.S_ISDIR(mode):
                 return {}
-            tracked = tracked_files(metadata(gitdir / "index", 64 * 1024 * 1024))
             break
         else:
             return {}
     except (OSError, ValueError, IndexError, RuntimeError):
         return {}
-    locations = {}
+    candidates = {}
     for path in paths:
         try:
             candidate = cwd / path
@@ -103,11 +118,19 @@ def selected_uris(paths):
             if ".." in relative.parts or candidate.resolve(strict=True) != candidate:
                 continue
             name = os.fsencode(relative)
-            if name in tracked:
-                locations[path] = quote_from_bytes(name)
+            info = candidate.stat(follow_symlinks=False)
+            if stat.S_ISREG(info.st_mode):
+                candidates[path] = (name, info)
         except (OSError, ValueError, RuntimeError):
             continue
-    return locations
+    if not candidates:
+        return {}
+    try:
+        index = metadata(gitdir / "index", 64 * 1024 * 1024)
+        tracked = tracked_files(index, {name for name, _ in candidates.values()})
+    except (OSError, ValueError, IndexError):
+        return {}
+    return {path: SelectedFile(quote_from_bytes(name), info.st_dev, info.st_ino) for path, (name, info) in candidates.items() if name in tracked}
 
 
 KEY = r"""(?:[A-Za-z0-9_-]+|'[^'\n]*'|"(?:\\.|[^"\\\n])*")"""
@@ -221,11 +244,23 @@ def setting_lines(content, harness):
         return {}
 
 
-def setting_line(risk, keys, fields, harness):
+def setting_line(risk, keys, fields, report):
     rule = risk["rule"]
-    if harness == "Claude Code":
-        if keys[0] in ("hooks", "sshHostCommands"):
-            return None
+    if report["harness"] == "Claude Code":
+        if keys[0] == "hooks":
+            from .claude import HOOK_FIELDS, runs
+            handlers = [h for h in report["_hooks"][risk["entry"]]["handlers"] if runs(h)]
+            if len(handlers) != 1:
+                return None
+            hook = handlers[0]
+            field_names = HOOK_FIELDS[hook["kind"]]
+            if len(field_names) != 1:
+                return None
+            keys = ("hooks", hook["event"], str(hook["group"]), "hooks", str(hook["position"]), field_names[0])
+        if keys[0] == "sshHostCommands":
+            commands = [line for path, line in fields.items()
+                        if len(path) == 3 and path[0] == "sshHostCommands" and path[2] == "command"]
+            return commands[0] if len(commands) == 1 else None
         if keys in (("statusLine",), ("fileSuggestion",)):
             keys += ("command",)
     elif keys == ("approval_policy",):
@@ -241,6 +276,12 @@ def setting_line(risk, keys, fields, harness):
             keys += ("approval_mode" if len(keys) == 4 else "default_tools_approval_mode",)
         elif rule == "destructive_tools" and len(keys) == 4:
             keys += ("enabled",)
+        elif rule == "destructive_tools" and keys[0] == "apps":
+            candidates = ("destructive_enabled",) if keys[1] == "_default" else ("default_tools_enabled", "destructive_enabled")
+            for field in candidates:
+                if keys + (field,) in fields:
+                    return fields[keys + (field,)]
+            return fields.get(("apps", "_default", "destructive_enabled"))
         else:
             return None
     elif keys[0] == "hooks":

@@ -1,5 +1,9 @@
 import json
 import subprocess
+from contextlib import chdir
+
+from stay_safe import report
+from stay_safe.repo_locations import selected_files
 
 from tests.support import ConfigCase, ROOT, run_checkout
 
@@ -50,6 +54,8 @@ class RepoLocationTests(ConfigCase):
         self.assertIsNone(reported[key])
         self.assertIsNone(reported[key.replace("1:", "2:")])
         self.assertEqual(reported[key.replace("1:", "3:")], expected)
+        self.git("add", "-N", "--", other.name)
+        self.assertIsNone(self.export("--config", other)[key])
         home = self.repo / "home"
         (home / "rules").mkdir(parents=True)
         (home / "config.toml").write_bytes(self.sample.read_bytes())
@@ -114,6 +120,31 @@ class RepoLocationTests(ConfigCase):
         path.write_text('{"permissions":{"defaultMode":"default",\n"defaultMode":"bypassPermissions"}}')
         self.assertIsNone(self.export("--agent", "claude", "--config", path)
                           ["settings-1:permissions.defaultMode/commands_without_prompts"])
+
+    def test_a_replaced_tracked_file_cannot_gain_the_selected_files_location(self):
+        with chdir(self.repo):
+            selected = selected_files([self.sample])
+        self.assertIn(self.sample, selected)
+        other = self.sample.with_name("replacement")
+        other.write_bytes(self.sample.read_bytes())
+        other.replace(self.sample)
+        result = report.inspect([self.sample], repo_files=selected)
+        sarif = json.loads(report.render(result, "sarif"))
+        self.assertTrue(sarif["runs"][0]["results"])
+        self.assertNotIn("physicalLocation", json.dumps(sarif))
+
+    def test_one_claude_hook_has_a_command_line_and_grouped_hooks_keep_their_logical_id(self):
+        path = self.repo / "hooks.json"
+        hook = {"type": "command", "command": "PRIVATE_COMMAND"}
+        def write(handlers):
+            path.write_text(json.dumps({"hooks": {"PreToolUse": [{"hooks": handlers}]}}, indent=2))
+        write([hook])
+        self.git("add", "--", path.name)
+        key = "settings-1:hooks/configured_program"
+        line = next(i for i, text in enumerate(path.read_text().splitlines(), 1) if '"command":' in text)
+        self.assertEqual(self.export("--agent", "claude", "--config", path)[key]["region"]["startLine"], line)
+        write([hook, hook])
+        self.assertIsNone(self.export("--agent", "claude", "--config", path)[key])
 
     def test_location_flag_requires_sarif_before_reading_config(self):
         result = run_checkout(ROOT, "--config", str(self.sample), "--sarif-repo-locations", cwd=self.repo)

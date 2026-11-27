@@ -1,5 +1,6 @@
 import hashlib
 import json
+import subprocess
 from pathlib import Path
 
 import fastjsonschema
@@ -106,6 +107,22 @@ class SarifTests(ConfigCase):
             with self.subTest(private=private):
                 self.assertNotIn(private, encoded)
         self.assertNotIn("physicalLocation", encoded)
+
+    def test_opted_in_location_validates_against_the_same_schema(self):
+        project = self.root.resolve() / "tracked"
+        project.mkdir()
+        path = project / "sample.toml"
+        path.write_text(QUIET.replace("on-request", "never"))
+        for args in (("init", "-q"), ("add", "--", path.name)):
+            subprocess.run(["git", *args], cwd=project, check=True)
+        result = run_checkout(self.checkout, "--config", path.name, "--format", "sarif", "--sarif-repo-locations",
+                              cwd=project)
+        self.assertEqual((result.returncode, result.stderr), (0, ""))
+        document = json.loads(result.stdout)
+        self.validate(document)
+        location, = document["runs"][0]["results"][0]["locations"]
+        self.assertEqual(location["physicalLocation"], {"artifactLocation": {"uri": "sample.toml"},
+                                                      "region": {"startLine": 1}})
 
     def test_save_rejects_sarif_before_writing_any_report(self):
         result = run_checkout(self.checkout, "--save", "--format", "sarif", cwd=self.root)
