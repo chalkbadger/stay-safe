@@ -217,7 +217,9 @@ Tests: [tests/overview_lists_findings_first/](../tests/overview_lists_findings_f
 Issue: https://github.com/chalkbadger/stay-safe/issues/1
 Tests: [tests/share_without_exposing_secrets/](../tests/share_without_exposing_secrets/)
 
-- When I opt in to repository locations for a tracked config I select, I see its repository-relative path and the line that defines the setting in SARIF. Discovery, untracked files and files outside the checkout keep their paths private. `test_repo_locations.py::test_only_an_opted_in_tracked_selected_config_shows_its_relative_uri_and_setting_line`
+- When I opt in and select a tracked config that matches its staged contents, I see the repository-relative path and line for an explicit setting in SARIF. `test_repo_locations.py::test_only_an_opted_in_tracked_selected_config_shows_its_relative_uri_and_setting_line`
+- When my file differs from its staged contents, I see the finding with its logical ID. If none of my findings has a verified line, I see a warning without a filename. `test_repo_locations.py::test_dirty_content_warns_without_a_path_and_reverting_restores_the_line`
+- When I discover a config automatically or select a file outside the checkout or outside the index, I see no physical path for it. `test_repo_locations.py::test_discovery_and_selected_files_outside_the_index_or_checkout_keep_paths_private`
 - I inspect files containing private values and none appear in the report. `test_report.py::test_report_excludes_private_values`
 - I see names as written, with a reminder to check them before sharing. `test_report.py::test_names_are_shown_as_written_and_the_report_says_to_check_them`
 - I use names containing markup and the saved page shows text, not executable content or unintended links. `test_page.py::test_names_with_html_characters_are_shown_as_written_not_as_markup`

@@ -285,7 +285,8 @@ def main(argv=None):
         sys.stderr.write(NOT_SAVED)
         sys.stderr.flush()
     terminal = args.format is None and sys.stdout.isatty()
-    sys.stdout.write(render_all(runs, args.format or ("plain" if terminal else "markdown")))
+    sys.stdout.write(render_all(runs, args.format or ("plain" if terminal else "markdown"),
+                                repo_locations=args.sarif_repo_locations))
     if path is not None:
         sys.stdout.write(open_command(path))
     if terminal and not args.save:
