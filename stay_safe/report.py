@@ -3,7 +3,7 @@ import json
 from pathlib import Path
 import re
 
-from .codex import (APP_TOOL_REVIEWER_GAP, APPROVALS, EMPTY_PROFILES, ENV_GAP, ENV_EXTRA, EXCLUDED_ACCOUNT, INLINE_MCP_VALUES, INLINE_PROFILE_OVERRIDE,
+from .codex import (APP_TOOL_REVIEWER_GAP, APPROVALS, EMPTY_PROFILES, ENV_GAP, ENV_UNCHECKED, EXCLUDED_ACCOUNT, INLINE_MCP_VALUES, INLINE_PROFILE_OVERRIDE,
                     INVALID_APPROVAL, INVALID_BOOLEAN, INVALID_MCP_MAP, INVALID_PROFILE_SELECTOR, LEGACY_PROFILE_SELECTOR,
                     LEGACY_PROFILE_TABLES, PROFILE_LOADER_VERSION, ROOT_HOME_UNKNOWN, ROOTS_NO_WORKSPACE, ROOTS_SCOPE,
                     WORKSPACE_HOME, WORKSPACE_HOME_UNKNOWN, WORKSPACE_UNKNOWN, read_file)
@@ -60,10 +60,8 @@ def inspect(paths, *, rules_path=None, discovered=False, gaps=(), workspace=None
     revision = provenance["source_revision"]
     by_id = {entry["id"]: entry for entry in entries}
     for risk in risks:
-        entry = by_id[risk["entry"]]
-        risk["configured_evidence"] = list(entry["observations"])
-        risk["unchecked_fields"] = entry.get("facts", {}).get("unchecked_fields", False)
-        if risk["rule"] == "environment_inheritance" and risk.get("unchecked_fields"):
+        risk["configured_evidence"] = list(by_id[risk["entry"]]["observations"])
+        if risk["rule"] == "environment_inheritance" and ENV_UNCHECKED in risk["configured_evidence"]:
             risk["explanation"] = ENV_START + " " + ENV_GAP
         risk["rule_source"] = source_link(revision, "stay_safe/rules.py")
         risk["interpretation_source"] = source_link(revision, "harnesses/codex.md")
@@ -854,8 +852,8 @@ def finding(risk, files=None, contexts=None):
     pick = lambda text: (text.get(keys[0]) if isinstance(text, dict)
                          else text[len(keys) == 4] if isinstance(text, tuple) else text)
     headline, why, step = pick(plain["headline"]), pick(plain["why"]), advice(risk, files or {}, contexts or {})
-    if risk["rule"] == "environment_inheritance" and risk.get("unchecked_fields"):
-        why = why + " " + ENV_EXTRA
+    if risk["rule"] == "environment_inheritance" and ENV_UNCHECKED in risk["configured_evidence"]:
+        headline, why = ENV_START, ENV_GAP
     if keys == ["apps", "_default"]:
         headline = TEMPLATE_HEADLINES.get(risk["rule"], headline)
     source = risk["entry"].split(":", 1)[0]

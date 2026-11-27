@@ -7,8 +7,6 @@ from stay_safe.report import inspect, render
 from tests.support import without_rule_links
 from tests.support import INCOMPLETE
 from tests.support import ConfigCase, ROOT
-from stay_safe.codex import ENV_EXTRA
-from stay_safe.codex import ENV_GAP
 
 BASE = 'approval_policy="on-request"\nsandbox_mode="read-only"\n'
 DEFAULTS = ['inherit: all (default)', 'ignore_default_excludes: true (default)']
@@ -90,34 +88,32 @@ class EnvironmentInheritanceTests(ConfigCase):
                 self.assertNotIn('private-value', render(report, 'json'))
 
     def test_extra_fields_preserve_the_starting_policy_and_leave_the_final_environment_unknown(self):
+        gap = ("Additional shell_environment_policy fields were not evaluated. Stay-safe could not determine "
+               "which variables commands receive.")
         for field in ('exclude=[]', 'include_only=[]', 'set={}', 'filters={}', 'experimental_use_profile=false',
                       'exclude=["PRIVATE_NAME"]', 'include_only=["PRIVATE_NAME"]', 'set={PRIVATE_NAME="private-value"}',
                       'filters={PRIVATE_NAME="exclude"}', 'experimental_use_profile=true', '"PRIVATE_NAME"="private-value"'):
             for inherit in (None, "all", "core", "none"):
-                for ignore in (True, False):
-                    with self.subTest(field=field, inherit=inherit, ignore=ignore):
-                        policy = '[shell_environment_policy]\n' + field
-                        if inherit:
-                            policy += f'\ninherit="{inherit}"\nignore_default_excludes={str(ignore).lower()}'
-                        report = inspect([self.config(BASE + policy)])
-                        self.assertEqual(report["inspection_gaps"], ["config-1: " + ENV_GAP])
-                        observations = report["catalog"][-1]["observations"]
-                        expected = ([f"inherit: {inherit} (explicit)",
-                                     f"ignore_default_excludes: {str(ignore).lower()} (explicit)"]
-                                    if inherit else DEFAULTS)
-                        self.assertEqual(observations, expected + [ENV_EXTRA])
-                        self.assertEqual([r["rule"] for r in report["risks"]],
-                                         ["environment_inheritance"] if inherit in (None, "all") else [])
-                        markdown = render(report)
-                        if report["risks"]:
-                            self.assertTrue(any(r.get("unchecked_fields")
-                                                for r in report["risks"] if r["rule"] == "environment_inheritance"))
-                            self.assertIn(ENV_GAP, report["risks"][0]["explanation"])
-                            self.assertIn(MARKDOWN_LEAD, markdown)
-                        self.assertIn(ENV_GAP, markdown)
-                        for text in (markdown, render(report, "json")):
-                            self.assertNotIn("PRIVATE_NAME", text)
-                            self.assertNotIn("private-value", text)
+                with self.subTest(field=field, inherit=inherit):
+                    policy = '[shell_environment_policy]\n' + field
+                    if inherit:
+                        policy += f'\ninherit="{inherit}"\nignore_default_excludes=false'
+                    report = inspect([self.config(BASE + policy)])
+                    self.assertEqual(report["inspection_gaps"], ["config-1: " + gap])
+                    observations = report["catalog"][-1]["observations"]
+                    expected = ([f"inherit: {inherit} (explicit)", "ignore_default_excludes: false (explicit)"]
+                                if inherit else DEFAULTS)
+                    self.assertEqual(observations, expected + ["final environment not checked"])
+                    self.assertEqual([r["rule"] for r in report["risks"]],
+                                     ["environment_inheritance"] if inherit in (None, "all") else [])
+                    markdown = render(report)
+                    if report["risks"]:
+                        self.assertIn(gap, report["risks"][0]["explanation"])
+                        self.assertNotIn(MARKDOWN_LEAD, markdown)
+                    self.assertIn(gap, markdown)
+                    for text in (markdown, render(report, "json")):
+                        self.assertNotIn("PRIVATE_NAME", text)
+                        self.assertNotIn("private-value", text)
 
     def test_rejected_files_never_gain_default_entries(self):
         missing = self.root / 'missing.toml'

@@ -73,7 +73,7 @@ class DefaultConfigTests(ConfigCase):
                     ])
                     self.assertEqual(report['risks'], [{
                         'rule': 'environment_inheritance', 'entry': expected_entry['id'], 'explanation': EXPLANATION,
-                        'incidents': ['I23'], 'configured_evidence': DEFAULTS, 'unchecked_fields': False,
+                        'incidents': ['I23'], 'configured_evidence': DEFAULTS,
                         'rule_source': prefix + 'stay_safe/rules.py', 'interpretation_source': prefix + 'harnesses/codex.md',
                     }])
                     self.assertEqual(report['incident_links'], {

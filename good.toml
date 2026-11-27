@@ -1,4 +1,0 @@
-# good.toml  (only the two known keys – or completely empty)
-[shell_environment_policy]
-inherit = "core"
-ignore_default_excludes = false
