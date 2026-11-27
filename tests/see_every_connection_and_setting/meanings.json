@@ -410,6 +410,12 @@
     "entry": "apps.calendar.tools.read"
   },
   {
+    "setting": "apps.*.links",
+    "value": "empty table",
+    "config": "approval_policy=\"on-request\"\nsandbox_mode=\"read-only\"\n[apps.files]\nlinks={}",
+    "entry": "apps.files"
+  },
+  {
     "setting": "model_providers.*",
     "value": "definition",
     "config": "approval_policy=\"on-request\"\nsandbox_mode=\"read-only\"\n[model_providers.internal]\nbase_url=\"https://example.com\"",

@@ -429,7 +429,7 @@ class Reader:
             if destructive is not None and enabled is True and not template:
                 obs.append(f"destructive tools {'enabled' if destructive else 'disabled'} by {source}")
                 facts["destructive_tools"] = destructive
-            if "links" in app:
+            if "links" in app and (app["links"] != {} or template or enabled is not True):
                 self.gap("Per-account app policy is not evaluated; account identifiers were withheld.")
             if app.get("approvals_reviewer") in AUTO_REVIEW_VALUES:
                 self.gap("App approvals_reviewer is not evaluated; Codex may let a reviewer decide an app's tool calls instead of asking you.")
