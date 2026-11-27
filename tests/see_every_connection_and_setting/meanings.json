@@ -197,6 +197,13 @@
     "entry": "mcp_servers.docs.bearer_token_env_var"
   },
   {
+    "setting": "mcp_servers.*.http_headers",
+    "value": "on a stdio server",
+    "config": "approval_policy=\"on-request\"\nsandbox_mode=\"read-only\"\n[mcp_servers.remote]\ncommand=\"synthetic-command\"\nhttp_headers={Accept=\"text/plain\"}",
+    "entry": "mcp_servers.remote",
+    "gaps": ["Codex cannot load this configuration because stdio MCP server remote sets http_headers."]
+  },
+  {
     "setting": "mcp_servers.*.http_headers_helper",
     "value": "nonempty command",
     "config": "approval_policy=\"on-request\"\nsandbox_mode=\"read-only\"\n[mcp_servers.remote]\nurl=\"https://example.com\"\nhttp_headers_helper=\"synthetic-helper\"",
@@ -210,6 +217,55 @@
     "gaps": [
       "Codex cannot load this configuration because stdio MCP server remote sets http_headers_helper."
     ]
+  },
+  {
+    "setting": "mcp_servers.*.env_http_headers",
+    "value": "on a stdio server",
+    "config": "approval_policy=\"on-request\"\nsandbox_mode=\"read-only\"\n[mcp_servers.remote]\ncommand=\"synthetic-command\"\nenv_http_headers={}",
+    "entry": "mcp_servers.remote",
+    "gaps": ["Codex cannot load this configuration because stdio MCP server remote sets env_http_headers."]
+  },
+  {
+    "setting": "mcp_servers.*.bearer_token_env_var",
+    "value": "on a stdio server",
+    "config": "approval_policy=\"on-request\"\nsandbox_mode=\"read-only\"\n[mcp_servers.remote]\ncommand=\"synthetic-command\"\nbearer_token_env_var=\"\"",
+    "entry": "mcp_servers.remote",
+    "gaps": ["Codex cannot load this configuration because stdio MCP server remote sets bearer_token_env_var."]
+  },
+  {
+    "setting": "mcp_servers.*.oauth",
+    "value": "on a stdio server",
+    "config": "approval_policy=\"on-request\"\nsandbox_mode=\"read-only\"\n[mcp_servers.remote]\ncommand=\"synthetic-command\"\noauth={}",
+    "entry": "mcp_servers.remote",
+    "gaps": ["Codex cannot load this configuration because stdio MCP server remote sets oauth."]
+  },
+  {
+    "setting": "mcp_servers.*.oauth_resource",
+    "value": "on a stdio server",
+    "config": "approval_policy=\"on-request\"\nsandbox_mode=\"read-only\"\n[mcp_servers.remote]\ncommand=\"synthetic-command\"\noauth_resource=\"\"",
+    "entry": "mcp_servers.remote",
+    "gaps": ["Codex cannot load this configuration because stdio MCP server remote sets oauth_resource."]
+  },
+  {
+    "setting": "mcp_servers.*.auth",
+    "value": "on a stdio server",
+    "config": "approval_policy=\"on-request\"\nsandbox_mode=\"read-only\"\n[mcp_servers.remote]\ncommand=\"synthetic-command\"\nauth=\"oauth\"",
+    "entry": "mcp_servers.remote",
+    "gaps": ["Codex cannot load this configuration because stdio MCP server remote sets auth."]
+  },
+  {
+    "setting": "mcp_servers.*.bearer_token",
+    "value": "on a stdio server",
+    "config": "approval_policy=\"on-request\"\nsandbox_mode=\"read-only\"\n[mcp_servers.remote]\ncommand=\"synthetic-command\"\nbearer_token=\"synthetic-token\"",
+    "entry": "mcp_servers.remote",
+    "gaps": ["Codex cannot load this configuration because MCP server remote sets bearer_token."]
+  },
+  {
+    "setting": "mcp_servers.*.bearer_token",
+    "value": "on an HTTP server",
+    "config": "approval_policy=\"on-request\"\nsandbox_mode=\"read-only\"\n[mcp_servers.remote]\nurl=\"https://example.invalid/mcp\"\nbearer_token=\"synthetic-token\"",
+    "entry": "mcp_servers.remote",
+    "gaps": ["Codex cannot load this configuration because MCP server remote sets bearer_token."]
   },
   {
     "setting": "mcp_servers.*.enabled_tools",

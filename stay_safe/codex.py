@@ -28,8 +28,9 @@ INVALID_APPROVAL = "Codex cannot load this configuration file because {label} is
 INVALID_BOOLEAN = "Codex cannot load this configuration file because {label} is not a boolean."
 INLINE_MCP_VALUES = "{label} contains inline values. Check the entries for credentials."
 INVALID_MCP_MAP = "Codex cannot load this configuration because {label} must be a table of strings."
+MCP_HTTP_AUTH_FIELDS = ("http_headers", "env_http_headers", "bearer_token_env_var", "oauth", "oauth_resource", "auth")
 MCP_OTHER_TRANSPORT = {
-    "env": {"http_headers", "http_headers_helper", "env_http_headers", "bearer_token_env_var", "oauth", "oauth_resource", "auth", "bearer_token"},
+    "env": {"http_headers_helper", *MCP_HTTP_AUTH_FIELDS, "bearer_token"},
     "http_headers": {"args", "env", "env_vars", "cwd", "bearer_token"},
 }
 SANDBOXES = {"read-only", "workspace-write", "danger-full-access"}
@@ -319,8 +320,8 @@ class Reader:
 
     def mcp(self, data):
         servers = self.table(data.get("mcp_servers", {}), "mcp_servers")
-        known = {"command", "args", "env", "env_vars", "cwd", "url", "http_headers", "env_http_headers",
-                 "bearer_token_env_var", "oauth", "oauth_resource", "auth", "scopes", "name", "enabled",
+        known = {"command", "args", "env", "env_vars", "cwd", "url", "bearer_token", *MCP_HTTP_AUTH_FIELDS,
+                 "scopes", "name", "enabled",
                  "enabled_tools", "disabled_tools", "startup_timeout_sec", "startup_timeout_ms", "tool_timeout_sec",
                  "required", "startup_readiness", "default_tools_approval_mode", "tools", "http_headers_helper",
                  "environment_id", "supports_parallel_tool_calls", "tool_input_schema_max_bytes", "omit_tools_from"}
@@ -337,10 +338,14 @@ class Reader:
             field = "env" if stdio else "http_headers"
             values = server.get(field, {})
             valid = (stdio and bool(command.strip())) or http
-            if stdio and helper is not None:
+            rejected = [key for key in ("http_headers_helper", *MCP_HTTP_AUTH_FIELDS) if key in server] if stdio else []
+            for key in rejected:
+                self.gap(f"Codex cannot load this configuration because stdio MCP server {name} sets {key}.")
+            if "bearer_token" in server:
+                self.gap(f"Codex cannot load this configuration because MCP server {name} sets bearer_token.")
+            if (stdio or http) and (rejected or "bearer_token" in server):
                 valid = False
-                obs.append("Codex rejects this stdio configuration")
-                self.gap(f"Codex cannot load this configuration because stdio MCP server {name} sets http_headers_helper.")
+                obs.append("Codex rejects this stdio configuration" if stdio else "Codex rejects this HTTP configuration")
             elif valid and not (isinstance(values, dict) and all(isinstance(v, str) for v in values.values())):
                 valid = False
                 obs.append("Codex rejects this configuration")

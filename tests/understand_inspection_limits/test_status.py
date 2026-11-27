@@ -12,6 +12,106 @@ COMPLETE = 'approval_policy = "on-request"\nsandbox_mode = "read-only"\n'
 
 
 class StatusTests(ConfigCase):
+    def test_stdio_rejects_http_authentication_settings_by_presence(self):
+        checkout = copy_checkout(self.root / "checkout")
+        config = COMPLETE + 'shell_environment_policy.inherit="none"\n[mcp_servers.demo]\n'
+        command = 'command="fixture-server"\n'
+        url = 'url="https://example.invalid/mcp"\n'
+        cases = (
+            ("env_http_headers", '{ Authorization = "PRIVATE_FIXTURE" }'),
+            ("env_http_headers", "{}"),
+            ("bearer_token_env_var", '"PRIVATE_FIXTURE"'),
+            ("bearer_token_env_var", '""'),
+            ("oauth", '{ client_id = "PRIVATE_FIXTURE" }'),
+            ("oauth", "{}"),
+            ("oauth_resource", '"PRIVATE_FIXTURE"'),
+            ("oauth_resource", '""'),
+            ("auth", '"oauth"'),
+        )
+        for key, value in cases:
+            for transport in (command, url):
+                with self.subTest(key=key, value=value, transport=transport):
+                    path = str(self.config(config + transport + f"{key} = {value}\n"))
+                    args = ("--agent", "codex", "--config", path, "--format")
+                    run = run_checkout(checkout, *args, "json", cwd=self.root)
+                    report = json.loads(run.stdout)
+                    if transport == command:
+                        self.assertEqual(report["inspection_gaps"], [
+                            f"config-1: Codex cannot load this configuration because stdio MCP server demo sets {key}."])
+                        self.assertEqual(report["risks"], [])
+                        self.assertEqual(run.returncode, 2)
+                        human = run_checkout(checkout, *args, "markdown", cwd=self.root)
+                        self.assertIn(f"remove `{key}`", section(human.stdout, "Not checked").lower())
+                        self.assertNotIn("PRIVATE_FIXTURE", human.stdout)
+                    else:
+                        self.assertEqual(report["inspection_gaps"], [])
+                        self.assertEqual([risk["rule"] for risk in report["risks"]], ["self_described_tools"])
+                        self.assertEqual(run.returncode, 0)
+                    self.assertNotIn("PRIVATE_FIXTURE", run.stdout)
+
+        path = str(self.config(config + command + 'enabled=false\noauth={}\nauth="oauth"\n'
+                               '[mcp_servers.sibling]\ncommand="fixture-server"\nscopes=["read"]\n'))
+        run = run_checkout(checkout, "--agent", "codex", "--config", path, "--format", "json", cwd=self.root)
+        report = json.loads(run.stdout)
+        self.assertEqual(run.returncode, 2)
+        self.assertCountEqual(report["inspection_gaps"], [
+            "config-1: Codex cannot load this configuration because stdio MCP server demo sets oauth.",
+            "config-1: Codex cannot load this configuration because stdio MCP server demo sets auth."])
+        self.assertCountEqual([(risk["entry"], risk["rule"]) for risk in report["risks"]], [
+            ("config-1:mcp_servers.sibling", "configured_program"),
+            ("config-1:mcp_servers.sibling", "self_described_tools")])
+
+    def test_literal_mcp_bearer_token_is_rejected_on_both_transports(self):
+        checkout = copy_checkout(self.root / "checkout")
+        config = COMPLETE + 'shell_environment_policy.inherit="none"\n[mcp_servers.demo]\n'
+        for transport in ('command="fixture-server"', 'url="https://example.invalid/mcp"',
+                          'command="fixture-server"\nenabled=false', 'url="https://example.invalid/mcp"\nenabled=false'):
+            with self.subTest(transport=transport):
+                path = str(self.config(config + transport + '\nbearer_token="PRIVATE_FIXTURE"\n'))
+                args = ("--agent", "codex", "--config", path, "--format")
+                run = run_checkout(checkout, *args, "json", cwd=self.root)
+                report = json.loads(run.stdout)
+                self.assertEqual(report["inspection_gaps"], [
+                    "config-1: Codex cannot load this configuration because MCP server demo sets bearer_token."])
+                self.assertEqual(run.returncode, 2)
+                self.assertEqual(report["risks"], [])
+                human = run_checkout(checkout, *args, "markdown", cwd=self.root)
+                self.assertIn("remove `bearer_token`", section(human.stdout, "Not checked").lower())
+                self.assertNotIn("PRIVATE_FIXTURE", run.stdout + human.stdout)
+
+    def test_static_http_headers_require_an_http_server(self):
+        checkout = copy_checkout(self.root / "checkout")
+        config = COMPLETE + 'shell_environment_policy.inherit="none"\n[mcp_servers.demo]\n'
+        command = 'command="fixture-server"\n'
+        url = 'url="https://example.invalid/mcp"\n'
+        headers = 'http_headers = { Accept = "private-header-value" }\n'
+        reason = "config-1: Codex cannot load this configuration because stdio MCP server demo sets http_headers."
+        cases = (
+            (command + headers, [reason], []),
+            (command + headers + 'enabled=false\n', [reason], []),
+            (command + 'http_headers = {}\n', [reason], []),
+            (command, [], ["configured_program", "self_described_tools"]),
+            (url + headers, ["config-1: mcp_servers.demo.http_headers contains inline values. "
+                             "Check the entries for credentials."], ["self_described_tools"]),
+            (url + 'http_headers = {}\n', [], ["self_described_tools"]),
+        )
+        for settings, gaps, rules in cases:
+            with self.subTest(settings=settings):
+                path = str(self.config(config + settings))
+                args = ("--agent", "codex", "--config", path, "--format")
+                run = run_checkout(checkout, *args, "json", cwd=self.root)
+                report = json.loads(run.stdout)
+                self.assertEqual(report["inspection_gaps"], gaps)
+                self.assertCountEqual([r["rule"] for r in report["risks"]], rules)
+                self.assertEqual(run.returncode, 2 if gaps else 0)
+                self.assertNotIn("private-header-value", run.stdout)
+                if settings == command + headers:
+                    human = run_checkout(checkout, *args, "markdown", cwd=self.root)
+                    explanation = section(human.stdout, "Not checked")
+                    self.assertIn("the `demo` server", explanation.lower())
+                    self.assertIn("remove `http_headers`", explanation.lower())
+                    self.assertNotIn("private-header-value", human.stdout)
+
     def test_stdio_header_helper_names_the_rejected_setting(self):
         checkout = copy_checkout(self.root / "checkout")
         config = COMPLETE + 'shell_environment_policy.inherit="core"\n[mcp_servers."docs.local"]\n'

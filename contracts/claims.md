@@ -87,6 +87,9 @@ Tests: [tests/understand_inspection_limits/](../tests/understand_inspection_limi
 - If one MCP server has an invalid tool setting, the report explains the error and asks me to check only the other server's inline environment variables for credentials. `test_inline_mcp.py::test_rejected_tool_settings_keep_their_diagnostic_without_credentials_advice`
 - If `env` or `http_headers` has the wrong type, the report names the setting and tells me Codex expects a table of strings. It also warns me about the command configured for the other server. `test_inline_mcp.py::test_rejected_inline_maps_keep_the_other_servers_finding`
 - I give a stdio server an HTTP header helper and see why Codex rejects the setting and how to fix it. `test_status.py::test_stdio_header_helper_names_the_rejected_setting`
+- I see which server's static HTTP headers prevent Codex from loading its configuration. `test_status.py::test_static_http_headers_require_an_http_server`
+- I see which HTTP authentication setting prevents a stdio MCP server from loading. `test_status.py::test_stdio_rejects_http_authentication_settings_by_presence`
+- I see why Codex rejects a literal bearer token on either MCP transport. `test_status.py::test_literal_mcp_bearer_token_is_rejected_on_both_transports`
 - I see which AWS credential commands were left unchecked even when the provider is selected elsewhere. `test_status.py::test_aws_credentials_name_each_unchecked_command`
 - When I set a gateway credential command or a telemetry header helper, I see each one under "Not checked". `test_status.py::test_gateway_and_otel_helpers_name_unchecked_commands`
 - I choose an AI reviewer for an App tool, and "Not checked" names the setting and explains that a policy can require a different reviewer. `test_status.py::test_app_tool_ai_reviewer_is_named_and_explains_policy_limits`
