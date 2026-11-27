@@ -1374,7 +1374,7 @@ def plain(report, files=None):
 
 
 def sarif_run(report, repo_locations=False):
-    rules, results = {}, []
+    rules, results, unlocated = {}, [], []
     for risk in report["risks"]:
         rule = risk["rule"]
         if rule not in rules:
@@ -1390,17 +1390,26 @@ def sarif_run(report, repo_locations=False):
             line = setting_line(risk, tuple(parts(name)), lines, report)
             if line is not None:
                 location["physicalLocation"] = {"artifactLocation": {"uri": uri}, "region": {"startLine": line}}
+        if repo_locations and "physicalLocation" not in location:
+            unlocated.append({"ruleId": rule, "logicalId": risk["entry"]})
         results.append({"ruleId": rule, "level": "warning", "message": {"text": risk["explanation"]},
                         "locations": [location]})
     notifications = [{"level": "warning", "message": {"text": gap}} for gap in report["inspection_gaps"]]
     driver = {"name": "stay-safe", "rules": list(rules.values())}
-    if repo_locations and results and not any("physicalLocation" in r["locations"][0] for r in results):
-        descriptor = {"id": "no-repository-locations"}
+    if unlocated:
+        if len(unlocated) == len(results):
+            descriptor = {"id": "no-repository-locations"}
+            message = "No finding in this run has a verified repository file and line."
+        else:
+            descriptor = {"id": "partial-repository-locations"}
+            count = len(unlocated)
+            message = (f"{count} of {len(results)} findings "
+                       f"{'has' if count == 1 else 'have'} no verified repository file and line.")
         driver["notifications"] = [descriptor]
         notifications.append({"level": "warning", "descriptor": descriptor,
-                              "message": {"text": "No finding in this run has a verified repository file and line. "
-                                                  "Select a tracked file with --config and check that its contents match "
-                                                  "the Git index and the setting has an explicit line."}})
+                              "properties": {"unlocatedFindings": unlocated},
+                              "message": {"text": message + " Select a committed file with --config and check that "
+                                                  "its contents match HEAD and the setting has an explicit line."}})
     return {
         "tool": {"driver": driver},
         "automationDetails": {"id": report["harness"]},

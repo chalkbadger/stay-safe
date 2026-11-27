@@ -143,24 +143,22 @@ your selected rules file is missing, its run contains a warning about the file.
 
 ### Show a setting in GitHub Code Scanning
 
-For GitHub alerts, run from the checkout of the commit you will upload. Select
-a committed config whose bytes match its Git index entry. This repository's
-synthetic sample defines `approval_policy` on line 2.
+Run from the checkout of the commit you will upload. Select a committed config
+and request repository locations. This repository's synthetic sample defines
+`approval_policy` on line 2.
 
 ```sh
-config=tests/runs_without_a_coding_agent/sample.toml
-git cat-file -e "HEAD:$config" &&
-  git diff --cached --quiet HEAD -- "$config" &&
-  python3 -m stay_safe --config "$config" --format sarif --sarif-repo-locations > stay-safe.sarif
+python3 -m stay_safe --config tests/runs_without_a_coding_agent/sample.toml \
+  --format sarif --sarif-repo-locations > stay-safe.sarif
 ```
 
-The two Git commands check that the path exists in the commit and that the
-staged file matches it. A new or modified file you have staged can receive
-locations locally. Commit it before uploading. stay-safe checks the bytes it
-actually inspects against the staged blob. Unstaged edits or checkout filters
-that change those bytes leave the finding's location private.
+The exporter checks the selected path in `HEAD` and the Git index, then checks
+the bytes it inspected against the Git blob at that path. A newly staged file,
+a staged edit, or an unstaged edit keeps its findings and logical IDs. Commit the
+file in the checkout to get verified lines. Unrelated staged changes do not
+affect an otherwise matching file.
 
-After the export step succeeds, pass the SARIF to GitHub's [`upload-sarif` action](https://github.com/github/codeql-action/tree/v4/upload-sarif)
+Pass the SARIF to GitHub's [`upload-sarif` action](https://github.com/github/codeql-action/tree/v4/upload-sarif)
 using `contents: read` and `security-events: write`. Use the same workflow and
 file path on repeat uploads. Review the relative filenames before sharing.
 
@@ -173,11 +171,18 @@ indexes, indexes with an omitted checksum (`index.skipHash`, also enabled by
 `GIT_DIR`, `GIT_WORK_TREE`, `GIT_COMMON_DIR` or `GIT_INDEX_FILE` overrides
 keep their paths private.
 
-If you request locations and a run has findings but none has a verified setting
-line, its SARIF invocation includes a `no-repository-locations` warning. It
-contains no filenames. A run with no findings has no location warning.
-The diagnostic exit status still reflects inspection gaps. The default SARIF
-export keeps input paths private.
+stay-safe reads local Git metadata directly, including loose objects and packs
+with version 2 indexes. If it cannot verify the commit or a required tree, the
+affected findings keep their logical IDs. This can happen on an unborn branch
+or when a required object exists only in a remote or alternate object store.
+
+Each opt-in run with missing locations includes a SARIF invocation warning.
+`partial-repository-locations` gives the missing count when some findings have
+verified lines. `no-repository-locations` covers a run where all are missing.
+Both list the affected rule IDs and logical entry IDs in
+`properties.unlocatedFindings`. A fully located run or a run with no findings
+has no location warning. The diagnostic exit status still reflects inspection gaps.
+The default SARIF export keeps input paths private.
 
 ## Save the report as a page: `--save`
 

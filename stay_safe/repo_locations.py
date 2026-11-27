@@ -9,18 +9,7 @@ import stat
 import tomllib
 from urllib.parse import quote_from_bytes
 
-from .codex import open_input
-
-
-def metadata(path, limit):
-    with os.fdopen(open_input(path), "rb") as stream:
-        info = os.fstat(stream.fileno())
-        if not stat.S_ISREG(info.st_mode) or info.st_size > limit:
-            raise ValueError
-        data = stream.read(limit + 1)
-        if len(data) > limit:
-            raise ValueError
-        return data
+from .git_objects import committed_files, metadata
 
 
 def tracked_files(index, wanted):
@@ -151,7 +140,8 @@ def selected_files(paths):
         return {}
     try:
         index = metadata(gitdir / "index", 64 * 1024 * 1024)
-        tracked = tracked_files(index, {name for name, _ in candidates.values()})
+        indexed = tracked_files(index, {name for name, _ in candidates.values()})
+        tracked = committed_files(gitdir, indexed)
     except (OSError, ValueError, IndexError):
         return {}
     return {path: SelectedFile(quote_from_bytes(name), info.st_dev, info.st_ino, tracked[name])
