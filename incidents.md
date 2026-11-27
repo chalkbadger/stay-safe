@@ -193,3 +193,9 @@ Real-world reports of coding agents doing destructive or risky things. Risk rule
 - What happened: a user asked Claude Code to review, validate and deploy a repository. They reported that it ran every file in the test directory without reading them first. One test worked on a live application's configuration folder in the home directory and pruned its backups. Four backup files were deleted with `rm -f`.
 - Enabling condition: a command the agent ran could delete files outside the repository. The report does not state the permission mode or whether the sandbox was on.
 - Source: [Claude Code issue #111921](https://github.com/anthropics/claude-code/issues/111921)
+
+## I35. Test cleanup deleted files across the Windows C: drive
+- Harness: Claude Code 2.1.332, auto mode, Windows 11.
+- What happened: the reporter said Claude Code bypassed the repository’s test runner and launched the shell tests directly. A helper used `"$T/c"` for a directory holding fake container state. With `T` empty, the reporter saw `/c` as the first deletion target in the running `rm.exe` command line. On that machine, `/c` mapped to the C: drive. The cleanup deleted files in the user’s profile and elsewhere on the drive.
+- Enabling condition: the helper continued with an empty temporary-directory variable, and the cleanup ran with the user’s filesystem permissions. The reporter has since changed the scripts to require the official runner, check that `mktemp` succeeded, and abort cleanup if `T` is empty.
+- Sources: [Original report](https://github.com/anthropics/claude-code/issues/112156) · [Reporter’s follow-up with the observed command line](https://github.com/anthropics/claude-code/issues/112156#issuecomment-7192159450)
