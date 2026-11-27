@@ -1373,7 +1373,7 @@ def plain(report, files=None):
     return "\n".join(lines) + "\n"
 
 
-def sarif_run(report):
+def sarif_run(report, repo_locations=False):
     rules, results = {}, []
     for risk in report["risks"]:
         rule = risk["rule"]
@@ -1393,16 +1393,24 @@ def sarif_run(report):
         results.append({"ruleId": rule, "level": "warning", "message": {"text": risk["explanation"]},
                         "locations": [location]})
     notifications = [{"level": "warning", "message": {"text": gap}} for gap in report["inspection_gaps"]]
+    driver = {"name": "stay-safe", "rules": list(rules.values())}
+    if repo_locations and results and not any("physicalLocation" in r["locations"][0] for r in results):
+        descriptor = {"id": "no-repository-locations"}
+        driver["notifications"] = [descriptor]
+        notifications.append({"level": "warning", "descriptor": descriptor,
+                              "message": {"text": "No finding in this run has a verified repository file and line. "
+                                                  "Select a tracked file with --config and check that its contents match "
+                                                  "the Git index and the setting has an explicit line."}})
     return {
-        "tool": {"driver": {"name": "stay-safe", "rules": list(rules.values())}},
+        "tool": {"driver": driver},
         "automationDetails": {"id": report["harness"]},
-        "invocations": [{"executionSuccessful": not notifications, "toolExecutionNotifications": notifications}],
+        "invocations": [{"executionSuccessful": not report["inspection_gaps"], "toolExecutionNotifications": notifications}],
         "results": results,
     }
 
 
-def sarif(reports):
-    return json.dumps({"version": "2.1.0", "runs": [sarif_run(report) for report in reports]}, indent=2) + "\n"
+def sarif(reports, repo_locations=False):
+    return json.dumps({"version": "2.1.0", "runs": [sarif_run(report, repo_locations) for report in reports]}, indent=2) + "\n"
 
 
 def public(report):
@@ -1421,11 +1429,11 @@ def render(report, format_name="markdown", files=None):
     return markdown(report, files)
 
 
-def render_all(runs, format_name="markdown"):
+def render_all(runs, format_name="markdown", *, repo_locations=False):
+    if format_name == "sarif":
+        return sarif((report for report, _ in runs), repo_locations)
     if len(runs) == 1:
         return render(runs[0][0], format_name, runs[0][1])
-    if format_name == "sarif":
-        return sarif(report for report, _ in runs)
     if format_name == "json":
         return json.dumps({"reports": [public(report) for report, _ in runs]}, ensure_ascii=True, indent=2) + "\n"
     if format_name == "html":

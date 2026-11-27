@@ -124,6 +124,17 @@ class SarifTests(ConfigCase):
         self.assertEqual(location["physicalLocation"], {"artifactLocation": {"uri": "sample.toml"},
                                                       "region": {"startLine": 1}})
 
+        path.write_text("\n" + path.read_text())
+        fallback = run_checkout(self.checkout, "--config", path.name, "--format", "sarif", "--sarif-repo-locations",
+                                cwd=project)
+        self.assertEqual((fallback.returncode, fallback.stderr), (0, ""))
+        document = json.loads(fallback.stdout)
+        self.validate(document)
+        invocation, = document["runs"][0]["invocations"]
+        warning, = invocation["toolExecutionNotifications"]
+        self.assertTrue(invocation["executionSuccessful"])
+        self.assertEqual(warning["descriptor"]["id"], "no-repository-locations")
+
     def test_save_rejects_sarif_before_writing_any_report(self):
         result = run_checkout(self.checkout, "--save", "--format", "sarif", cwd=self.root)
         self.assertEqual((result.returncode, result.stdout), (2, ""))

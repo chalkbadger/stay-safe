@@ -26,18 +26,19 @@ def metadata(path, limit):
 def tracked_files(index, wanted):
     version = int.from_bytes(index[4:8], "big")
     if index[:4] != b"DIRC" or version not in (2, 3, 4):
-        return set()
+        return {}
     for digest in (hashlib.sha1, hashlib.sha256):
         width = digest().digest_size
         if digest(memoryview(index)[:-width]).digest() == index[-width:]:
             break
     else:
-        return set()
+        return {}
     end = len(index) - width
-    pos, previous, tracked = 12, b"", set()
+    pos, previous, tracked = 12, b"", {}
     for _ in range(int.from_bytes(index[8:12], "big")):
         start = pos
         mode = int.from_bytes(index[pos + 24:pos + 28], "big")
+        blob_id = index[pos + 40:pos + 40 + width]
         pos += 40 + width
         flags = int.from_bytes(index[pos:pos + 2], "big")
         pos += 2
@@ -59,19 +60,22 @@ def tracked_files(index, wanted):
             prefix = previous[:len(previous) - remove]
         nul = index.index(0, pos, end)
         if len(prefix) + nul - pos > 4096:
-            return set()
+            return {}
         previous = prefix + index[pos:nul]
         pos = nul + 1
         if version < 4:
             pos += (start - pos) % 8
         if previous in wanted and mode in (0o100644, 0o100755) and not flags & 0x3000 and not extended & 0x2000:
-            tracked.add(previous)
+            tracked[previous] = blob_id
     while pos < end:
         extension = index[pos:pos + 4]
-        if len(extension) != 4 or not 65 <= extension[0] <= 90 or pos + 8 > end:
-            return set()
-        pos += 8 + int.from_bytes(index[pos + 4:pos + 8], "big")
-    return tracked if pos == end else set()
+        if pos + 8 > end:
+            return {}
+        size = int.from_bytes(index[pos + 4:pos + 8], "big")
+        if not 65 <= extension[0] <= 90 and (extension != b"sdir" or size != 0):
+            return {}
+        pos += 8 + size
+    return tracked if pos == end else {}
 
 
 @dataclass
@@ -79,16 +83,37 @@ class SelectedFile:
     uri: str
     device: int
     inode: int
+    blob_id: bytes
     lines: dict = field(default_factory=dict)
 
     def capture(self, info, content, harness):
         self.lines = {}
-        if (info.st_dev, info.st_ino) == (self.device, self.inode):
+        if (info.st_dev, info.st_ino) != (self.device, self.inode):
+            return
+        digest = hashlib.sha1() if len(self.blob_id) == 20 else hashlib.sha256()
+        digest.update(f"blob {len(content)}\0".encode("ascii"))
+        digest.update(content)
+        if digest.digest() == self.blob_id:
             self.lines = setting_lines(content, harness)
 
 
+def checkout_path(root, candidate):
+    current = root
+    for part in candidate.relative_to(root).parts:
+        if part == "..":
+            if current == root:
+                return None
+            current = current.parent
+        else:
+            current = current / part
+            if stat.S_ISLNK(current.stat(follow_symlinks=False).st_mode):
+                return None
+    return current
+
+
 def selected_files(paths):
-    if not paths:
+    overrides = ("GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE", "GIT_COMMON_DIR")
+    if not paths or any(key in os.environ for key in overrides):
         return {}
     try:
         cwd = Path(".").resolve(strict=True)
@@ -113,11 +138,10 @@ def selected_files(paths):
     candidates = {}
     for path in paths:
         try:
-            candidate = cwd / path
-            relative = candidate.relative_to(root)
-            if ".." in relative.parts or candidate.resolve(strict=True) != candidate:
+            candidate = checkout_path(root, cwd / path)
+            if candidate is None or candidate.resolve(strict=True) != candidate:
                 continue
-            name = os.fsencode(relative)
+            name = os.fsencode(candidate.relative_to(root))
             info = candidate.stat(follow_symlinks=False)
             if stat.S_ISREG(info.st_mode):
                 candidates[path] = (name, info)
@@ -130,7 +154,8 @@ def selected_files(paths):
         tracked = tracked_files(index, {name for name, _ in candidates.values()})
     except (OSError, ValueError, IndexError):
         return {}
-    return {path: SelectedFile(quote_from_bytes(name), info.st_dev, info.st_ino) for path, (name, info) in candidates.items() if name in tracked}
+    return {path: SelectedFile(quote_from_bytes(name), info.st_dev, info.st_ino, tracked[name])
+            for path, (name, info) in candidates.items() if name in tracked}
 
 
 KEY = r"""(?:[A-Za-z0-9_-]+|'[^'\n]*'|"(?:\\.|[^"\\\n])*")"""
