@@ -181,14 +181,19 @@ WORDS = {"default": "`default` (asks before most actions)", "manual": "`manual` 
          "addresses withheld": "some addresses (left out)"}
 
 
-def inspect(paths, *, discovered=False, gaps=(), scopes=()):
+def inspect(paths, *, discovered=False, gaps=(), scopes=(), repo_files=None):
     entries, gaps, sources_read = [], list(gaps), []
     scopes = list(scopes) + [None] * (len(paths) - len(scopes))
     hashes = fingerprints()
     provenance = identify(hashes=hashes)
+    repo_locations = {}
     for index, path in enumerate(paths, 1):
-        found, missing = read_file(path, f"settings-{index}", discovered=discovered, sources_read=sources_read,
-                                   scope=scopes[index - 1])
+        source = f"settings-{index}"
+        selected = (repo_files or {}).get(path)
+        found, missing = read_file(path, source, discovered=discovered, sources_read=sources_read,
+                                   scope=scopes[index - 1], location=selected)
+        if selected and selected.lines:
+            repo_locations[source] = (selected.uri, selected.lines)
         entries.extend(found)
         gaps.extend(missing)
     gaps.extend(resolve(entries, discovered))
@@ -214,7 +219,8 @@ def inspect(paths, *, discovered=False, gaps=(), scopes=()):
     gaps.extend(f"Incomplete fingerprint: {name} could not be read." for name, value in hashes.items() if value is None)
     if revision is None:
         gaps.append(GAP)
-    return {"format_version": 3, "harness": HARNESS, "provenance": provenance, "scope": list(SCOPE),
+    return {**({"_repo_locations": repo_locations} if repo_locations else {}),
+            "format_version": 3, "harness": HARNESS, "provenance": provenance, "scope": list(SCOPE),
             "file_inspection": "incomplete" if gaps else "complete for supported fields", "sources_read": sources_read,
             "catalog": [{k: v for k, v in entry.items() if k != "facts"} for entry in entries],
             "_hooks": {entry["id"]: {key: entry["facts"][key] for key in ("handlers", "allowlist", "project")}

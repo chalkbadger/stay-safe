@@ -9,6 +9,7 @@ from .codex import (APP_TOOL_REVIEWER_GAP, APPROVALS, EMPTY_PROFILES, ENV_GAP, E
                     LEGACY_PROFILE_TABLES, PROFILE_LOADER_VERSION, ROOT_HOME_UNKNOWN, ROOTS_NO_WORKSPACE, ROOTS_SCOPE,
                     WORKSPACE_HOME, WORKSPACE_HOME_UNKNOWN, WORKSPACE_UNKNOWN, read_file)
 from .codex_rules import UNCHECKED_RULE_LINES, other_files, read_file as read_rules
+from .repo_locations import setting_line
 from .rules import SANDBOX_OFF_EXPLANATION, evaluate
 from .provenance import GAP, REPOSITORY, fingerprints, identify, source_link, resource
 
@@ -43,12 +44,17 @@ SCOPE = [
 ]
 
 
-def inspect(paths, *, rules_path=None, discovered=False, gaps=(), workspace=None):
+def inspect(paths, *, rules_path=None, discovered=False, gaps=(), workspace=None, repo_files=None):
     entries, gaps = [], list(gaps)
     hashes = fingerprints()
     provenance = identify(hashes=hashes)
+    repo_locations = {}
     for index, path in enumerate(paths, 1):
-        found, missing = read_file(path, f"config-{index}", discovered=discovered, workspace=workspace)
+        source = f"config-{index}"
+        selected = (repo_files or {}).get(path)
+        found, missing = read_file(path, source, discovered=discovered, workspace=workspace, location=selected)
+        if selected and selected.lines:
+            repo_locations[source] = (selected.uri, selected.lines)
         entries.extend(found)
         gaps.extend(missing)
     if rules_path is not None:
@@ -78,7 +84,8 @@ def inspect(paths, *, rules_path=None, discovered=False, gaps=(), workspace=None
     gaps.extend(f"Incomplete fingerprint: {name} could not be read." for name, value in hashes.items() if value is None)
     if revision is None:
         gaps.append(GAP)
-    return {"format_version": 3, "harness": "Codex", "provenance": provenance,
+    return {**({"_repo_locations": repo_locations} if repo_locations else {}),
+            "format_version": 3, "harness": "Codex", "provenance": provenance,
             "scope": list(SCOPE),
             "file_inspection": "incomplete" if gaps else "complete for supported fields",
             "catalog": [{k: v for k, v in entry.items() if k != "facts"} for entry in entries],
@@ -1366,8 +1373,8 @@ def plain(report, files=None):
     return "\n".join(lines) + "\n"
 
 
-def sarif_run(report):
-    rules, results = {}, []
+def sarif_run(report, repo_locations=False):
+    rules, results, unlocated = {}, [], []
     for risk in report["risks"]:
         rule = risk["rule"]
         if rule not in rules:
@@ -1376,19 +1383,43 @@ def sarif_run(report):
             if url:
                 descriptor["helpUri"] = url
             rules[rule] = descriptor
+        location = {"logicalLocations": [{"fullyQualifiedName": risk["entry"]}]}
+        source, name = risk["entry"].split(":", 1)
+        if source in report.get("_repo_locations", {}):
+            uri, lines = report["_repo_locations"][source]
+            line = setting_line(risk, tuple(parts(name)), lines, report)
+            if line is not None:
+                location["physicalLocation"] = {"artifactLocation": {"uri": uri}, "region": {"startLine": line}}
+        if repo_locations and "physicalLocation" not in location:
+            unlocated.append({"ruleId": rule, "logicalId": risk["entry"]})
         results.append({"ruleId": rule, "level": "warning", "message": {"text": risk["explanation"]},
-                        "locations": [{"logicalLocations": [{"fullyQualifiedName": risk["entry"]}]}]})
+                        "locations": [location]})
     notifications = [{"level": "warning", "message": {"text": gap}} for gap in report["inspection_gaps"]]
+    driver = {"name": "stay-safe", "rules": list(rules.values())}
+    if unlocated:
+        if len(unlocated) == len(results):
+            descriptor = {"id": "no-repository-locations"}
+            message = "No finding in this run has a verified repository file and line."
+        else:
+            descriptor = {"id": "partial-repository-locations"}
+            count = len(unlocated)
+            message = (f"{count} of {len(results)} findings "
+                       f"{'has' if count == 1 else 'have'} no verified repository file and line.")
+        driver["notifications"] = [descriptor]
+        notifications.append({"level": "warning", "descriptor": descriptor,
+                              "properties": {"unlocatedFindings": unlocated},
+                              "message": {"text": message + " Select a committed file with --config and check that "
+                                                  "its contents match HEAD and the setting has an explicit line."}})
     return {
-        "tool": {"driver": {"name": "stay-safe", "rules": list(rules.values())}},
+        "tool": {"driver": driver},
         "automationDetails": {"id": report["harness"]},
-        "invocations": [{"executionSuccessful": not notifications, "toolExecutionNotifications": notifications}],
+        "invocations": [{"executionSuccessful": not report["inspection_gaps"], "toolExecutionNotifications": notifications}],
         "results": results,
     }
 
 
-def sarif(reports):
-    return json.dumps({"version": "2.1.0", "runs": [sarif_run(report) for report in reports]}, indent=2) + "\n"
+def sarif(reports, repo_locations=False):
+    return json.dumps({"version": "2.1.0", "runs": [sarif_run(report, repo_locations) for report in reports]}, indent=2) + "\n"
 
 
 def public(report):
@@ -1407,11 +1438,11 @@ def render(report, format_name="markdown", files=None):
     return markdown(report, files)
 
 
-def render_all(runs, format_name="markdown"):
+def render_all(runs, format_name="markdown", *, repo_locations=False):
+    if format_name == "sarif":
+        return sarif((report for report, _ in runs), repo_locations)
     if len(runs) == 1:
         return render(runs[0][0], format_name, runs[0][1])
-    if format_name == "sarif":
-        return sarif(report for report, _ in runs)
     if format_name == "json":
         return json.dumps({"reports": [public(report) for report, _ in runs]}, ensure_ascii=True, indent=2) + "\n"
     if format_name == "html":

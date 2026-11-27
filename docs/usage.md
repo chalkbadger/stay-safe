@@ -141,6 +141,49 @@ A complete inspection with no findings produces no results or warnings and exits
 An incomplete inspection still writes the document and exits 2. For example, if
 your selected rules file is missing, its run contains a warning about the file.
 
+### Show a setting in GitHub Code Scanning
+
+Run from the checkout of the commit you will upload. Select a committed config
+and request repository locations. This repository's synthetic sample defines
+`approval_policy` on line 2.
+
+```sh
+python3 -m stay_safe --config tests/runs_without_a_coding_agent/sample.toml \
+  --format sarif --sarif-repo-locations > stay-safe.sarif
+```
+
+The exporter checks the selected path in `HEAD` and the Git index, then checks
+the bytes it inspected against the Git blob at that path. A newly staged file,
+a staged edit, or an unstaged edit keeps its findings and logical IDs. Commit the
+file in the checkout to get verified lines. Unrelated staged changes do not
+affect an otherwise matching file.
+
+Pass the SARIF to GitHub's [`upload-sarif` action](https://github.com/github/codeql-action/tree/v4/upload-sarif)
+using `contents: read` and `security-events: write`. Use the same workflow and
+file path on repeat uploads. Review the relative filenames before sharing.
+
+Automatic discovery, `--rules`, untracked files, symlink paths and paths outside
+the checkout keep their logical IDs. A relative path can use `..` within the
+checkout. Sparse checkouts can supply locations for individual regular files
+present in the index. Directories represented only by a tree entry, split
+indexes, indexes with an omitted checksum (`index.skipHash`, also enabled by
+`feature.manyFiles`), and explicit
+`GIT_DIR`, `GIT_WORK_TREE`, `GIT_COMMON_DIR` or `GIT_INDEX_FILE` overrides
+keep their paths private.
+
+stay-safe reads local Git metadata directly, including loose objects and packs
+with version 2 indexes. If it cannot verify the commit or a required tree, the
+affected findings keep their logical IDs. This can happen on an unborn branch
+or when a required object exists only in a remote or alternate object store.
+
+Each opt-in run with missing locations includes a SARIF invocation warning.
+`partial-repository-locations` gives the missing count when some findings have
+verified lines. `no-repository-locations` covers a run where all are missing.
+Both list the affected rule IDs and logical entry IDs in
+`properties.unlocatedFindings`. A fully located run or a run with no findings
+has no location warning. The diagnostic exit status still reflects inspection gaps.
+The default SARIF export keeps input paths private.
+
 ## Save the report as a page: `--save`
 
 `--save` also writes the report as a self-contained page, `stay-safe-report.html`, in
