@@ -5,6 +5,7 @@ from pathlib import Path
 from posixpath import normpath
 import re
 import stat
+import sys
 import tomllib
 import unicodedata
 
@@ -28,8 +29,9 @@ INVALID_APPROVAL = "Codex cannot load this configuration file because {label} is
 INVALID_BOOLEAN = "Codex cannot load this configuration file because {label} is not a boolean."
 INLINE_MCP_VALUES = "{label} contains inline values. Check the entries for credentials."
 INVALID_MCP_MAP = "Codex cannot load this configuration because {label} must be a table of strings."
+MCP_HTTP_AUTH_FIELDS = ("http_headers", "env_http_headers", "bearer_token_env_var", "oauth", "oauth_resource", "auth")
 MCP_OTHER_TRANSPORT = {
-    "env": {"http_headers", "http_headers_helper", "env_http_headers", "bearer_token_env_var", "oauth", "oauth_resource", "auth", "bearer_token"},
+    "env": {"http_headers_helper", *MCP_HTTP_AUTH_FIELDS, "bearer_token"},
     "http_headers": {"args", "env", "env_vars", "cwd", "bearer_token"},
 }
 SANDBOXES = {"read-only", "workspace-write", "danger-full-access"}
@@ -53,6 +55,17 @@ PREFERENCES = {"model", "review_model", "model_reasoning_effort", "model_reasoni
                "model_verbosity", "service_tier", "personality", "tui", "notice", "history",
                "check_for_update_on_startup", "disable_paste_burst", "hide_agent_reasoning",
                "show_raw_agent_reasoning", "suppress_unstable_features_warning"}
+
+
+def codex_home_override():
+    value = os.environ.get("CODEX_HOME", "")
+    try:
+        if sys.platform == "win32":
+            return value.encode("utf-16-le", "surrogatepass").decode("utf-16-le")
+        value.encode(sys.getfilesystemencoding(), "surrogateescape").decode("utf-8")
+    except UnicodeError:
+        return ""
+    return value
 
 
 def config_name(parts):
@@ -119,8 +132,7 @@ def unresolved_home_alias(target, home):
             unicodedata.normalize("NFD", target[1].casefold()) == unicodedata.normalize("NFD", home[1].casefold()))
 
 
-ENV_UNCHECKED = "final environment not checked"
-ENV_GAP = ("Additional shell_environment_policy fields were not evaluated. Stay-safe could not determine "
+ENV_GAP = ("stay-safe doesn't read the other fields under [shell_environment_policy], so it can't tell "
            "which variables commands receive.")
 
 
@@ -202,7 +214,7 @@ class Reader:
             return
         if target not in normalized:
             return
-        home = os.environ.get("CODEX_HOME")
+        home = codex_home_override()
         if not home and os.environ.get("HOME"):
             home = Path(os.environ["HOME"]) / ".codex"
         home = Path(home).absolute() if home else None
@@ -270,9 +282,9 @@ class Reader:
         observations = [f"{key}: {value} ({'explicit' if key in policy else 'default'})"
                         for key, value in (("inherit", inherit), ("ignore_default_excludes", str(ignore).lower()))]
         if unchecked:
-            observations.append(ENV_UNCHECKED)
+            observations.append("final environment not checked")
         self.add([label], "permission", observations,
-                 {"environment_inheritance": inherit == "all"})
+                 {"environment_inheritance": inherit == "all", "unchecked_environment_fields": unchecked})
 
     def tool_approval(self, mode, applies, label, report_invalid=True):
         default = mode is None
@@ -327,8 +339,8 @@ class Reader:
 
     def mcp(self, data):
         servers = self.table(data.get("mcp_servers", {}), "mcp_servers")
-        known = {"command", "args", "env", "env_vars", "cwd", "url", "http_headers", "env_http_headers",
-                 "bearer_token_env_var", "oauth", "oauth_resource", "auth", "scopes", "name", "enabled",
+        known = {"command", "args", "env", "env_vars", "cwd", "url", "bearer_token", *MCP_HTTP_AUTH_FIELDS,
+                 "scopes", "name", "enabled",
                  "enabled_tools", "disabled_tools", "startup_timeout_sec", "startup_timeout_ms", "tool_timeout_sec",
                  "required", "startup_readiness", "default_tools_approval_mode", "tools", "http_headers_helper",
                  "environment_id", "supports_parallel_tool_calls", "tool_input_schema_max_bytes", "omit_tools_from"}
@@ -345,10 +357,14 @@ class Reader:
             field = "env" if stdio else "http_headers"
             values = server.get(field, {})
             valid = (stdio and bool(command.strip())) or http
-            if stdio and helper is not None:
+            rejected = [key for key in ("http_headers_helper", *MCP_HTTP_AUTH_FIELDS) if key in server] if stdio else []
+            for key in rejected:
+                self.gap(f"Codex cannot load this configuration because stdio MCP server {name} sets {key}.")
+            if "bearer_token" in server:
+                self.gap(f"Codex cannot load this configuration because MCP server {name} sets bearer_token.")
+            if (stdio or http) and (rejected or "bearer_token" in server):
                 valid = False
-                obs.append("Codex rejects this stdio configuration")
-                self.gap(f"Codex cannot load this configuration because stdio MCP server {name} sets http_headers_helper.")
+                obs.append("Codex rejects this stdio configuration" if stdio else "Codex rejects this HTTP configuration")
             elif valid and not (isinstance(values, dict) and all(isinstance(v, str) for v in values.values())):
                 valid = False
                 obs.append("Codex rejects this configuration")
@@ -437,7 +453,7 @@ class Reader:
             if destructive is not None and enabled is True and not template:
                 obs.append(f"destructive tools {'enabled' if destructive else 'disabled'} by {source}")
                 facts["destructive_tools"] = destructive
-            if "links" in app:
+            if "links" in app and (app["links"] != {} or template or enabled is not True):
                 self.gap("Per-account app policy is not evaluated; account identifiers were withheld.")
             if app.get("approvals_reviewer") in AUTO_REVIEW_VALUES:
                 self.gap("App approvals_reviewer is not evaluated; Codex may let a reviewer decide an app's tool calls instead of asking you.")

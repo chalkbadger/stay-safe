@@ -5,6 +5,7 @@ import stat
 import sys
 
 from . import claude_report
+from .codex import codex_home_override
 from .report import inspect, render_all
 from .save import NAME, save
 from .provenance import INSTALLED
@@ -35,7 +36,7 @@ class Parser(argparse.ArgumentParser):
 
 
 def codex_home():
-    value = os.environ.get("CODEX_HOME", "")
+    value = codex_home_override()
     if value:
         try:
             if Path(value).is_dir():
@@ -220,7 +221,7 @@ def discover_runs(args, agents):
     else:
         include_claude = status != "missing" or configured or project != (None, None)
         include_codex = True
-        if (status == "directory" or project[0] is not None) and not os.environ.get("CODEX_HOME"):
+        if (status == "directory" or project[0] is not None) and not codex_home_override():
             codex, _ = codex_home()
             include_codex = codex is not None and directory_status(codex) != "missing"
     runs = [codex_run(args)] if include_codex else []
@@ -303,7 +304,8 @@ def codex_run(args):
         else:
             paths = [home / "config.toml"]
             rules = home / "rules" / "default.rules"
-            base = "$CODEX_HOME" if os.environ.get("CODEX_HOME", "") else "~/.codex"
+
+            base = "$CODEX_HOME" if codex_home_override() else "~/.codex"
             files = {"config-1": f"{base}/config.toml", "rules-1": f"{base}/rules/default.rules"}
             if hooks_json(home):
                 gaps.append("Codex home: hooks.json exists and was not inspected.")

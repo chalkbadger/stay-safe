@@ -7,6 +7,7 @@ from .codex import MAX_BYTES, Reader, exclude_account_files, open_input
 
 
 RECORD = re.compile(r'prefix_rule\(pattern=(\[.*\]), decision="allow"\)')
+UNCHECKED_RULE_LINES = 'Rules contain lines that are not inspected.'
 PROGRAMS = ('git', 'gh', 'npm', 'npx', 'pnpm', 'yarn', 'node', 'python', 'python3', 'pip', 'pip3', 'uv', 'cargo',
             'go', 'make', 'docker', 'kubectl', 'curl', 'wget', 'ssh', 'bash', 'sh', 'rm', 'mv', 'cp', 'chmod')
 
@@ -53,7 +54,7 @@ def read_file(path, source, *, discovered=False):
             continue
         pattern = declaration(line)
         if pattern is None:
-            reader.gap('Rules contain lines that are not inspected.')
+            reader.gap(UNCHECKED_RULE_LINES)
             continue
         observations = [f'program: {name}' for name in PROGRAMS if name == pattern[0]] + [f'tokens: {len(pattern)}']
         if len(pattern) == 1:
@@ -63,13 +64,23 @@ def read_file(path, source, *, discovered=False):
 
 
 def other_files(path, source):
+    directory = path.parents[0]
     try:
-        names = os.listdir(path.parents[0])
+        names = os.listdir(directory)
     except FileNotFoundError:
         return []
     except OSError:
         return [f'{source}: The rules directory cannot be listed; '
                 'other rules files may exist and were not inspected.']
-    if any(name.endswith('.rules') and name != 'default.rules' for name in names):
-        return [f'{source}: Other rules files exist and were not inspected.']
-    return []
+    gaps = set()
+    for name in names:
+        if name in ('.rules', 'default.rules') or not name.endswith('.rules'):
+            continue
+        try:
+            mode = (directory / name).stat(follow_symlinks=False).st_mode
+        except OSError:
+            gaps.add(f'{source}: A rules entry could not be checked to determine whether it is a file.')
+        else:
+            if stat.S_ISREG(mode):
+                gaps.add(f'{source}: Other rules files exist and were not inspected.')
+    return sorted(gaps)

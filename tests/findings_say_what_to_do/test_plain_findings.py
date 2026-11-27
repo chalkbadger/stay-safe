@@ -106,11 +106,53 @@ ALL_RULES = {"saved_approval", "commands_without_prompts", "unrestricted_filesys
 
 
 class PlainFindingTests(ConfigCase):
-    def run_cli(self, *args):
-        run = subprocess.run([sys.executable, "-B", "-m", "stay_safe", *args], cwd=ROOT, env={},
+    def run_cli(self, *args, env=None):
+        run = subprocess.run([sys.executable, "-B", "-m", "stay_safe", *args], cwd=ROOT, env=env or {},
                              text=True, capture_output=True, timeout=10)
         self.assertEqual(run.stderr, INCOMPLETE if run.returncode == 2 else "")
         return run
+
+    def test_unchecked_rules_put_the_startup_check_beside_each_saved_approval(self):
+        for unchecked in ('prefix_rule(', 'prefix_rule(pattern=["demo"], decision="prompt")'):
+            with self.subTest(unchecked=unchecked):
+                rules = self.config(RULES + unchecked + '\n' +
+                                    'prefix_rule(pattern=["private-program"], decision="allow")\n')
+                run = self.run_cli("--rules", str(rules), "--format", "markdown")
+                self.assertEqual(run.returncode, 2)
+                first, third = finding_items(run.stdout)
+                for item, line, description in ((first, 1, " for a `git` command"), (third, 3, "")):
+                    self.assertTrue(item.startswith(f"**The approval on line {line} may not apply.** "
+                                                    f"Stay-safe found a saved approval{description}, but couldn't "
+                                                    "check every rule in this file."), item)
+                    self.assertIn("*What to check:* Look for a rules error when you start Codex. "
+                                  "If you see one, Codex didn't use any of your saved approvals.", item)
+                self.assertIn("rules that ask first or forbid a command", section(run.stdout, "Not checked"))
+                for private in ("private-program", "seed-rule-word"):
+                    self.assertNotIn(private, run.stdout)
+
+    def test_startup_check_needs_both_an_approval_and_unchecked_lines_in_its_file(self):
+        (self.root / "rules").mkdir()
+        rules = self.config(RULES, "rules/default.rules")
+        settings = 'approval_policy="on-request"\nsandbox_mode="read-only"\n'
+        for config, status in ((self.config(settings), 0),
+                               (self.config(settings + 'unknown_option=true\n', "extra.toml"), 2)):
+            with self.subTest(config=config.name):
+                run = self.run_cli("--config", str(config), "--rules", str(rules))
+                self.assertEqual(run.returncode, status)
+                self.assertIn(EXPECTED["saved_approval", "rules-1:prefix_rule.1"], run.stdout)
+                self.assertNotIn("Look for a rules error", run.stdout)
+        self.config("# another file\n", "rules/other.rules")
+        discovered = self.run_cli("--format", "markdown", env={"CODEX_HOME": str(self.root)})
+        self.assertEqual(discovered.returncode, 2)
+        self.assertIn("other rules files", section(discovered.stdout, "Not checked"))
+        self.assertIn(EXPECTED["saved_approval", "rules-1:prefix_rule.1"], discovered.stdout)
+        self.assertNotIn("Look for a rules error", discovered.stdout)
+        rules.write_text("prefix_rule(\n")
+        run = self.run_cli("--rules", str(rules))
+        self.assertEqual(run.returncode, 2)
+        self.assertIn("some lines in your rules file", section(run.stdout, "Not checked"))
+        self.assertNotIn("### Finding ", run.stdout)
+        self.assertNotIn("Look for a rules error", run.stdout)
 
     def test_each_finding_leads_with_its_meaning_then_incidents_next_step_and_trace_and_sources_close_the_report(self):
         args = ["--config", str(self.config(FIRST, "first.toml")), "--config", str(self.config(SECOND, "second.toml")),

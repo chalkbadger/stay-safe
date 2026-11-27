@@ -9,7 +9,15 @@ Tests: [tests/see_every_connection_and_setting/](../tests/see_every_connection_a
 - I inspect several files and each keeps its own settings and identities. `test_config.py::test_files_remain_independent_and_identity_preserves_dotted_name`
 - I follow the saved scanner example and see the flagged server and its default approval for the configuration I selected. `test_saved_scan_example.py::test_published_example_pairs_the_flag_with_the_selected_snapshot`
 - I have no default config file and see the assessed defaults and remaining gaps. `test_defaults.py::test_both_formats_report_cited_defaults_and_retained_gaps`
+- On Unix, an invalid UTF-8 `CODEX_HOME` gives me findings from the files labeled `~/.codex`. `test_home.py::test_non_unicode_override_reads_and_labels_the_default_codex_files`
+- A valid UTF-8 override selects the original Unix directory even when Python uses an ASCII filesystem codec. `test_home.py::test_valid_utf8_override_keeps_its_original_filesystem_path`
+- Given Windows environment strings, the home lookup selects the default for an unpaired surrogate and the named directory for a valid pair. `test_home.py::test_windows_home_lookup_accepts_paired_surrogates_and_ignores_unpaired_ones`
+- With only a Claude Code home, an invalid UTF-8 `CODEX_HOME` leaves the default report on Claude Code. `test_home.py::test_non_unicode_override_does_not_select_codex_in_a_claude_only_home`
 - I inspect saved approvals and see each supported record identified separately. `test_saved_rules.py::test_saved_lines_keep_line_numbers_part_counts_and_broad_labels`
+- I see my saved approval and get the extra-file warning for a sibling rules file, while a sibling directory with the same name adds no warning. `test_other_rules_files.py::test_rules_named_directory_adds_no_gap_and_the_saved_approval_stays_visible`
+- I see my saved approval beside a file named `.rules` and get the extra-file warning when I rename it to `team.rules`. `test_other_rules_files.py::test_only_a_rules_extension_adds_a_gap`
+- Links and pipes beside my saved approval leave its report unchanged. `test_other_rules_files.py::test_symlinks_and_pipes_add_no_rules_gap_and_preserve_the_approval`
+- I see that a rules entry could not be checked and can still review my saved approval. `test_other_rules_files.py::test_an_uninspectable_sibling_reports_an_incomplete_check_and_preserves_the_approval`
 - I omit the workspace while allowing commands to write to extra folders and see the missing workspace under "Not checked" with the folder paths withheld. `test_unlisted_settings.py::test_active_writable_roots_give_a_gap_and_no_entry_or_risk`
 - I see on the ChatGPT Apps connection whether apps my file doesn't name are off and where their `destructive_enabled` comes from. `test_chatgpt_apps.py::test_chatgpt_apps_connection_says_whether_apps_not_named_can_change_data`
 - My Codex folder has skills in `skills` and an `environments.toml` file, and I see each under "Not checked" without their contents. `test_skills_and_environments.py::test_skills_and_environments_toml_each_give_their_own_gap`
@@ -74,6 +82,7 @@ Tests: [tests/understand_inspection_limits/](../tests/understand_inspection_limi
 
 - I pass a cleared file to `--rules` and the introduction names it and confirms it contains no saved approvals. `test_scope.py::test_selected_rules_file_is_named_when_it_has_no_saved_approvals`
 - I follow the report's scope link and see its limits on live connections, effective permissions and other unverified behavior. `test_scope.py::test_the_full_scope_holds_every_scope_line`
+- When I review an enabled named App, I see the same tool findings whether its account map is absent or empty. When the map is populated or malformed, I see an inspection gap that withholds account identifiers. `test_account_links.py::test_only_an_empty_account_map_clears_the_account_gap`
 - I supply an unreadable file beside a readable one and see the failure without losing valid findings. `test_selected_config_failures.py::test_each_failure_has_a_distinct_private_safe_reason_and_action_in_both_formats`
 - I get an incomplete report and an explanation of exit status 2. `test_status.py::test_reports_with_gaps_explain_exit_two_on_stderr_only`
 - The report warns me about the server's configured command whether I set values in `env` or list variable names in `env_vars`. It asks me to check for credentials only when I write the values directly in `env`. `test_inline_mcp.py::test_inline_env_and_reference_control_keep_the_program_finding`
@@ -82,6 +91,9 @@ Tests: [tests/understand_inspection_limits/](../tests/understand_inspection_limi
 - If one MCP server has an invalid tool setting, the report explains the error and asks me to check only the other server's inline environment variables for credentials. `test_inline_mcp.py::test_rejected_tool_settings_keep_their_diagnostic_without_credentials_advice`
 - If `env` or `http_headers` has the wrong type, the report names the setting and tells me Codex expects a table of strings. It also warns me about the command configured for the other server. `test_inline_mcp.py::test_rejected_inline_maps_keep_the_other_servers_finding`
 - I give a stdio server an HTTP header helper and see why Codex rejects the setting and how to fix it. `test_status.py::test_stdio_header_helper_names_the_rejected_setting`
+- I see which server's static HTTP headers prevent Codex from loading its configuration. `test_status.py::test_static_http_headers_require_an_http_server`
+- I see which HTTP authentication setting prevents a stdio MCP server from loading. `test_status.py::test_stdio_rejects_http_authentication_settings_by_presence`
+- I see why Codex rejects a literal bearer token on either MCP transport. `test_status.py::test_literal_mcp_bearer_token_is_rejected_on_both_transports`
 - I see which AWS credential commands were left unchecked even when the provider is selected elsewhere. `test_status.py::test_aws_credentials_name_each_unchecked_command`
 - When I set a gateway credential command or a telemetry header helper, I see each one under "Not checked". `test_status.py::test_gateway_and_otel_helpers_name_unchecked_commands`
 - I choose an AI reviewer for an App tool, and "Not checked" names the setting and explains that a policy can require a different reviewer. `test_status.py::test_app_tool_ai_reviewer_is_named_and_explains_policy_limits`
@@ -112,7 +124,7 @@ Tests: [tests/check_workspace_settings/](../tests/check_workspace_settings/)
 Issue: https://github.com/chalkbadger/stay-safe/issues/13
 Tests: [tests/each_risk_shows_its_cause/](../tests/each_risk_shows_its_cause/)
 
-- When my shell environment policy includes fields stay-safe does not check, I see the starting inheritance and name-filter settings and a warning that the final environment is unknown. Private variable names and values stay out of the report. `test_environment.py::test_extra_fields_preserve_the_starting_policy_and_leave_the_final_environment_unknown`
+- When my shell environment policy includes fields stay-safe doesn't read, I see the starting inheritance and name-filter settings. The report tells me which part remains unchecked. Private variable names and values stay out of the report. `test_environment.py::test_extra_fields_preserve_the_starting_policy_and_leave_the_final_environment_unknown`
 - I see the expected warnings tied to their settings and reported incidents. `test_report.py::test_cli_risks_have_expected_entries_incidents_and_status_in_both_formats`
 - I turn the sandbox off and see that commands could change Codex's own configuration, saved approvals and instructions. `test_conditions.py::test_sandbox_off_explains_changes_to_settings_saved_approvals_and_instructions`
 - I change command or sandbox settings and get warnings only when their conditions apply. `test_conditions.py::test_command_prompt_and_filesystem_rules_have_independent_positive_and_negative_cases`
@@ -164,6 +176,8 @@ Issue: https://github.com/chalkbadger/stay-safe/issues/12
 Tests: [tests/findings_say_what_to_do/](../tests/findings_say_what_to_do/)
 
 - I get advice for each finding, including the setting to change and stricter options where supported. `test_what_to_do.py::test_each_finding_gives_lower_friction_then_stricter_option_then_how_to_change_it`
+- I see how to check whether Codex used each saved approval when stay-safe skips a line in its file. `test_plain_findings.py::test_unchecked_rules_put_the_startup_check_beside_each_saved_approval`
+- I get this startup check only when the same file contains a saved approval and an unchecked line. `test_plain_findings.py::test_startup_check_needs_both_an_approval_and_unchecked_lines_in_its_file`
 - I inspect different sandbox settings with `never` and the advice never suggests a weaker sandbox, and says what `on-request` adds and that ordinary commands can still run without asking. `test_what_to_do.py::test_commands_advice_never_loosens_the_configured_sandbox`
 - I select a permission profile in one file and can follow the approval finding and sandbox gap advice without replacing it. `test_what_to_do.py::test_profile_in_either_file_preserves_approval_and_gap_advice`
 - I see that configured approvals do not establish what Codex will allow. `test_what_to_do.py::test_shared_note_keeps_approval_outcomes_unassessed_for_each_policy`

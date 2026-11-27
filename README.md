@@ -37,7 +37,7 @@ cd stay-safe-0.3.0
 python3 -m stay_safe
 ```
 
-By default it reads `~/.codex/config.toml` (`$CODEX_HOME/config.toml` when `CODEX_HOME` is set). [Usage](docs/usage.md) covers the inspected files, options, `--save` and exit status.
+By default, stay-safe reads `~/.codex/config.toml`. See [Usage](docs/usage.md) for other file locations and options.
 
 ## Run with uv
 

@@ -193,3 +193,16 @@ Real-world reports of coding agents doing destructive or risky things. Risk rule
 - What happened: a user asked Claude Code to review, validate and deploy a repository. They reported that it ran every file in the test directory without reading them first. One test worked on a live application's configuration folder in the home directory and pruned its backups. Four backup files were deleted with `rm -f`.
 - Enabling condition: a command the agent ran could delete files outside the repository. The report does not state the permission mode or whether the sandbox was on.
 - Source: [Claude Code issue #111921](https://github.com/anthropics/claude-code/issues/111921)
+
+## I35. Test cleanup deleted files across the Windows C: drive
+- Harness: Claude Code 2.1.332, auto mode, Windows 11.
+- What happened: the reporter said Claude Code bypassed the repository’s test runner and launched the shell tests directly. A helper used `"$T/c"` for a directory holding fake container state. With `T` empty, the reporter saw `/c` as the first deletion target in the running `rm.exe` command line. On that machine, `/c` mapped to the C: drive. The cleanup deleted files in the user’s profile and elsewhere on the drive.
+- Enabling condition: the helper continued with an empty temporary-directory variable, and the cleanup ran with the user’s filesystem permissions. The reporter has since changed the scripts to require the official runner, check that `mktemp` succeeded, and abort cleanup if `T` is empty.
+- Sources: [Original report](https://github.com/anthropics/claude-code/issues/112156) · [Reporter’s follow-up with the observed command line](https://github.com/anthropics/claude-code/issues/112156#issuecomment-7192159450)
+
+## I37. OpenCode folder cleanup reached the Windows drive root
+- Harness: OpenCode on Windows. The reporter who captured the process command line used OpenCode 2.3.2 through OpenChamber with Windows PowerShell 5.1.
+- What happened: one user reported losing about 270,000 files on D: after asking OpenCode to remove a duplicate project folder. A second user reported losing their Windows profile and, after rerunning the stored command, additional files on C:. They captured the command line passed to `cmd`. An earlier report also documented access outside the requested project and left the cause open.
+- Enabling condition: in the captured session, the permission check evaluated the command as written and the OpenChamber client automatically approved the `ask` decision. An independent contributor used an argument printer on Windows PowerShell 5.1 to show how the nested quoting turned the current drive root into a separate deletion target. The check printed arguments without deleting files.
+- Proposed repair: the OpenCode pull request adds a check that rejects recursive deletion of a drive root before evaluating permission rules.
+- Sources: [D: drive incident](https://github.com/anomalyco/opencode/issues/66449) · [C: drive incident and captured command line](https://github.com/anomalyco/opencode/issues/66771) · [Earlier out-of-scope deletion report](https://github.com/anomalyco/opencode/issues/43921) · [Independent quoting check and proposed repair](https://github.com/anomalyco/opencode/pull/66802)

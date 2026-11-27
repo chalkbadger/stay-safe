@@ -13,8 +13,10 @@ APP_ENABLED_GAP = "Codex cannot load this configuration file because apps.exampl
 TOOL_ENABLED_GAP = "Codex cannot load this configuration file because apps.example.tools.lookup.enabled is not a boolean."
 
 PLAIN = {
-    **{gap: f"**{gap}** Findings for other entries describe settings written in the file."
-       for gap in (APP_MODE_GAP, TOOL_MODE_GAP)},
+    **{gap: f'**Codex cannot load this configuration file.** `{field}` must be `"auto"`, `"prompt"`, `"writes"` or `"approve"`. '
+            "Findings for other entries describe settings written in the file."
+       for gap, field in ((APP_MODE_GAP, "apps.example.default_tools_approval_mode"),
+                          (TOOL_MODE_GAP, "apps.example.tools.lookup.approval_mode"))},
     **{gap: f"**Codex cannot load this configuration file.** `{field}` must be `true` or `false` without quotes. "
             "Findings for other entries describe settings written in the file."
        for gap, field in ((APP_ENABLED_GAP, "apps.example.default_tools_enabled"),
@@ -170,6 +172,8 @@ PLAIN = {
     "The rules directory cannot be listed; other rules files may exist and were not inspected.":
         "**Not checked: other rules files.** stay-safe couldn't list your `rules` folder, so there may be rules "
         "files it didn't read.",
+    "A rules entry could not be checked to determine whether it is a file.":
+        "**Not checked: other rules files.** stay-safe couldn't tell whether an entry in your `rules` folder is a file.",
     "Other rules files exist and were not inspected.":
         "**Not checked: other rules files.** Your `rules` folder has other `.rules` files besides "
         "`default.rules`. Codex reads them too, but stay-safe doesn't.",
@@ -327,6 +331,8 @@ STEPS = {
         "Review the other lines in your rules file yourself, especially rules that ask first or forbid a command.",
     "The rules directory cannot be listed; other rules files may exist and were not inspected.":
         "Check that `rules` in your Codex folder is a folder you can read, then run stay-safe again.",
+    "A rules entry could not be checked to determine whether it is a file.":
+        "Check that you can inspect the entries in your Codex `rules` folder, then run stay-safe again.",
     "Other rules files exist and were not inspected.":
         "Review the other `.rules` files yourself, or check one with `--rules`.",
     "Codex home: CODEX_HOME is set but is missing, not a directory or cannot be checked; "
@@ -364,7 +370,8 @@ ABSENT_STEPS = {
         "create `~/.codex/config.toml` (or `config.toml` in the folder `CODEX_HOME` names) with "
         "`sandbox_mode = \"workspace-write\"` or `\"read-only\"`.",
 }
-RULES_GAPS = {message for message in PLAIN if message.startswith(("Rules", "Selected rules", "The rules", "Other rules"))}
+RULES_GAPS = {message for message in PLAIN
+              if message.startswith(("Rules", "Selected rules", "The rules", "Other rules", "A rules entry"))}
 UNSOURCED = {message for message in PLAIN
              if message.startswith(("Codex home:", "System config folder:", "Committed", "Incomplete", "Revision"))}
 

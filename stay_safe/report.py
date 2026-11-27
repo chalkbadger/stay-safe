@@ -3,16 +3,17 @@ import json
 from pathlib import Path
 import re
 
-from .codex import (APP_TOOL_REVIEWER_GAP, APPROVALS, EMPTY_PROFILES, ENV_GAP, ENV_UNCHECKED, EXCLUDED_ACCOUNT, INLINE_MCP_VALUES, INLINE_PROFILE_OVERRIDE,
-                    INVALID_APPROVAL, INVALID_BOOLEAN, INVALID_MCP_MAP, INVALID_PROFILE_SELECTOR, LEGACY_PROFILE_SELECTOR,
+from .codex import (APP_TOOL_REVIEWER_GAP, APPROVALS, EMPTY_PROFILES, ENV_GAP, EXCLUDED_ACCOUNT, INLINE_MCP_VALUES,
+                    INLINE_PROFILE_OVERRIDE, INVALID_APPROVAL, INVALID_BOOLEAN, INVALID_MCP_MAP, INVALID_PROFILE_SELECTOR,
+                    MCP_HTTP_AUTH_FIELDS, LEGACY_PROFILE_SELECTOR,
                     LEGACY_PROFILE_TABLES, PROFILE_LOADER_VERSION, ROOT_HOME_UNKNOWN, ROOTS_NO_WORKSPACE, ROOTS_SCOPE,
                     WORKSPACE_HOME, WORKSPACE_HOME_UNKNOWN, WORKSPACE_UNKNOWN, read_file)
-from .codex_rules import other_files, read_file as read_rules
+from .codex_rules import UNCHECKED_RULE_LINES, other_files, read_file as read_rules
 from .rules import SANDBOX_OFF_EXPLANATION, evaluate
 from .provenance import GAP, REPOSITORY, fingerprints, identify, source_link, resource
 
 INCIDENTS = resource("incidents.md")
-ENV_START = "The shell environment policy starts with all parent environment variables."
+ENV_SCOPE = "Other fields in this policy can change which variables reach commands. Stay-safe doesn't read those fields."
 INCIDENT_STATUS = "reported, not verified"
 APPROVAL_OPTIONS = ", ".join(f'`"{mode}"`' for mode in APPROVALS[:-1]) + f' or `"{APPROVALS[-1]}"`'
 
@@ -60,9 +61,11 @@ def inspect(paths, *, rules_path=None, discovered=False, gaps=(), workspace=None
     revision = provenance["source_revision"]
     by_id = {entry["id"]: entry for entry in entries}
     for risk in risks:
-        risk["configured_evidence"] = list(by_id[risk["entry"]]["observations"])
-        if risk["rule"] == "environment_inheritance" and ENV_UNCHECKED in risk["configured_evidence"]:
-            risk["explanation"] = ENV_START + " " + ENV_GAP
+        entry = by_id[risk["entry"]]
+        risk["configured_evidence"] = list(entry["observations"])
+        if entry["facts"].get("unchecked_environment_fields"):
+            risk["scope_note"] = ENV_SCOPE
+            risk["explanation"] += " " + ENV_SCOPE
         risk["rule_source"] = source_link(revision, "stay_safe/rules.py")
         risk["interpretation_source"] = source_link(revision, "harnesses/codex.md")
     try:
@@ -344,7 +347,7 @@ KINDS = {"mcp_servers": "MCP server", "apps": "app"}
 STRICTNESS = ("read-only", "workspace-write")
 
 
-def sandbox_context(report, files):
+def finding_context(report, files):
     sources = {entry["source"] for entry in report["catalog"] if entry["source"].startswith("config-")}
     gaps = {}
     for text in report["inspection_gaps"]:
@@ -364,7 +367,8 @@ def sandbox_context(report, files):
                     and "sandbox_mode is unsupported or invalid; its value was withheld." not in messages
                     and source not in own)]
     profile_files = ", ".join(f"`{files.get(source, source)}`" for source in sorted(profiles, key=source_order))
-    context = {}
+    context = {source: {"unchecked_rules": True} for source, messages in gaps.items()
+               if UNCHECKED_RULE_LINES in messages}
     for source in sources:
         others = sorted((int(other.split("-")[1]), other) for other, value in own.items()
                         if other != source and value == "read-only")
@@ -423,7 +427,7 @@ EXTRA_FOLDERS = "Some may be outside your workspace. Their paths are withheld."
 REVIEW_ROOTS = ("Review each folder in `writable_roots` and remove any that commands shouldn't change, "
                 "such as the Docker socket (`/var/run/docker.sock`).")
 GAPS = {
-    ENV_GAP: "**Not checked: which environment variables reach commands.** " + ENV_GAP,
+    ENV_GAP: "**Not checked: other fields under `[shell_environment_policy]`.** " + ENV_SCOPE,
     INLINE_MCP_VALUES: "**Not checked: inline values in `{label}`.** stay-safe did not check these entries for credentials.",
     INVALID_MCP_MAP: "**Codex cannot load this configuration.** `{label}` must be a table of strings.",
     "Unchecked section {label}; its settings were not evaluated.":
@@ -544,6 +548,12 @@ GAPS = {
     "An MCP header-helper command is invalid; its value was withheld.":
         "**Not checked: an MCP header-helper command.** An `http_headers_helper` value isn't a valid command, so "
         f"stay-safe didn't assess it. {WITHHELD}",
+    **{f"Codex cannot load this configuration because stdio MCP server {{label}} sets {field}.":
+        "**Codex can't load this configuration.** The `{label}` server uses `command` (stdio). "
+        f"The `{field}` setting applies to HTTP servers." for field in MCP_HTTP_AUTH_FIELDS},
+    "Codex cannot load this configuration because MCP server {label} sets bearer_token.":
+        "**Codex can't load this configuration.** The `{label}` server sets `bearer_token`, "
+        "which Codex rejects on both stdio and HTTP servers.",
     "Codex cannot load this configuration because stdio MCP server {label} sets http_headers_helper.":
         "**Codex can't load this configuration.** The `{label}` server uses `command` (stdio). "
         "Codex accepts `http_headers_helper` only on HTTP servers.",
@@ -559,7 +569,9 @@ GAPS = {
         "approve or deny the request. Your organization can limit who may review requests. For example, if its "
         "policy allows only human review, Codex may ask you to decide. Stay-safe can’t tell from this file "
         "which policy applies to your run.",
-    INVALID_APPROVAL: f"**{INVALID_APPROVAL}** Findings for other entries describe settings written in the file.",
+    INVALID_APPROVAL:
+        f"**Codex cannot load this configuration file.** `{{label}}` must be {APPROVAL_OPTIONS}. "
+        "Findings for other entries describe settings written in the file.",
     INVALID_BOOLEAN:
         "**Codex cannot load this configuration file.** `{label}` must be `true` or `false` without quotes. "
         "Findings for other entries describe settings written in the file.",
@@ -595,12 +607,14 @@ GAPS = {
     "Rules input is unreadable, a symlink or invalid UTF-8; raw errors were withheld.":
         "**Not checked: your rules file.** stay-safe couldn't read it: it's unreadable, a symlink, or not valid "
         "UTF-8. Error details are left out of this report.",
-    "Rules contain lines that are not inspected.":
+    UNCHECKED_RULE_LINES:
         "**Not checked: some lines in your rules file.** stay-safe reads only one-line saved approvals. Other "
         "lines, such as rules that ask first or forbid a command, could change what the listed approvals do.",
     "The rules directory cannot be listed; other rules files may exist and were not inspected.":
         "**Not checked: other rules files.** stay-safe couldn't list your `rules` folder, so there may be rules "
         "files it didn't read.",
+    "A rules entry could not be checked to determine whether it is a file.":
+        "**Not checked: other rules files.** stay-safe couldn't tell whether an entry in your `rules` folder is a file.",
     "Other rules files exist and were not inspected.":
         "**Not checked: other rules files.** Your `rules` folder has other `.rules` files besides "
         "`default.rules`. Codex reads them too, but stay-safe doesn't.",
@@ -743,6 +757,11 @@ STEPS = {
     "An MCP transport is missing, conflicting or invalid.": "Give the server either a `command` or a `url`, not both.",
     "An MCP header-helper command is invalid; its value was withheld.":
         "Set `http_headers_helper` to the command you mean to run, or remove it.",
+    **{f"Codex cannot load this configuration because stdio MCP server {{label}} sets {field}.":
+        f"To keep using stdio, remove `{field}` from this server's settings." for field in MCP_HTTP_AUTH_FIELDS},
+    "Codex cannot load this configuration because MCP server {label} sets bearer_token.":
+        "Remove `bearer_token` from this server's settings. For HTTP bearer authentication, "
+        "use `bearer_token_env_var` to name the environment variable.",
     "Codex cannot load this configuration because stdio MCP server {label} sets http_headers_helper.":
         "To keep using stdio, remove `http_headers_helper` from this server's settings.",
     "Per-account app policy is not evaluated; account identifiers were withheld.":
@@ -776,10 +795,12 @@ STEPS = {
     "Selected rules input is missing; its path was withheld.": "Check the path you gave with `--rules`.",
     "Rules input is unreadable, a symlink or invalid UTF-8; raw errors were withheld.":
         "Check that the file is readable and valid UTF-8; for a symlink, select the file it points to.",
-    "Rules contain lines that are not inspected.":
+    UNCHECKED_RULE_LINES:
         "Review the other lines in your rules file yourself, especially rules that ask first or forbid a command.",
     "The rules directory cannot be listed; other rules files may exist and were not inspected.":
         "Check that `rules` in your Codex folder is a folder you can read, then run stay-safe again.",
+    "A rules entry could not be checked to determine whether it is a file.":
+        "Check that you can inspect the entries in your Codex `rules` folder, then run stay-safe again.",
     "Other rules files exist and were not inspected.":
         "Review the other `.rules` files yourself, or check one with `--rules`.",
     "Codex home: CODEX_HOME is set but is missing, not a directory or cannot be checked; "
@@ -852,12 +873,22 @@ def finding(risk, files=None, contexts=None):
     pick = lambda text: (text.get(keys[0]) if isinstance(text, dict)
                          else text[len(keys) == 4] if isinstance(text, tuple) else text)
     headline, why, step = pick(plain["headline"]), pick(plain["why"]), advice(risk, files or {}, contexts or {})
-    if risk["rule"] == "environment_inheritance" and ENV_UNCHECKED in risk["configured_evidence"]:
-        headline, why = ENV_START, ENV_GAP
+    if "scope_note" in risk:
+        why += " " + risk["scope_note"]
     if keys == ["apps", "_default"]:
         headline = TEMPLATE_HEADLINES.get(risk["rule"], headline)
     source = risk["entry"].split(":", 1)[0]
-    full_access = (contexts or {}).get(source, {}).get("full_access")
+    context = (contexts or {}).get(source, {})
+    if risk["rule"] == "saved_approval" and context.get("unchecked_rules"):
+        headline = "The approval on line {line} may not apply."
+        program = next((word.removeprefix("program: ") for word in risk["configured_evidence"]
+                        if word.startswith("program: ")), None)
+        command = f" for a `{program}` command" if program else ""
+        why = (f"Stay-safe found a saved approval{command}, but couldn't check every rule in this file. "
+               "If this approval applies, matching commands may run outside the sandbox without asking you."
+               "\n\n*What to check:* Look for a rules error when you start Codex. "
+               "If you see one, Codex didn't use any of your saved approvals.")
+    full_access = context.get("full_access")
     if keys == ["approval_policy"] and (risk["rule"], full_access) in {("commands_without_prompts", "on-request"),
                                                                       ("automatic_tools", "never")}:
         headline, why = FULL_ACCESS_HEADLINES[risk["rule"]]
@@ -1148,7 +1179,7 @@ def markdown(report, files=None):
         lines += [paragraph, ""]
     files = {source: path for source, path in files.items() if path is not None}
     blocks, titles = [], []
-    contexts = sandbox_context(report, files)
+    contexts = finding_context(report, files)
     for number, risk in enumerate(risks, 1):
         citations = ", ".join(f"[{i}]({report['incident_links'][i]})" if i in report["incident_links"] else i for i in risk["incidents"])
         lead, how, step = finding(risk, files, contexts) or (risk["explanation"], "See the cited incidents.",
