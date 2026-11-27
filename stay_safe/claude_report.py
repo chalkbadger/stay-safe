@@ -181,7 +181,7 @@ WORDS = {"default": "`default` (asks before most actions)", "manual": "`manual` 
          "addresses withheld": "some addresses (left out)"}
 
 
-def inspect(paths, *, discovered=False, gaps=(), scopes=(), repo_uris=None):
+def inspect(paths, *, discovered=False, gaps=(), scopes=(), repo_files=None):
     entries, gaps, sources_read = [], list(gaps), []
     scopes = list(scopes) + [None] * (len(paths) - len(scopes))
     hashes = fingerprints()
@@ -189,10 +189,11 @@ def inspect(paths, *, discovered=False, gaps=(), scopes=(), repo_uris=None):
     repo_locations = {}
     for index, path in enumerate(paths, 1):
         source = f"settings-{index}"
-        lines = {} if repo_uris and path in repo_uris else None
-        found, missing = read_file(path, source, discovered=discovered, sources_read=sources_read, scope=scopes[index - 1], lines=lines)
-        if lines:
-            repo_locations[source] = (repo_uris[path], lines)
+        selected = (repo_files or {}).get(path)
+        found, missing = read_file(path, source, discovered=discovered, sources_read=sources_read,
+                                   scope=scopes[index - 1], location=selected)
+        if selected and selected.lines:
+            repo_locations[source] = (selected.uri, selected.lines)
         entries.extend(found)
         gaps.extend(missing)
     gaps.extend(resolve(entries, discovered))

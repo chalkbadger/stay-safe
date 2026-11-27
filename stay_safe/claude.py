@@ -453,13 +453,14 @@ def resolve(entries, discovered):
 
 
 @exclude_account_files
-def read_file(path, source, *, discovered=False, sources_read=None, scope=None, lines=None):
+def read_file(path, source, *, discovered=False, sources_read=None, scope=None, location=None):
     reader = SettingsReader(source)
     reader.scope = scope
     try:
         fd = open_input(path)
         with os.fdopen(fd, "rb") as stream:
-            if not stat.S_ISREG(os.fstat(stream.fileno()).st_mode):
+            info = os.fstat(stream.fileno())
+            if not stat.S_ISREG(info.st_mode):
                 raise ValueError("not a regular file")
             content = stream.read(MAX_BYTES + 1)
         if len(content) > MAX_BYTES:
@@ -479,7 +480,6 @@ def read_file(path, source, *, discovered=False, sources_read=None, scope=None, 
         return [], sorted(reader.gaps)
     if sources_read is not None:
         sources_read.append(source)
-    if lines is not None:
-        from .repo_locations import setting_lines
-        lines.update(setting_lines(content, "Claude Code"))
+    if location:
+        location.capture(info, content, "Claude Code")
     return reader.read(data)
