@@ -1,8 +1,8 @@
 # Publish the package
 
-Version 0.2.4 is published on [PyPI](https://pypi.org/project/stay-safe/0.2.4/).
-Its public installation and report were verified for [#95](https://github.com/chalkbadger/stay-safe/issues/95).
-The commands below are for the next release, 0.3.0. Published versions cannot be
+Version 0.3.0 is published on [PyPI](https://pypi.org/project/stay-safe/0.3.0/).
+Its public installation and report were verified for [#207](https://github.com/chalkbadger/stay-safe/issues/207).
+The commands below are for the next release, 0.3.1. Published versions cannot be
 uploaded again. For a later release, choose a new version and update
 `pyproject.toml` and these commands before building.
 
@@ -12,7 +12,7 @@ From a clean checkout of the accepted release commit, in a development environme
 python3 -m pip install build "setuptools>=77" wheel
 python3 check_tests.py
 python3 -m build
-uv publish dist/stay_safe-0.3.0*
+uv publish dist/stay_safe-0.3.1*
 ```
 
 Use PyPI's credential prompt or its supported environment configuration; never
@@ -27,8 +27,8 @@ was 3.9.6 rejected the package without it instead of selecting a newer interpret
 In a new directory, retrieve the public release (without local wheel options):
 
 ```sh
-uvx --python 3.11 stay-safe@0.3.0 --help
-uvx --python 3.11 stay-safe@0.3.0 --save
+uvx --python 3.11 stay-safe@0.3.1 --help
+uvx --python 3.11 stay-safe@0.3.1 --save
 ```
 
 Record the version, source commit, platform, selected Python, output and exit
