@@ -68,24 +68,16 @@ class EnvironmentInheritanceTests(ConfigCase):
                 self.assertEqual(report['catalog'][-1]['observations'], observations)
                 self.assertEqual(report['inspection_gaps'], [])
 
-    def test_invalid_or_extra_fields_are_gaps_without_fabricated_defaults(self):
+    def test_invalid_fields_are_gaps_without_fabricated_defaults(self):
         table = 'config-1: shell_environment_policy must be a table.'
         inherit = 'config-1: shell_environment_policy.inherit is unsupported or invalid; its value was withheld.'
         excludes = 'config-1: shell_environment_policy.ignore_default_excludes has an invalid boolean; its behavior is unknown.'
-        extra = 'config-1: shell_environment_policy contains fields outside reader coverage; their values were withheld.'
         for policy, gap in [
             *[('shell_environment_policy=' + value, table) for value in ('"private-value"', '[]', 'false')],
             *[('[shell_environment_policy]\ninherit=' + value, inherit)
               for value in ('"private-value"', '"ALL"', 'true', '1', '[]', '{}')],
             *[('[shell_environment_policy]\nignore_default_excludes=' + value, excludes)
               for value in ('"private-value"', '1', '0', '[]', '{}')],
-            *[('[shell_environment_policy]\n' + field, extra)
-              for field in ('exclude=[]', 'include_only=[]', 'set={}', 'filters={}', 'experimental_use_profile=false',
-                            'exclude=["PRIVATE_NAME"]', 'include_only=["PRIVATE_NAME"]',
-                            'set={PRIVATE_NAME="private-value"}', 'filters={PRIVATE_NAME="exclude"}',
-                            'experimental_use_profile=true',
-                            '"PRIVATE_NAME"="private-value"')],
-            ('[shell_environment_policy]\ninherit="all"\nignore_default_excludes=true\nexclude=[]', extra),
         ]:
             with self.subTest(policy=policy):
                 report = inspect([self.config('approval_policy="never"\nsandbox_mode="read-only"\n' + policy)])
@@ -94,6 +86,36 @@ class EnvironmentInheritanceTests(ConfigCase):
                 self.assertEqual(report['inspection_gaps'], [gap])
                 self.assertNotIn('PRIVATE_NAME', render(report))
                 self.assertNotIn('private-value', render(report, 'json'))
+
+    def test_extra_fields_preserve_the_starting_policy_and_leave_the_final_environment_unknown(self):
+        gap = ("stay-safe doesn't read the other fields under [shell_environment_policy], so it can't tell "
+               "which variables commands receive.")
+        scope = "Other fields in this policy can change which variables reach commands. Stay-safe doesn't read those fields."
+        for field in ('exclude=[]', 'include_only=[]', 'set={}', 'filters={}', 'experimental_use_profile=false',
+                      'exclude=["PRIVATE_NAME"]', 'include_only=["PRIVATE_NAME"]', 'set={PRIVATE_NAME="private-value"}',
+                      'filters={PRIVATE_NAME="exclude"}', 'experimental_use_profile=true', '"PRIVATE_NAME"="private-value"'):
+            for inherit, excludes in ((None, None), ("all", "true"), ("all", "false"), ("core", "false"), ("none", "false")):
+                with self.subTest(field=field, inherit=inherit, excludes=excludes):
+                    policy = '[shell_environment_policy]\n' + field
+                    if inherit:
+                        policy += f'\ninherit="{inherit}"\nignore_default_excludes={excludes}'
+                    report = inspect([self.config(BASE + policy)])
+                    self.assertEqual(report["inspection_gaps"], ["config-1: " + gap])
+                    observations = report["catalog"][-1]["observations"]
+                    expected = ([f"inherit: {inherit} (explicit)", f"ignore_default_excludes: {excludes} (explicit)"]
+                                if inherit else DEFAULTS)
+                    self.assertEqual(observations, expected + ["final environment not checked"])
+                    self.assertEqual([r["rule"] for r in report["risks"]],
+                                     ["environment_inheritance"] if inherit in (None, "all") else [])
+                    markdown = render(report)
+                    if report["risks"]:
+                        self.assertEqual(report["risks"][0]["explanation"], EXPLANATION + " " + scope)
+                        self.assertIn(MARKDOWN_LEAD + " " + scope, markdown)
+                    self.assertIn("**Not checked: other fields under `[shell_environment_policy]`.** " + scope, markdown)
+                    for fmt in ("plain", "markdown", "html", "json", "sarif"):
+                        text = render(report, fmt)
+                        self.assertNotIn("PRIVATE_NAME", text)
+                        self.assertNotIn("private-value", text)
 
     def test_rejected_files_never_gain_default_entries(self):
         missing = self.root / 'missing.toml'

@@ -3,8 +3,9 @@ import json
 from pathlib import Path
 import re
 
-from .codex import (APP_TOOL_REVIEWER_GAP, APPROVALS, EMPTY_PROFILES, EXCLUDED_ACCOUNT, INLINE_MCP_VALUES, INLINE_PROFILE_OVERRIDE,
-                    INVALID_APPROVAL, INVALID_BOOLEAN, INVALID_MCP_MAP, INVALID_PROFILE_SELECTOR, MCP_HTTP_AUTH_FIELDS, LEGACY_PROFILE_SELECTOR,
+from .codex import (APP_TOOL_REVIEWER_GAP, APPROVALS, EMPTY_PROFILES, ENV_GAP, EXCLUDED_ACCOUNT, INLINE_MCP_VALUES,
+                    INLINE_PROFILE_OVERRIDE, INVALID_APPROVAL, INVALID_BOOLEAN, INVALID_MCP_MAP, INVALID_PROFILE_SELECTOR,
+                    MCP_HTTP_AUTH_FIELDS, LEGACY_PROFILE_SELECTOR,
                     LEGACY_PROFILE_TABLES, PROFILE_LOADER_VERSION, ROOT_HOME_UNKNOWN, ROOTS_NO_WORKSPACE, ROOTS_SCOPE,
                     WORKSPACE_HOME, WORKSPACE_HOME_UNKNOWN, WORKSPACE_UNKNOWN, read_file)
 from .codex_rules import UNCHECKED_RULE_LINES, other_files, read_file as read_rules
@@ -12,6 +13,7 @@ from .rules import SANDBOX_OFF_EXPLANATION, evaluate
 from .provenance import GAP, REPOSITORY, fingerprints, identify, source_link, resource
 
 INCIDENTS = resource("incidents.md")
+ENV_SCOPE = "Other fields in this policy can change which variables reach commands. Stay-safe doesn't read those fields."
 INCIDENT_STATUS = "reported, not verified"
 APPROVAL_OPTIONS = ", ".join(f'`"{mode}"`' for mode in APPROVALS[:-1]) + f' or `"{APPROVALS[-1]}"`'
 
@@ -59,7 +61,11 @@ def inspect(paths, *, rules_path=None, discovered=False, gaps=(), workspace=None
     revision = provenance["source_revision"]
     by_id = {entry["id"]: entry for entry in entries}
     for risk in risks:
-        risk["configured_evidence"] = list(by_id[risk["entry"]]["observations"])
+        entry = by_id[risk["entry"]]
+        risk["configured_evidence"] = list(entry["observations"])
+        if entry["facts"].get("unchecked_environment_fields"):
+            risk["scope_note"] = ENV_SCOPE
+            risk["explanation"] += " " + ENV_SCOPE
         risk["rule_source"] = source_link(revision, "stay_safe/rules.py")
         risk["interpretation_source"] = source_link(revision, "harnesses/codex.md")
     try:
@@ -421,6 +427,7 @@ EXTRA_FOLDERS = "Some may be outside your workspace. Their paths are withheld."
 REVIEW_ROOTS = ("Review each folder in `writable_roots` and remove any that commands shouldn't change, "
                 "such as the Docker socket (`/var/run/docker.sock`).")
 GAPS = {
+    ENV_GAP: "**Not checked: other fields under `[shell_environment_policy]`.** " + ENV_SCOPE,
     INLINE_MCP_VALUES: "**Not checked: inline values in `{label}`.** stay-safe did not check these entries for credentials.",
     INVALID_MCP_MAP: "**Codex cannot load this configuration.** `{label}` must be a table of strings.",
     "Unchecked section {label}; its settings were not evaluated.":
@@ -663,6 +670,7 @@ ABSENT = {
         "commands Codex runs are allowed to do.",
 }
 STEPS = {
+    ENV_GAP: "Review the other fields under `[shell_environment_policy]`, including any filters or added variables.",
     INLINE_MCP_VALUES: "Review the entries for credentials in your own configuration file.",
     INVALID_MCP_MAP: "Give each entry in `{label}` a quoted string value, or remove the setting.",
     "Unchecked section {label}; its settings were not evaluated.":
@@ -865,6 +873,8 @@ def finding(risk, files=None, contexts=None):
     pick = lambda text: (text.get(keys[0]) if isinstance(text, dict)
                          else text[len(keys) == 4] if isinstance(text, tuple) else text)
     headline, why, step = pick(plain["headline"]), pick(plain["why"]), advice(risk, files or {}, contexts or {})
+    if "scope_note" in risk:
+        why += " " + risk["scope_note"]
     if keys == ["apps", "_default"]:
         headline = TEMPLATE_HEADLINES.get(risk["rule"], headline)
     source = risk["entry"].split(":", 1)[0]

@@ -124,6 +124,7 @@ Tests: [tests/check_workspace_settings/](../tests/check_workspace_settings/)
 Issue: https://github.com/chalkbadger/stay-safe/issues/13
 Tests: [tests/each_risk_shows_its_cause/](../tests/each_risk_shows_its_cause/)
 
+- When my shell environment policy includes fields stay-safe doesn't read, I see the starting inheritance and name-filter settings. The report tells me which part remains unchecked. Private variable names and values stay out of the report. `test_environment.py::test_extra_fields_preserve_the_starting_policy_and_leave_the_final_environment_unknown`
 - I see the expected warnings tied to their settings and reported incidents. `test_report.py::test_cli_risks_have_expected_entries_incidents_and_status_in_both_formats`
 - I turn the sandbox off and see that commands could change Codex's own configuration, saved approvals and instructions. `test_conditions.py::test_sandbox_off_explains_changes_to_settings_saved_approvals_and_instructions`
 - I change command or sandbox settings and get warnings only when their conditions apply. `test_conditions.py::test_command_prompt_and_filesystem_rules_have_independent_positive_and_negative_cases`

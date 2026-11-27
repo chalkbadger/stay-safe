@@ -132,6 +132,10 @@ def unresolved_home_alias(target, home):
             unicodedata.normalize("NFD", target[1].casefold()) == unicodedata.normalize("NFD", home[1].casefold()))
 
 
+ENV_GAP = ("stay-safe doesn't read the other fields under [shell_environment_policy], so it can't tell "
+           "which variables commands receive.")
+
+
 class Reader:
     def __init__(self, source, workspace=None):
         self.source = source
@@ -262,8 +266,9 @@ class Reader:
         if not isinstance(policy, dict):
             self.gap(f"{label} must be a table.")
             return
-        if self.unknown(policy, {"inherit", "ignore_default_excludes"}, label):
-            return
+        unchecked = bool(policy.keys() - {"inherit", "ignore_default_excludes"})
+        if unchecked:
+            self.gap(ENV_GAP)
         inherit = policy.get("inherit", "all")
         ignore = policy.get("ignore_default_excludes", True)
         inherit_valid = isinstance(inherit, str) and inherit in {"all", "core", "none"}
@@ -276,8 +281,10 @@ class Reader:
             return
         observations = [f"{key}: {value} ({'explicit' if key in policy else 'default'})"
                         for key, value in (("inherit", inherit), ("ignore_default_excludes", str(ignore).lower()))]
+        if unchecked:
+            observations.append("final environment not checked")
         self.add([label], "permission", observations,
-                 {"environment_inheritance": inherit == "all"})
+                 {"environment_inheritance": inherit == "all", "unchecked_environment_fields": unchecked})
 
     def tool_approval(self, mode, applies, label, report_invalid=True):
         default = mode is None
