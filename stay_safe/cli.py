@@ -7,6 +7,7 @@ import sys
 from . import claude_report
 from .codex import codex_home_override
 from .report import inspect, render_all
+from .repo_locations import selected_uris
 from .save import NAME, save
 from .provenance import INSTALLED
 
@@ -241,6 +242,8 @@ def main(argv=None):
                         help="Check this coding agent; repeat for both. With no files selected, inspect the agent folders found.")
     parser.add_argument("--format", choices=("markdown", "json", "sarif"),
                         help="Choose the report format.")
+    parser.add_argument("--sarif-repo-locations", action="store_true",
+                        help="Include tracked repository paths and setting lines for explicitly selected configs in SARIF.")
     parser.add_argument("--save", action="store_true",
                         help=f"Also save the report as a formatted page, {NAME}, in {SAVE_FOLDER}, and end with a command "
                              "that opens it. Use --save with Markdown output only.")
@@ -258,6 +261,8 @@ def main(argv=None):
         parser.error("Only one rules file may be selected.")
     if args.save and args.format in ("json", "sarif"):
         parser.exit(2, f"--save can't be combined with --format {args.format}. Use --help.\n")
+    if args.sarif_repo_locations and args.format != "sarif":
+        parser.exit(2, "--sarif-repo-locations needs --format sarif.\n")
     agents = list(dict.fromkeys(args.agent or []))
     if args.config and len(agents) > 1:
         parser.exit(2, "--config needs one --agent: choose codex or claude.\n")
@@ -266,10 +271,12 @@ def main(argv=None):
     if args.rules and "claude" in agents:
         parser.exit(2, "--rules reads Codex files only.\n")
     if args.config or args.rules:
+        paths = [Path(p) for p in args.config or []]
+        uris = selected_uris(paths) if args.sarif_repo_locations else {}
         if "claude" in agents:
-            runs = [(claude_report.inspect([Path(p) for p in args.config]), {})]
+            runs = [(claude_report.inspect(paths, repo_uris=uris), {})]
         else:
-            runs = [codex_run(args)]
+            runs = [codex_run(args, repo_uris=uris)]
     else:
         runs = discover_runs(args, agents)
     status = 2 if any(result["inspection_gaps"] for result, _ in runs) else 0
@@ -290,7 +297,7 @@ def main(argv=None):
     return status
 
 
-def codex_run(args):
+def codex_run(args, repo_uris=None):
     paths = [Path(p) for p in args.config or []]
     rules = Path(args.rules[0]) if args.rules else None
     defaults = not args.config and not args.rules
@@ -315,4 +322,4 @@ def codex_run(args):
             gaps.extend(gap for gap in (skills(home), environments_toml(home)) if gap)
             if system_config():
                 gaps.append("System config folder: /etc/codex holds Codex configuration that was not inspected.")
-    return inspect(paths, rules_path=rules, discovered=defaults, gaps=gaps, workspace=args.workspace), files
+    return inspect(paths, rules_path=rules, discovered=defaults, gaps=gaps, workspace=args.workspace, repo_uris=repo_uris), files

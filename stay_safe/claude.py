@@ -453,7 +453,7 @@ def resolve(entries, discovered):
 
 
 @exclude_account_files
-def read_file(path, source, *, discovered=False, sources_read=None, scope=None):
+def read_file(path, source, *, discovered=False, sources_read=None, scope=None, lines=None):
     reader = SettingsReader(source)
     reader.scope = scope
     try:
@@ -479,4 +479,7 @@ def read_file(path, source, *, discovered=False, sources_read=None, scope=None):
         return [], sorted(reader.gaps)
     if sources_read is not None:
         sources_read.append(source)
+    if lines is not None:
+        from .repo_locations import setting_lines
+        lines.update(setting_lines(content, "Claude Code"))
     return reader.read(data)

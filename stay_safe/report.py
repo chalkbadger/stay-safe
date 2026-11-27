@@ -9,6 +9,7 @@ from .codex import (APP_TOOL_REVIEWER_GAP, APPROVALS, EMPTY_PROFILES, ENV_GAP, E
                     LEGACY_PROFILE_TABLES, PROFILE_LOADER_VERSION, ROOT_HOME_UNKNOWN, ROOTS_NO_WORKSPACE, ROOTS_SCOPE,
                     WORKSPACE_HOME, WORKSPACE_HOME_UNKNOWN, WORKSPACE_UNKNOWN, read_file)
 from .codex_rules import UNCHECKED_RULE_LINES, other_files, read_file as read_rules
+from .repo_locations import setting_line
 from .rules import SANDBOX_OFF_EXPLANATION, evaluate
 from .provenance import GAP, REPOSITORY, fingerprints, identify, source_link, resource
 
@@ -43,12 +44,17 @@ SCOPE = [
 ]
 
 
-def inspect(paths, *, rules_path=None, discovered=False, gaps=(), workspace=None):
+def inspect(paths, *, rules_path=None, discovered=False, gaps=(), workspace=None, repo_uris=None):
     entries, gaps = [], list(gaps)
     hashes = fingerprints()
     provenance = identify(hashes=hashes)
+    repo_locations = {}
     for index, path in enumerate(paths, 1):
-        found, missing = read_file(path, f"config-{index}", discovered=discovered, workspace=workspace)
+        source = f"config-{index}"
+        lines = {} if repo_uris and path in repo_uris else None
+        found, missing = read_file(path, source, discovered=discovered, workspace=workspace, lines=lines)
+        if lines:
+            repo_locations[source] = (repo_uris[path], lines)
         entries.extend(found)
         gaps.extend(missing)
     if rules_path is not None:
@@ -78,7 +84,8 @@ def inspect(paths, *, rules_path=None, discovered=False, gaps=(), workspace=None
     gaps.extend(f"Incomplete fingerprint: {name} could not be read." for name, value in hashes.items() if value is None)
     if revision is None:
         gaps.append(GAP)
-    return {"format_version": 3, "harness": "Codex", "provenance": provenance,
+    return {**({"_repo_locations": repo_locations} if repo_locations else {}),
+            "format_version": 3, "harness": "Codex", "provenance": provenance,
             "scope": list(SCOPE),
             "file_inspection": "incomplete" if gaps else "complete for supported fields",
             "catalog": [{k: v for k, v in entry.items() if k != "facts"} for entry in entries],
@@ -1376,8 +1383,15 @@ def sarif_run(report):
             if url:
                 descriptor["helpUri"] = url
             rules[rule] = descriptor
+        location = {"logicalLocations": [{"fullyQualifiedName": risk["entry"]}]}
+        source, name = risk["entry"].split(":", 1)
+        if source in report.get("_repo_locations", {}):
+            uri, lines = report["_repo_locations"][source]
+            line = setting_line(risk, tuple(parts(name)), lines, report["harness"])
+            if line is not None:
+                location["physicalLocation"] = {"artifactLocation": {"uri": uri}, "region": {"startLine": line}}
         results.append({"ruleId": rule, "level": "warning", "message": {"text": risk["explanation"]},
-                        "locations": [{"logicalLocations": [{"fullyQualifiedName": risk["entry"]}]}]})
+                        "locations": [location]})
     notifications = [{"level": "warning", "message": {"text": gap}} for gap in report["inspection_gaps"]]
     return {
         "tool": {"driver": {"name": "stay-safe", "rules": list(rules.values())}},

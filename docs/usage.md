@@ -141,6 +141,29 @@ A complete inspection with no findings produces no results or warnings and exits
 An incomplete inspection still writes the document and exits 2. For example, if
 your selected rules file is missing, its run contains a warning about the file.
 
+### Show a setting in GitHub Code Scanning
+
+From the project checkout, select a tracked configuration file and opt in to
+including its repository-relative path and setting line. For example, this
+repository's synthetic sample defines `approval_policy` on line 2.
+
+```sh
+python3 -m stay_safe --config tests/runs_without_a_coding_agent/sample.toml \
+  --format sarif --sarif-repo-locations > stay-safe.sarif
+```
+
+Check out the same revision in CI and pass the SARIF file to GitHub’s
+[`upload-sarif` action](https://github.com/github/codeql-action/tree/v4/upload-sarif).
+Give the workflow `contents: read` and `security-events: write`. Keep the category
+and file path consistent across uploads so GitHub can fingerprint the result.
+Review the relative filenames before sharing the file.
+
+Discovery, `--rules`, untracked or outside files, and symlink paths keep their
+logical IDs. Defaults and findings without a single identifiable setting line
+also keep their logical IDs. The same fallback applies if stay-safe cannot verify
+a regular file against the checkout’s Git index, including a split index.
+The default SARIF export keeps input paths private.
+
 ## Save the report as a page: `--save`
 
 `--save` also writes the report as a self-contained page, `stay-safe-report.html`, in
